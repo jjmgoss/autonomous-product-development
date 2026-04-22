@@ -1,0 +1,13 @@
+{
+  "run_id": "20260421-autodev-r1",
+  "review_artifacts": [
+    "docs/research.md",
+    "docs/opportunity-scorecard.md",
+    "docs/candidate-review.md",
+    "docs/validation.md",
+    "artifacts/runs/20260421-autodev-r1/reports/discovery-summary.md"
+  ],
+  "corpus_manifest": "research-corpus/runs/20260421-autodev-r1/manifest.json",
+  "candidate_links": "research-corpus/runs/20260421-autodev-r1/candidate-links.md",
+  "created_at": "2026-04-21T12:30:00Z"
+}

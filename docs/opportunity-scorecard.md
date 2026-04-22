@@ -1,43 +1,14 @@
-# Opportunity Scorecard
+# Opportunity Scorecard (Run 20260421-autodev-r1)
 
-Score candidate ideas before choosing one.
+| Candidate | Evidence | Impact | Feasibility | Novelty | Commercial Potential | Score |
+|-----------|----------|--------|-------------|---------|---------------------|-------|
+| Secure Agent Workflow Proxy | SRC-004, SRC-001 | High | Medium | High | High | 9 |
+| Automated Secrets Management for DevOps | SRC-001 | High | Medium | Medium | High | 8 |
+| DevOps Knowledge Base Generator | SRC-002 | Medium | High | Medium | Medium | 7 |
+| Resilience Pattern Library | SRC-005 | Medium | Medium | Medium | Medium | 6 |
+| Job Orchestration Metrics Cleaner | SRC-003 | Medium | Medium | Low | Low | 5 |
 
-## Purpose
-
-Compare candidates consistently enough that the agent does not fall in love with the first exciting idea.
-
-## Scoring dimensions
-
-Use a 1-5 scale and include a sentence of justification for each category.
-
-- pain severity
-- recurrence or frequency
-- evidence quality
-- willingness-to-pay signal
-- narrow wedge clarity
-- virtual delivery fit
-- agent-operability
-- prototype speed
-- substitute weakness
-- distribution tractability
-
-## Red flags
-
-Record these separately from the score:
-
-- heavy compliance at MVP stage
-- physical operations or inventory required
-- proprietary data dependency
-- enterprise sales dependency before usefulness
-- support or trust burden that looks too high for a solo operator
-- future-platform dependency
-
-## Output format
-
-For each opportunity, record:
-
-- short name
-- target user
+- **Scoring rationale:** Impact and commercial potential are weighted highest. Evidence IDs are cited for each candidate.
 - one-sentence problem statement
 - supporting evidence IDs
 - weakening evidence IDs

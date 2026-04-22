@@ -1,43 +1,29 @@
-# Candidate Review
+# Candidate Review (Run 20260421-autodev-r1)
 
-Use this file after the first research pass to help a human compare the top candidate opportunities quickly.
+## 1. Secure Agent Workflow Proxy
+- **Summary:** HTTP proxy layer that uses LLMs as a judge to secure agent actions in production.
+- **Supporting Evidence:** SRC-004, SRC-001
+- **Weakening Evidence:** SRC-005
+- **Score:** 9
+- **Notes:** Most novel and commercially promising; addresses emerging agent safety risks.
 
-## Purpose
+## 2. Automated Secrets Management for DevOps
+- **Summary:** Automated secrets scanning, rotation, and environment variable management for developer platforms.
+- **Supporting Evidence:** SRC-001
+- **Weakening Evidence:** SRC-004
+- **Score:** 8
+- **Notes:** High impact, but integration challenges and competition from existing tools.
 
-Summarize the strongest candidate ideas in a reviewer-friendly format and recommend what to do next.
+## 3. DevOps Knowledge Base Generator
+- **Summary:** Tool to automatically generate and maintain a technical reference repository for backend and DevOps teams.
+- **Supporting Evidence:** SRC-002
+- **Weakening Evidence:** SRC-003
+- **Score:** 7
+- **Notes:** Addresses onboarding and knowledge sharing pain, but less novel.
 
-## Recommended structure
-
-### 1. Ranked shortlist
-
-For each top candidate, include:
-
-- rank
-- short name
-- target user
-- pain point
-- narrow wedge or MVP angle
-- monetization angle
-- why agent-led build and operation are plausible
-- strongest evidence IDs
-- strongest weakening evidence IDs
-- strongest reason it is promising
-- strongest reason it may fail
-
-### 2. Comparison notes
-
-Call out the biggest differences across the top candidates:
-
-- pain severity
-- willingness to pay
-- substitute pressure
-- agent-operability
-- distribution simplicity
-- support burden
-
-### 3. Recommendation
-
-Choose one:
+## Other Candidates
+- Resilience Pattern Library (Score: 6)
+- Job Orchestration Metrics Cleaner (Score: 5)
 
 - prototype this first
 - continue validating the top two
