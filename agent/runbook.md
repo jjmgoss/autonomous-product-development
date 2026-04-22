@@ -24,12 +24,30 @@ Make sure the docs in `docs/` are present and consistent.
 If the run is new, initialize them.
 If the run is ongoing, update them rather than duplicating them.
 
-## Step 4: Research before building
+## Step 4: Decide the run mode
+
+Before deeper work, decide which of these two modes fits the current run:
+
+- Discovery-first mode: used for first runs, idea generation, market mapping, and opportunity ranking
+- Build-forward mode: used only after one opportunity clearly earns a go decision
+
+Default to discovery-first mode unless the existing docs already contain a strong validated opportunity.
+
+## Step 5: Research before building
 
 Use the product skills first.
 Do not start coding until the validation stage produces a clear go decision.
 
-## Step 5: Plan before implementation
+In discovery-first mode, produce at minimum:
+
+- `docs/research.md`
+- `docs/opportunity-scorecard.md`
+- `docs/candidate-review.md`
+- `docs/validation.md`
+
+If no opportunity earns a clear go decision, stop there with an explicit recommendation.
+
+## Step 6: Plan before implementation
 
 Before writing meaningful code:
 
@@ -38,7 +56,7 @@ Before writing meaningful code:
 - break the work into milestones and issues
 - prefer the smallest vertical slice that can falsify or support the product thesis
 
-## Step 6: Implement iteratively
+## Step 7: Implement iteratively
 
 During implementation:
 
@@ -47,7 +65,7 @@ During implementation:
 - verify behavior continuously
 - update `docs/work-log.md` and `docs/decision-log.md`
 
-## Step 7: Verify honestly
+## Step 8: Verify honestly
 
 Before declaring success:
 
@@ -56,7 +74,7 @@ Before declaring success:
 - document known gaps
 - confirm whether the app is truly runnable
 
-## Step 8: Close the loop
+## Step 9: Close the loop
 
 Finish with:
 
@@ -64,6 +82,19 @@ Finish with:
 - `docs/retrospective.md`
 - `docs/lifecycle-review.md`
 - an explicit recommendation: iterate, pivot, pause, or archive
+
+## Required product-discovery checks
+
+Before a go decision, confirm that you have answered all of these:
+
+- Who exactly has the problem?
+- How do they solve it today?
+- Why are current tools or workarounds insufficient?
+- Why would anyone plausibly pay for improvement?
+- Can the product start as a narrow wedge?
+- Can a solo operator with agents plausibly build and maintain it?
+- Is it compatible with mostly virtual operations?
+- Does it avoid immediate dependence on heavy compliance, services, or enterprise sales?
 
 ## Fallback behavior when stuck
 

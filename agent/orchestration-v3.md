@@ -14,6 +14,10 @@ Find real pain, extract patterns, and summarize evidence.
 
 Choose an opportunity, define the user, scope the MVP, and write requirements.
 
+### Commercial reviewer
+
+Assess willingness to pay, pricing shape, substitute pressure, and whether the product can become a real digital business seed rather than just a buildable tool.
+
 ### Architect
 
 Pick the simplest technical shape that can support the MVP.
@@ -43,7 +47,14 @@ At minimum, switch into Critic mode:
 - before major architecture commitment
 - before declaring MVP complete
 
+At minimum, switch into Commercial Reviewer mode:
+
+- before final opportunity ranking
+- before a go decision
+- before public launch or pricing claims
+
 ## Why this matters
 
 Autonomous systems often fail by being too eager to agree with themselves.
 A structured critic pass is a cheap way to reduce self-delusion.
+A structured commercial pass is a cheap way to reduce the buildable-but-not-viable mistake.

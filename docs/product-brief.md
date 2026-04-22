@@ -1,20 +1,25 @@
 # Product Brief
 
-Use this file once one opportunity is selected.
+Use this file once one opportunity is selected and has earned a go decision.
+
+## Purpose
+
+Describe the chosen product clearly enough that a reviewer can understand the wedge, the user, the commercial logic, and the operating assumptions.
 
 ## Include
 
-- problem statement
+- product name or working title
 - target user
+- painful workflow
 - job to be done
-- core workflow
-- success criteria
-- MVP scope
-- non-goals
-- assumptions
-- monetization ideas if relevant
-- top risks
+- core product wedge
+- success criteria for the MVP
+- explicit MVP scope
+- explicit non-goals
+- monetization angle
+- why agent-led build and operation are plausible
+- top risks and adoption barriers
 
 ## Quality bar
 
-A human should be able to read this and understand exactly what product is being attempted and what is intentionally out of scope.
+A reviewer should be able to understand exactly what product is being attempted, why it might matter, why it might get paid for, and what is intentionally out of scope.

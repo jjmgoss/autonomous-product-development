@@ -1,53 +1,62 @@
 # Theme
 
-This is the one file the human is expected to modify before starting a run.
+This is the main human-edited run configuration.
+
+The best use of this repository is to describe the opportunity space and the constraints clearly enough that an agent can perform strong discovery before it tries to build anything.
 
 ## Focus area
 
-Choose a broad but meaningful area to investigate.
-Examples:
-
-- personal productivity for knowledge workers
-- home infrastructure and self-hosting
-- lightweight data tooling for analysts
-- workflow automation for small teams
-- consumer note-taking and knowledge retrieval
-
-Replace the text below with the theme for the current run.
+Describe the broad domain to investigate.
 
 **Current theme:**
 
-> Build something in the area of autonomous product development and developer workflow automation.
+> Discover product opportunities in autonomous product development and developer workflow automation.
+
+## Desired product profile
+
+Use this section to bias the agent toward product shapes that fit the framework.
+
+**Current desired profile:**
+
+- software-first or information-first products
+- digitally monetizable products
+- mostly virtual operations after launch
+- narrow workflows with clear users
+- useful to a solo operator with agent assistance
+- capable of starting small and becoming useful quickly
 
 ## Constraints
 
-Specify constraints the agent should respect.
-
-Examples:
-
-- prefer open-source tools where possible
-- keep the MVP implementable in 1–3 days of focused work
-- avoid paid APIs unless clearly necessary
-- prefer local-first or low-cost deployment
-- keep the product understandable by one maintainer
+State the hard constraints the agent should respect.
 
 **Current constraints:**
 
-- Use a small, testable MVP.
-- Favor a web app or developer-facing tool over a mobile app.
-- Avoid ideas that require enterprise sales before they are useful.
-- Prefer reversible architecture choices.
-- Prefer products that can be meaningfully evaluated by one human reviewer.
+- Keep the first useful MVP small, testable, and understandable by one reviewer.
+- Favor products that can be prototyped in days, not quarters.
+- Avoid ideas that require enterprise sales before they become useful.
+- Avoid paid APIs unless clearly necessary for the wedge.
+- Prefer reversible architecture and distribution choices.
+- Prefer products that can be built, operated, and iterated on mostly through software and agent workflows.
+
+## Commercial lens
+
+State what kind of business seed the agent should look for.
+
+**Current commercial lens:**
+
+- Look for pain linked to budgets, measurable time savings, risk reduction, throughput improvement, or recurring operational friction.
+- Favor products with plausible subscription, usage-based, seat-based, or recurring report/monitoring pricing models.
+- Be skeptical of ideas that are interesting but have weak willingness-to-pay signals.
 
 ## Technology preferences
 
-Set default implementation preferences if relevant.
+Set implementation defaults for ideas that earn a go decision.
 
 **Current preferences:**
 
 - Backend: Python
-- Frontend: Next.js or other lightweight web UI
-- Data layer: SQLite or Postgres depending on need
+- Frontend: Next.js or another lightweight web UI when a UI is needed
+- Data layer: SQLite or Postgres depending on state and concurrency needs
 - Containerization: Docker
 - Testing: lightweight but real automated checks
 
@@ -59,8 +68,11 @@ Use this section to keep the agent away from dead ends.
 
 - generic chatbot wrappers
 - undifferentiated note apps
-- broad “AI for everything” platforms
-- ideas that depend on proprietary data access you do not have
+- broad "AI for everything" platforms
+- products that require proprietary data access you do not have
+- products that need physical inventory, physical delivery, or in-person operations
+- products that need compliance-heavy infrastructure at MVP stage unless unusually well justified
+- products that mainly work through large sales, support, or service organizations
 
 ## Human review posture
 
@@ -73,3 +85,11 @@ Choose one:
 **Current posture:**
 
 > Human gates enabled only before coding, before deployment, and before merge.
+
+## First-run preference
+
+Describe how conservative the agent should be on the first live pass.
+
+**Current first-run preference:**
+
+> Prioritize discovery, ranking, and validation. Do not code unless one opportunity clearly earns a go decision and the wedge is narrow.

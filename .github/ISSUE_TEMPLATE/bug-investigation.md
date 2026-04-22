@@ -8,6 +8,8 @@ labels: bug
 
 ## Steps to Reproduce
 
+## User Impact / Severity
+
 ## Root Cause
 
 ## Fix / Next Steps

@@ -8,8 +8,10 @@ Before making go/no-go decisions or major claims.
 
 ## Procedure
 1. List all claims and decisions.
-2. Check for supporting evidence.
-3. Flag unsupported or weak claims.
+2. Label each claim as observation, interpretation, or conclusion.
+3. Check for supporting evidence.
+4. Flag unsupported or weak claims.
+5. Call out where evidence exists for user pain but not for willingness to pay, or for buildability but not for operability.
 
 ## Expected Outputs
 - Evidence checklist
@@ -18,3 +20,4 @@ Before making go/no-go decisions or major claims.
 ## Common Failure Modes
 - Accepting intuition as evidence
 - Missing critical evidence gaps
+- treating multiple weak signals as one strong signal without saying so

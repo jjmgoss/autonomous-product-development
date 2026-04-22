@@ -1,83 +1,102 @@
 # Autonomous Product Development
 
-This repository is a starter kit for running an autonomous product-development loop with an LLM agent.
+This repository is an opinionated framework for autonomous product development, not a generic coding template.
 
-The repository is designed so the human changes exactly one file at the start of a run: `theme.md`.
-Everything else acts as operating instructions, templates, stage gates, and reusable skill packs.
+Its job is to help an agent move from a broad theme to one of two honest outcomes:
 
-## What this repo is for
+1. a validated, narrowly scoped product prototype with traceable reasoning, or
+2. a clearly documented no-go decision.
+
+The repository is designed so the human mainly edits one file at the start of a run: `theme.md`.
+Everything else exists to steer the agent, sharpen decisions, and leave behind inspectable artifacts.
+
+## What this repo is especially good for
+
+This version is tuned for first-run product discovery where the agent should look for opportunities that are:
+
+- fully virtual or mostly virtual to operate
+- plausible to monetize digitally
+- buildable and maintainable by a solo operator with agent assistance
+- narrow enough to prototype quickly
+- useful before any large enterprise sales motion or physical-world logistics
+
+The framework biases toward developer tools, workflow tools, automation products, niche SaaS, research/reporting products, monitoring and quality tooling, knowledge tools, and other software-first products with a clear narrow workflow.
+
+## What the agent should do
 
 Use this repository when you want an agent to:
 
-1. Research a broad area for real product pain.
-2. Select and validate a narrow opportunity.
-3. Define a minimal but coherent product.
-4. Break the work into milestones and issues.
-5. Implement a real prototype.
-6. Test, verify, and optionally deploy it.
-7. Compare the result against requirements and decide what to do next.
+1. research real user pain inside a broad focus area
+2. generate candidate product directions from repeated pain patterns
+3. compare those candidates using evidence, monetization, and agent-operability filters
+4. validate whether one opportunity is worth building now
+5. define a narrow MVP and vertical slices
+6. implement, verify, and optionally deploy the product
+7. compare the result against requirements and decide whether to iterate or stop
 
 ## Repo layout
 
-- `theme.md` — the one file the human edits before a run.
-- `agent/` — the agent operating system: system prompt, runbook, gates, lifecycle map, and repo conventions.
-- `skills/product/` — product research, scoring, validation, requirements, design docs, and roadmap guidance.
-- `skills/engineering/` — implementation loop, debugging, testing, code review, refactoring, release verification, and deployment readiness.
-- `skills/meta/` — critic, evidence checking, scope cutting, anti-slop, and recovery when stuck.
-- `skills/operations/` — observability, incident readiness, and feedback loops.
-- `docs/` — living artifacts the agent must maintain during a run.
-- `.github/` — labels, issue templates, milestone conventions, and PR template.
-- `templates/` — reusable status/update blocks.
+- `theme.md` - the main human-edited run configuration
+- `agent/` - repo-wide operating instructions, gates, lifecycle map, and conventions
+- `skills/product/` - discovery, scoring, validation, monetization, operability, requirements, design, and planning skills
+- `skills/engineering/` - implementation loop, debugging, testing, review, release, and deployment guidance
+- `skills/meta/` - anti-slop, evidence, critic, scope-cutting, and stuck-recovery guidance
+- `skills/operations/` - observability, incident readiness, and feedback-loop guidance for MVP operation
+- `docs/` - living artifacts the agent updates during each run
+- `.github/` - issue templates, labels, milestone notes, and PR template
+- `templates/` - reusable status and reporting blocks
 
-## Core idea
+## Core operating bias
 
-This is intentionally opinionated.
+This framework is intentionally not neutral.
 
-The agent should not be allowed to free-associate from a vague theme directly into code.
-It should earn the right to build by producing evidence, narrowing scope, and passing explicit stage gates.
+It biases toward:
 
-The framework biases toward:
-
-- narrow MVPs over broad product fantasies
 - real user pain over cleverness
-- vertical slices over sprawling scaffolding
-- verification over confident storytelling
-- documented decisions over hidden improvisation
+- repeated pain over isolated complaints
+- narrow wedges over platform fantasies
+- evidence over confidence
+- monetizable product seeds over impressive demos
+- virtual operations over physical delivery or heavy service layers
+- agent-compatible execution over ideas that require large human teams
+- honest no-go calls over forced implementation
+
+## First-run mode
+
+The best first use of this repository is discovery-first, not implementation-first.
+
+On a first live run, the agent should usually stop after producing:
+
+- a strong research summary
+- a scored candidate list
+- a human review artifact comparing the best candidates
+- an explicit recommendation about which idea to prototype first, if any
+
+If no idea earns a clear go decision, the correct result is a documented no-go or more targeted follow-up research.
 
 ## How to use it
 
-1. Edit `theme.md` with the focus area and constraints for the run.
-2. Point your coding agent at this repository.
-3. Use a simple instruction such as:
-   - “Inspect this repository, follow the instructions, and work the lifecycle until you reach a verified prototype or a documented no-go decision.”
-4. Optionally enforce the human gates in `agent/human-gates.md`.
-5. Review the outputs in `docs/`, issues, PRs, and running app artifacts.
+1. Edit `theme.md`.
+2. Read or provide `FIRST_RUN_PROMPT.md` to the agent for discovery-first work.
+3. Let the agent follow the instructions in `agent/` and the skill packs in `skills/`.
+4. Use the gate checklists in `agent/human-gates.md` to review research, validation, and release readiness.
+5. Review the living artifacts in `docs/`.
 
-## Expected outcome
+## Expected output from a strong run
 
-A successful run should leave behind:
+A strong run should leave behind:
 
-- evidence-backed product research
-- a clear product brief and requirements set
-- design decisions and implementation plan
-- a prioritized backlog and milestone breakdown
-- a working prototype or an honest no-go decision
-- release verification notes and retrospective learnings
-
-## What v3 adds
-
-Compared with earlier versions, v3 strengthens:
-
-- engineering execution skills
-- critic and evidence-checking routines
-- definition-of-done enforcement
-- GitHub issue template structure
-- operations and feedback-loop coverage
-- lifecycle gap analysis so the agent can see what is still weak
+- research grounded in repeated pain and substitutes
+- a ranked set of candidate opportunities
+- explicit monetization and agent-operability judgments
+- a selected product brief or a justified no-go
+- clear requirements, design, and roadmap artifacts if the idea earns a go decision
+- honest verification and lifecycle review
 
 ## Practical warning
 
-The weak link in autonomous product development is usually not code generation.
-It is product selection and scope discipline.
+Autonomous product development usually fails before implementation.
 
-This repository is built to force more skepticism before building and more honesty after building.
+The failure mode is not that the agent cannot write code. It is that the agent picks weak ideas, overstates validation, ignores substitutes, or chooses products that are not viable for a solo operator with software and agent workflows.
+
+This repository is built to make those mistakes harder.

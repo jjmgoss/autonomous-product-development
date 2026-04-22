@@ -4,30 +4,59 @@ Use this skill after research identifies multiple possible opportunities.
 
 ## Goal
 
-Choose the opportunity that best balances pain, evidence, tractable scope, and prototype value.
+Choose the candidate that best combines painful demand, believable monetization, narrow wedge clarity, and agent-compatible execution.
 
 ## Procedure
 
-1. List the strongest candidate opportunities.
-2. Score them in `docs/opportunity-scorecard.md`.
-3. Compare them on:
-   - pain intensity
-   - frequency
+1. Shortlist the strongest candidate wedges from `docs/research.md`.
+
+2. Score each candidate in `docs/opportunity-scorecard.md` on a 1-5 scale for:
+   - pain severity
+   - frequency or recurrence
    - evidence quality
-   - prototype feasibility
-   - differentiation potential
-   - monetization plausibility
-   - technical risk
-   - distribution difficulty
-4. Write down why the best-looking option might still be a bad choice.
-5. Select the narrowest promising option, not the broadest exciting one.
+   - willingness-to-pay signal
+   - narrow wedge clarity
+   - virtual delivery fit
+   - agent-operability
+   - prototype speed
+   - substitute weakness
+   - distribution tractability
+
+3. Record red flags separately from scores.
+   - Heavy compliance at MVP stage
+   - Requires field operations or inventory
+   - Needs large enterprise sales before value exists
+   - Depends on proprietary data you do not have
+   - Looks useful only after many future features
+
+4. Compare the top few candidates, not just the top score.
+   - Write why each top candidate is promising.
+   - Write why each top candidate may still fail.
+   - Produce a reviewer-friendly summary in `docs/candidate-review.md`.
+
+5. Use tie-breakers deliberately.
+   - Prefer stronger pain and evidence over a clever feature idea.
+   - Prefer a narrower wedge with believable value over a larger but speculative category.
+   - Prefer the product that could become useful fastest without requiring a support organization.
+
+6. Select one candidate only if it still looks strong after the negative case is written.
 
 ## Decision rule
 
-Default toward the idea that can produce a meaningful prototype quickly without requiring large sales, heavy trust barriers, or proprietary access.
+Default toward the opportunity that:
 
-## Anti-patterns
+- solves a painful recurring workflow
+- has plausible willingness-to-pay signals
+- can start as a narrow digital wedge
+- can be built and operated mostly through software and agent workflows
+- does not require enterprise machinery before it becomes useful
+
+If no candidate clears that bar, do not force a selection.
+
+## Common failure modes
 
 - choosing the most ambitious idea because it sounds startup-worthy
-- choosing a product that cannot be evaluated by one reviewer
+- using totals without looking at fatal weaknesses
+- confusing direct competitors with current substitutes and workarounds
+- ranking buildability above user pain and commercial relevance
 - choosing a product that is only compelling if many future features also land
