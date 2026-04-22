@@ -1,5 +1,8 @@
 # Framework vNext Summary
 
+Archived historical summary from an earlier polishing pass.
+The current launch model is described by `START_HERE.md`, `ACTIVE_RUN.md`, and `LAUNCH_MODEL_SUMMARY.md`.
+
 ## What changed
 
 This polishing pass strengthened the repository around the earliest and highest-risk stages of autonomous product development:
@@ -58,17 +61,3 @@ It remains intentionally light on:
 - heavy production operations machinery
 
 Those areas should only be expanded when a selected opportunity truly requires them.
-
-## Best-fit product directions now
-
-This framework is now best suited to discover and evaluate product ideas such as:
-
-- developer tools
-- workflow automation tools
-- monitoring, QA, and review products
-- agent infrastructure and orchestration tools
-- niche SaaS with a narrow workflow
-- knowledge and research tooling
-- recurring informational or reporting products that can be created and operated mostly virtually
-
-It is a worse fit for ideas that depend on physical operations, call centers, field work, compliance-heavy infrastructure at MVP stage, or immediate enterprise-scale sales motions.

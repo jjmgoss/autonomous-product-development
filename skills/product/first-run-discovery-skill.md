@@ -4,19 +4,19 @@
 
 Run a discovery-first pass that produces a ranked set of candidate opportunities without rushing into implementation.
 
-The first live run should produce a bounded, fully completed review package, not a sprawling research archive or a premature codebase.
+The discovery run should produce a bounded, fully completed review package, not a sprawling research archive or a premature codebase.
 
 ## When to use
 
-- the first live run of the framework
+- a fresh discovery pass for the current theme
 - any run where the goal is to discover what to build next
 - any run where the current opportunity set is weak or stale
 
 ## Procedure
 
 1. Read `theme.md` carefully and extract the preferred product profile.
-2. Read `FIRST_RUN_MODE.md` and adopt its source-count, candidate-count, completion, and stop-boundary rules.
-3. Create the run directory structure, including `artifacts/runs/<run-id>/review-package/`.
+2. Read `START_HERE.md`, `ACTIVE_RUN.md`, and `DISCOVERY_RUN_MODE.md`.
+3. Run `python scripts/start_discovery_run.py` to create the run directory structure, including `artifacts/runs/<run-id>/review-package/`.
 4. Use the research skill to identify repeated pain and workflow friction.
 5. Keep the saved corpus bounded and auditable.
 6. Generate candidate wedges from the strongest pain patterns.
@@ -26,7 +26,7 @@ The first live run should produce a bounded, fully completed review package, not
 10. Create `artifacts/runs/<run-id>/review-package/candidate-review.md` for human review.
 11. Create `artifacts/runs/<run-id>/reports/discovery-summary.md` and `artifacts/runs/<run-id>/run-index.md`.
 12. Decide whether one candidate earns a go decision, more validation, or no-go.
-13. Run the first-run checker against the completed run before stopping.
+13. Run `python scripts/check_repo_readiness.py --run-id <run-id>` before stopping.
 
 ## Required outputs
 

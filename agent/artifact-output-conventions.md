@@ -42,6 +42,7 @@ artifacts/
 - Use the same run ID in both `research-corpus/` and `artifacts/` for the same run.
 - Use lowercase kebab-case for project slugs.
 - Prefer descriptive filenames such as `discovery-summary.md` or `candidate-ranking.csv` over vague names.
+- Do not reuse an existing run folder unless a human explicitly wants to continue that exact run.
 
 ## Artifact manifest
 

@@ -40,9 +40,10 @@ Work through the lifecycle in this order unless new evidence forces a return to 
 7. Verification and release readiness
 8. Retrospective and next-step recommendation
 
-On a first research-heavy run, you may stop after stage 3 if the strongest honest outcome is a ranked candidate set plus a recommendation rather than a build decision.
+On a research-heavy discovery run, you may stop after stage 3 if the strongest honest outcome is a ranked candidate set plus a recommendation rather than a build decision.
 
-On the first live run, treat `FIRST_RUN_MODE.md` as a hard boundary file.
+Treat `START_HERE.md` as the canonical bootstrap entrypoint.
+Treat `ACTIVE_RUN.md` as the canonical active-run selector.
 
 ## Required artifacts
 
@@ -94,13 +95,15 @@ At each stage:
 
 At the start of a discovery-first run:
 
-- create a run ID
+- run the readiness check named in `ACTIVE_RUN.md`
+- use the launcher named in `ACTIVE_RUN.md` to create a fresh run ID unless a human explicitly provides one
 - initialize matching corpus and artifact folders
 - initialize the run-scoped review package under `artifacts/runs/<run-id>/review-package/`
-- keep source capture and candidate generation within the limits in `FIRST_RUN_MODE.md`
+- keep source capture and candidate generation within the limits in `DISCOVERY_RUN_MODE.md`
 - use the files in `docs/` as guidance rather than as final first-run outputs
 - do not treat template-shaped artifacts as complete work
-- stop at the first-run handoff point unless a human explicitly approves more
+- stop at the discovery handoff point unless a human explicitly approves more
+- do not invent launcher scripts or unsupported repo commands
 
 ## Anti-slop requirements
 
@@ -127,15 +130,15 @@ During research, opportunity selection, and validation:
 - judge whether a solo operator with agents could plausibly build and maintain it
 - make the final ranking and recommendation legible from the run index and review package
 
-## First-run restrictions
+## Discovery-run restrictions
 
-Unless a human explicitly authorizes a later stage, the first live run must not:
+Unless a human explicitly authorizes a later stage, a discovery run must not:
 
 - implement product code
 - deploy anything
 - create noisy external side effects
 - generate excessive numbers of sources or candidate ideas
-- continue past the review package defined in `FIRST_RUN_MODE.md`
+- continue past the review package defined in `DISCOVERY_RUN_MODE.md`
 
 ## Coding requirements
 
@@ -157,6 +160,6 @@ A human reviewer should be able to inspect the repository and see:
 3. a working prototype or justified no-go decision
 4. an honest account of what is incomplete or uncertain
 
-On the first live run specifically, Gate 1 should be reviewable primarily from the run index and review package inside `artifacts/runs/<run-id>/`.
+On a discovery run, Gate 1 should be reviewable primarily from the run index and review package inside `artifacts/runs/<run-id>/`.
 
-Begin by reading `theme.md`, `agent/runbook.md`, `agent/human-gates.md`, and `agent/lifecycle-map.md`.
+Begin by reading `START_HERE.md`, `ACTIVE_RUN.md`, `theme.md`, `agent/runbook.md`, `agent/human-gates.md`, and `agent/lifecycle-map.md`.
