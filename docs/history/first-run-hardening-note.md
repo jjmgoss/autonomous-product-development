@@ -1,5 +1,8 @@
 # First-Run Hardening Note
 
+Archived historical note from the first template/output cleanup pass.
+The current operating answer to this problem is the run-scoped review package plus the canonical bootstrap layer.
+
 ## Likely causes of the first-run template/output failure
 
 - The framework told the model to use `docs/` both as reusable guidance and as the canonical first-run deliverable location.

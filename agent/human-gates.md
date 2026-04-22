@@ -55,7 +55,7 @@ Gate 1 rejection triggers:
 - the idea requires heavy human services, field work, or compliance before it becomes useful
 - the product looks like a demo, not a viable narrow business seed
 
-On the first live run, Gate 1 is also the default stopping point.
+When `ACTIVE_RUN.md` selects discovery, Gate 1 is also the default stopping point.
 Do not continue into implementation unless a human explicitly approves the next stage.
 
 ### Gate 2: Before deployment or public exposure

@@ -11,12 +11,16 @@ As the framework evolves, this is where helper scripts can live for:
 
 ## Included helper
 
-- `check_first_run_readiness.py` verifies that the key files and directories for a discovery-first first run are present.
+- `check_repo_readiness.py` validates the canonical bootstrap surfaces and can also validate a completed discovery run package.
+- `start_discovery_run.py` creates a fresh discovery run ID, initializes the run directories, and writes manifest stubs.
+- `check_first_run_readiness.py` remains as a compatibility wrapper for older prompts.
 
-Run it from the repo root with:
+Only run scripts that are explicitly named in `ACTIVE_RUN.md` or in this file.
+
+Run the readiness check from the repo root with:
 
 ```text
-python scripts/check_first_run_readiness.py
+python scripts/check_repo_readiness.py
 ```
 
 Do not add automation here unless it clearly improves agent execution quality or human review quality.

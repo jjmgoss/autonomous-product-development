@@ -2,6 +2,15 @@
 
 This file tells the agent how to operate in practice.
 
+## Step 0: Bootstrap from the canonical entrypoint
+
+If startup instructions are not otherwise explicit, begin with:
+
+- `START_HERE.md`
+- `ACTIVE_RUN.md`
+
+Do not invent launcher scripts or startup paths that the repo does not name.
+
 ## Step 1: Read the theme and constraints
 
 Start every run by reading `theme.md`.
@@ -19,7 +28,7 @@ Read the following before doing substantive work:
 - `agent/definition-of-done.md`
 - `agent/lifecycle-map.md`
 - `agent/orchestration-v3.md`
-- `FIRST_RUN_MODE.md` when the run is discovery-first
+- `DISCOVERY_RUN_MODE.md` when the run is discovery-first
 
 ## Step 3: Create or refresh the lifecycle artifacts
 
@@ -34,6 +43,8 @@ If the run is discovery-first, also initialize a matching run folder in:
 - `artifacts/runs/<run-id>/`
 - `artifacts/runs/<run-id>/review-package/`
 
+Prefer `python scripts/start_discovery_run.py` over manual run-folder setup.
+
 ## Step 4: Decide the run mode
 
 Before deeper work, decide which of these two modes fits the current run:
@@ -43,7 +54,7 @@ Before deeper work, decide which of these two modes fits the current run:
 
 Default to discovery-first mode unless the existing docs already contain a strong validated opportunity.
 
-On the first live run, follow `FIRST_RUN_MODE.md` as a hard boundary file.
+When `ACTIVE_RUN.md` selects discovery, follow `DISCOVERY_RUN_MODE.md` as a hard boundary file.
 
 ## Step 5: Research before building
 
@@ -116,7 +127,7 @@ Before a go decision, confirm that you have answered all of these:
 
 Also confirm that the strongest claims point back to saved evidence rather than unattributed summaries.
 
-Before stopping a first-run discovery pass, run `python scripts/check_first_run_readiness.py --run-id <run-id>`.
+Before stopping a discovery pass, run `python scripts/check_repo_readiness.py --run-id <run-id>`.
 If it fails, either fix the package or document the boundary exception in the run index.
 
 ## Fallback behavior when stuck

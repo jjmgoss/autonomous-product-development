@@ -10,6 +10,12 @@ Its job is to help an agent move from a broad theme to one of two honest outcome
 The repository is designed so the human mainly edits one file at the start of a run: `theme.md`.
 Everything else exists to steer the agent, sharpen decisions, and leave behind inspectable artifacts.
 
+The canonical bootstrap path is:
+
+1. `START_HERE.md`
+2. `ACTIVE_RUN.md`
+3. the boundary file and helper commands named there
+
 ## What this repo is especially good for
 
 This version is tuned for first-run product discovery where the agent should look for opportunities that are:
@@ -36,7 +42,11 @@ Use this repository when you want an agent to:
 
 ## Repo layout
 
+- `START_HERE.md` - canonical repo bootstrap entrypoint for agents
+- `ACTIVE_RUN.md` - canonical active-run selector and launch contract
 - `theme.md` - the main human-edited run configuration
+- `DISCOVERY_RUN_MODE.md` - boundary file for discovery runs
+- `DISCOVERY_RUN_PROMPT.md` - detailed discovery-run prompt when a tiny prompt is not enough
 - `agent/` - repo-wide operating instructions, gates, lifecycle map, and conventions
 - `skills/product/` - discovery, scoring, validation, monetization, operability, requirements, design, and planning skills
 - `skills/engineering/` - implementation loop, debugging, testing, review, release, and deployment guidance
@@ -63,11 +73,11 @@ It biases toward:
 - agent-compatible execution over ideas that require large human teams
 - honest no-go calls over forced implementation
 
-## First-run mode
+## Discovery mode
 
-The best first use of this repository is discovery-first, not implementation-first.
+The default operating mode for a new theme is discovery-first, not implementation-first.
 
-On a first live run, the agent should usually stop after producing:
+On a discovery run, the agent should usually stop after producing:
 
 - a strong research summary
 - a scored candidate list
@@ -76,7 +86,7 @@ On a first live run, the agent should usually stop after producing:
 
 Those first-run outputs should live under `artifacts/runs/<run-id>/`, with `run-index.md` as the review entry point and `review-package/` as the canonical Gate 1 bundle.
 
-Use `FIRST_RUN_MODE.md` as the hard boundary file for that run.
+Use `DISCOVERY_RUN_MODE.md` as the hard boundary file for that run.
 Use `research-corpus/` to store saved evidence and `artifacts/` to store generated run outputs.
 
 If no idea earns a clear go decision, the correct result is a documented no-go or more targeted follow-up research.
@@ -84,11 +94,13 @@ If no idea earns a clear go decision, the correct result is a documented no-go o
 ## How to use it
 
 1. Edit `theme.md`.
-2. Run `python scripts/check_first_run_readiness.py`.
-3. Read or provide `FIRST_RUN_PROMPT.md` to the agent for discovery-first work.
-4. Let the agent follow the instructions in `agent/`, `FIRST_RUN_MODE.md`, and the skill packs in `skills/`.
-5. Use the gate checklists in `agent/human-gates.md` to review research, validation, and release readiness.
-6. Review the run through `artifacts/runs/<run-id>/run-index.md`, then inspect the saved evidence in `research-corpus/` and any later-stage project docs in `docs/`.
+2. Read `START_HERE.md`.
+3. Confirm or update `ACTIVE_RUN.md`.
+4. Run `python scripts/check_repo_readiness.py`.
+5. For discovery runs, run `python scripts/start_discovery_run.py`.
+6. If you need a detailed launch prompt, use `DISCOVERY_RUN_PROMPT.md`.
+7. Use the gate checklists in `agent/human-gates.md` to review research, validation, and release readiness.
+8. Review the run through `artifacts/runs/<run-id>/run-index.md`, then inspect the saved evidence in `research-corpus/` and any later-stage project docs in `docs/`.
 
 ## Expected output from a strong run
 

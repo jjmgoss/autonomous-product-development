@@ -1,5 +1,8 @@
 # First-Run Hardening Summary
 
+Archived historical note from the first hardening pass.
+The active operating surfaces now live in `START_HERE.md`, `ACTIVE_RUN.md`, and the generalized discovery bootstrap files.
+
 ## What framework weaknesses were fixed
 
 - First-run outputs no longer target reusable docs in place.

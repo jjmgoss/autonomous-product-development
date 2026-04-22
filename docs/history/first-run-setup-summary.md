@@ -1,6 +1,7 @@
 # First-Run Setup Summary
 
-This setup pass finished the repo work needed to make the first live discovery run bounded, evidence-backed, and easy to review.
+Archived historical note from the initial bootstrap pass.
+The durable operating surfaces now live in `START_HERE.md`, `ACTIVE_RUN.md`, `DISCOVERY_RUN_MODE.md`, and `scripts/check_repo_readiness.py`.
 
 ## What was added
 

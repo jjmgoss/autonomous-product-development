@@ -8,6 +8,7 @@ These conventions keep autonomous work legible and reviewable.
 - Prefer plain language in docs.
 - Keep filenames predictable.
 - Update existing docs rather than creating near-duplicates.
+- Route startup through `START_HERE.md` and `ACTIVE_RUN.md` instead of scattering launch behavior.
 
 ## Artifact roles
 
@@ -38,11 +39,16 @@ Use the non-doc output directories for clearly different purposes:
 
 Use `YYYYMMDD-theme-slug-rN` for run IDs.
 
+Use `python scripts/start_discovery_run.py` when discovery mode is active unless a human explicitly provides a run ID.
+
 Use the same run ID in:
 
 - `research-corpus/runs/<run-id>/`
 - `artifacts/runs/<run-id>/`
 - any reviewer-facing run summary
+
+Never reuse an existing run ID by default.
+If a collision exists, increment `rN` until both run roots are unused.
 
 ## Decision logging
 

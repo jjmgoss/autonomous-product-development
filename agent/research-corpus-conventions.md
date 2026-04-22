@@ -29,6 +29,9 @@ research-corpus/
 
 Use `YYYYMMDD-theme-slug-rN`.
 
+Prefer `python scripts/start_discovery_run.py` to create discovery-run IDs and matching folders.
+If you are not using the helper, you must still choose a fresh unused ID and check both run roots before writing files.
+
 Examples:
 
 - `20260421-devtools-r1`

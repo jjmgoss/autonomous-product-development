@@ -1,5 +1,8 @@
 # First-Run Readiness Note
 
+Archived historical note from the initial bootstrap phase.
+The current diagnosis and bootstrap model now live in `docs/launch-diagnosis.md` and `START_HERE.md`.
+
 ## Purpose
 
 Capture the specific setup gaps that still needed to be closed before the first live discovery run.
