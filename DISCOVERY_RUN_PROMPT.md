@@ -16,7 +16,9 @@ Before doing anything else:
 2. Read `ACTIVE_RUN.md` and the boundary file it names.
 3. Run the readiness check named in `ACTIVE_RUN.md`.
 4. If the repo is not `READY`, stop and report the missing framework gaps.
-5. If the repo is `READY`, run the launcher command named in `ACTIVE_RUN.md` and execute the discovery run immediately.
+5. If the repo is `READY`, run the launcher command named in `ACTIVE_RUN.md`.
+6. After launch, immediately do the actual discovery work inside the new run paths.
+7. Run the completion check named in `ACTIVE_RUN.md` only after the package is fully populated.
 
 Start from `theme.md` and look for monetizable, fully virtual, agent-compatible product opportunities that could be primarily built, operated, maintained, and iterated on through software and agent workflows, with human approval at key checkpoints.
 
@@ -39,21 +41,25 @@ Important output rule:
 - files under `docs/` are reusable framework guides and templates
 - the canonical final outputs for this run belong under `artifacts/runs/<run-id>/review-package/`
 - the run root should provide a reviewer-friendly entry point through `artifacts/runs/<run-id>/run-index.md`
+- the launcher only creates the run shell; it does not complete the manifests or reviewer package for you
 
 Required workflow:
 1. Follow `START_HERE.md` and `ACTIVE_RUN.md` rather than inventing your own startup path.
 2. Use the launcher helper to create a fresh run ID and initialize matching folders.
 3. Save between 6 and 12 meaningful sources with manifest entries, normalized text when useful, and short source notes.
-4. Use at least 3 source types when practical. If you cannot, explicitly explain why in the run index.
-5. Research repeated pain and unmet needs in the theme area.
-6. Generate at most 5 candidate opportunities from those pain patterns.
-7. Score at most the top 3 candidates in detail.
-8. Produce a reviewer-friendly comparison of the strongest candidates.
-9. Make an explicit recommendation:
+4. Update `research-corpus/runs/<run-id>/manifest.json` as you save sources. It must contain real source entries before the run can stop.
+5. Use at least 3 source types when practical. If you cannot, explicitly explain why in the run index.
+6. Research repeated pain and unmet needs in the theme area.
+7. Generate at most 5 candidate opportunities from those pain patterns.
+8. Keep `research-corpus/runs/<run-id>/candidate-links.md` meaningfully populated with supporting and weakening evidence IDs for each serious candidate.
+9. Score at most the top 3 candidates in detail.
+10. Produce a reviewer-friendly comparison of the strongest candidates.
+11. Complete `artifacts/runs/<run-id>/manifest.json` and `artifacts/runs/<run-id>/run-index.md` as part of the required package.
+12. Make an explicit recommendation:
    - prototype candidate A first
    - continue validating candidates A and B
    - no current candidate is strong enough
-10. Run the completion check named in `ACTIVE_RUN.md` before stopping.
+13. Run the completion check named in `ACTIVE_RUN.md` before stopping.
 
 Major claims in the ranking and recommendation must cite saved evidence IDs.
 If a claim describes a repeated pattern, back it with more than one evidence ID when possible.
@@ -75,6 +81,8 @@ Completion rules:
 - the run is not complete while template prompts such as `Choose one:` or `Explain why.` remain in final artifacts
 - the run is not complete while required sections are blank or obviously unresolved
 - the run is not complete if only one candidate is developed while the others are just names or thin bullets
+- the run is not complete if the manifests are still empty, still marked as launch scaffolds, or missing required entries
+- the run is not complete if the run index still reads like a launch scaffold or leaves core reviewer fields unresolved
 - the run is not complete if the completion check fails and the run index does not explain an allowed boundary exception
 
 For each top candidate, explain:

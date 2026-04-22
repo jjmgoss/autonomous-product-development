@@ -1,11 +1,3 @@
-# Legacy Discovery Skill Alias
-
-Use `skills/product/discovery-run-skill.md` for the canonical discovery-run operating instructions.
-This file remains only as a compatibility alias for older prompts.
-
-Do not prefer this alias in new repo wiring.
-Route new discovery guidance through `START_HERE.md`, `ACTIVE_RUN.md`, and `skills/product/discovery-run-skill.md`.
-*** Add File: c:\Users\jjmgo\coding_projects\autonomous-product-development\skills\product\discovery-run-skill.md
 # Product Skill: Discovery Run
 
 ## Goal

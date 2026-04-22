@@ -18,7 +18,7 @@ The canonical bootstrap path is:
 
 ## What this repo is especially good for
 
-This version is tuned for first-run product discovery where the agent should look for opportunities that are:
+This version is tuned for discovery-stage product runs where the agent should look for opportunities that are:
 
 - fully virtual or mostly virtual to operate
 - plausible to monetize digitally
@@ -84,7 +84,19 @@ On a discovery run, the agent should usually stop after producing:
 - a human review artifact comparing the best candidates
 - an explicit recommendation about which idea to prototype first, if any
 
-Those first-run outputs should live under `artifacts/runs/<run-id>/`, with `run-index.md` as the review entry point and `review-package/` as the canonical Gate 1 bundle.
+Those discovery outputs should live under `artifacts/runs/<run-id>/`, with `run-index.md` as the reviewer entry point and `review-package/` as the canonical Gate 1 bundle.
+
+The required discovery sequence is:
+
+1. run the readiness check
+2. run the launcher
+3. do the actual research and candidate-comparison work
+4. populate both manifests, the run index, and the reviewer package
+5. run the completion check at the end
+6. stop at Gate 1
+
+The launcher and checker are bookends around the discovery work.
+They do not replace the middle of the run.
 
 Use `DISCOVERY_RUN_MODE.md` as the hard boundary file for that run.
 Use `research-corpus/` to store saved evidence and `artifacts/` to store generated run outputs.
@@ -98,9 +110,11 @@ If no idea earns a clear go decision, the correct result is a documented no-go o
 3. Confirm or update `ACTIVE_RUN.md`.
 4. Run `python scripts/check_repo_readiness.py`.
 5. For discovery runs, run `python scripts/start_discovery_run.py`.
-6. If you need a detailed launch prompt, use `DISCOVERY_RUN_PROMPT.md`.
-7. Use the gate checklists in `agent/human-gates.md` to review research, validation, and release readiness.
-8. Review the run through `artifacts/runs/<run-id>/run-index.md`, then inspect the saved evidence in `research-corpus/` and any later-stage project docs in `docs/`.
+6. Do the actual discovery work inside the launched run paths.
+7. Run `python scripts/check_repo_readiness.py --run-id <run-id>` only after the package is complete.
+8. If you need a detailed launch prompt, use `DISCOVERY_RUN_PROMPT.md`.
+9. Use the gate checklists in `agent/human-gates.md` to review research, validation, and release readiness.
+10. Review the run through `artifacts/runs/<run-id>/run-index.md`, then inspect the saved evidence in `research-corpus/` and any later-stage project docs in `docs/`.
 
 ## Expected output from a strong run
 

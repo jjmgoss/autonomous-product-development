@@ -86,10 +86,10 @@ Choose one:
 
 > Human gates enabled only before coding, before deployment, and before merge.
 
-## First-run preference
+## Discovery-run preference
 
-Describe how conservative the agent should be on the first live pass.
+Describe how conservative the agent should be on the next discovery pass.
 
-**Current first-run preference:**
+**Current discovery-run preference:**
 
 > Prioritize discovery, ranking, and validation. Do not code unless one opportunity clearly earns a go decision and the wedge is narrow.

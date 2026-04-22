@@ -28,7 +28,7 @@ REQUIRED_FILES = [
     "docs/validation.md",
     "docs/launch-diagnosis.md",
     "skills/product/research-skill.md",
-    "skills/product/first-run-discovery-skill.md",
+    "skills/product/discovery-run-skill.md",
     "skills/product/monetization-sanity-skill.md",
     "skills/product/agent-operability-skill.md",
     "skills/product/competitor-substitute-analysis-skill.md",
@@ -46,6 +46,7 @@ REQUIRED_FILES = [
     "artifacts/projects/README.md",
     "artifacts/shared/README.md",
     "scripts/start_discovery_run.py",
+    "scripts/clean_empty_run_dirs.py",
     "LAUNCH_MODEL_SUMMARY.md",
 ]
 
@@ -85,6 +86,8 @@ ARTIFACT_MANIFEST_FIELDS = {
     "notes",
 }
 
+LAUNCH_SCAFFOLD_MARKER = "launch scaffold"
+
 FORBIDDEN_PATTERNS = [
     re.compile(r"<run-id>", re.IGNORECASE),
     re.compile(r"<name>", re.IGNORECASE),
@@ -101,6 +104,7 @@ FORBIDDEN_PATTERNS = [
 REQUIRED_RUN_INDEX_HEADINGS = {
     "## run context",
     "## boundary status",
+    "## execution checklist",
     "## reviewer route",
     "## recommendation snapshot",
     "## evidence that could overturn the ranking",
@@ -135,13 +139,41 @@ REQUIRED_ACTIVE_RUN_FIELDS = [
 MIN_NONEMPTY_LINES = {
     "START_HERE.md": 12,
     "ACTIVE_RUN.md": 16,
-    "run-index.md": 12,
+    "run-index.md": 18,
     "review-package/research.md": 25,
     "review-package/opportunity-scorecard.md": 18,
     "review-package/candidate-review.md": 18,
     "review-package/validation.md": 18,
     "reports/discovery-summary.md": 16,
-    "candidate-links.md": 10,
+    "candidate-links.md": 12,
+}
+
+RUN_INDEX_REQUIRED_FIELDS = {
+    "actual source count",
+    "actual source-type count",
+    "actual candidate count",
+    "recommended outcome",
+    "leading candidate",
+    "why the leader won",
+    "why it may still fail",
+    "requested human decision",
+    "stop status",
+}
+
+RUN_INDEX_PLACEHOLDER_SNIPPETS = (
+    "in progress",
+    "replace with",
+    "do not fill until",
+    "launch complete, research and package completion still in progress",
+)
+
+CANDIDATE_LINK_REQUIRED_BULLETS = {
+    "short thesis",
+    "status in ranking",
+    "supporting evidence ids",
+    "weakening evidence ids",
+    "substitute pressure notes",
+    "open questions that could change ranking",
 }
 
 
@@ -205,6 +237,67 @@ def parse_boundary_fields(text: str) -> tuple[str, str]:
     return boundary_result, exception_note
 
 
+def parse_markdown_bullets(text: str) -> dict[str, str]:
+    bullets: dict[str, str] = {}
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line.startswith("- ") or ":" not in line:
+            continue
+        key, value = line[2:].split(":", 1)
+        bullets[key.strip().lower()] = value.strip()
+    return bullets
+
+
+def count_candidate_sections(text: str) -> int:
+    return sum(1 for line in text.splitlines() if line.strip().startswith("## Candidate:"))
+
+
+def validate_run_index(relative_path: str) -> list[str]:
+    errors = validate_markdown(relative_path, REQUIRED_RUN_INDEX_HEADINGS)
+    text, load_error = load_text(relative_path)
+    if load_error:
+        return [load_error]
+    assert text is not None
+
+    bullets = parse_markdown_bullets(text)
+    missing_fields = sorted(field for field in RUN_INDEX_REQUIRED_FIELDS if not bullets.get(field))
+    if missing_fields:
+        errors.append(f"{relative_path} is missing populated run-index fields: {', '.join(missing_fields)}")
+
+    placeholder_fields: list[str] = []
+    for field in RUN_INDEX_REQUIRED_FIELDS:
+        value = bullets.get(field, "")
+        lowered = value.lower()
+        if any(snippet in lowered for snippet in RUN_INDEX_PLACEHOLDER_SNIPPETS):
+            placeholder_fields.append(field)
+    if placeholder_fields:
+        errors.append(
+            f"{relative_path} still contains placeholder run-index values for: {', '.join(sorted(placeholder_fields))}"
+        )
+    return errors
+
+
+def validate_candidate_links(relative_path: str) -> list[str]:
+    errors = validate_markdown(relative_path)
+    text, load_error = load_text(relative_path)
+    if load_error:
+        return [load_error]
+    assert text is not None
+
+    sections = re.split(r"(?m)^## Candidate:\s*", text)
+    candidate_sections = sections[1:]
+    if not candidate_sections:
+        errors.append(f"{relative_path} must contain at least one `## Candidate:` section.")
+        return errors
+
+    for index, section in enumerate(candidate_sections, start=1):
+        bullets = parse_markdown_bullets(section)
+        missing = sorted(field for field in CANDIDATE_LINK_REQUIRED_BULLETS if not bullets.get(field))
+        if missing:
+            errors.append(f"{relative_path} candidate #{index} is missing fields: {', '.join(missing)}")
+    return errors
+
+
 def exception_is_documented(run_index_text: str) -> bool:
     boundary_result, exception_note = parse_boundary_fields(run_index_text)
     if boundary_result.lower() != "exception":
@@ -224,6 +317,11 @@ def validate_markdown(relative_path: str, required_headings: set[str] | None = N
     min_lines = MIN_NONEMPTY_LINES.get(relative_key, MIN_NONEMPTY_LINES.get(Path(relative_path).name, 0))
     if min_lines and nonempty_line_count(text) < min_lines:
         errors.append(f"{relative_path} looks too thin ({nonempty_line_count(text)} non-empty lines).")
+
+    if LAUNCH_SCAFFOLD_MARKER in text.lower():
+        errors.append(
+            f"{relative_path} is still a launch scaffold. Replace the scaffold text with completed run content before the completion check."
+        )
 
     matches = find_forbidden_matches(text)
     if matches:
@@ -258,9 +356,15 @@ def validate_research_manifest(relative_path: str) -> list[str]:
         return [load_error]
     assert data is not None
 
+    if str(data.get("population_status", "")).strip().lower() == LAUNCH_SCAFFOLD_MARKER:
+        errors.append(
+            f"{relative_path} is still marked as a launch scaffold. Save real source entries and remove the scaffold status before the completion check."
+        )
+
     sources = data.get("sources")
     if not isinstance(sources, list) or not sources:
-        return [f"{relative_path} must contain a non-empty 'sources' list."]
+        errors.append(f"{relative_path} must contain a non-empty 'sources' list.")
+        return errors
 
     for index, source in enumerate(sources, start=1):
         if not isinstance(source, dict):
@@ -279,9 +383,15 @@ def validate_artifact_manifest(relative_path: str, run_id: str) -> list[str]:
         return [load_error]
     assert data is not None
 
+    if str(data.get("population_status", "")).strip().lower() == LAUNCH_SCAFFOLD_MARKER:
+        errors.append(
+            f"{relative_path} is still marked as a launch scaffold. Add completed artifact entries and remove the scaffold status before the completion check."
+        )
+
     artifacts = data.get("artifacts")
     if not isinstance(artifacts, list) or not artifacts:
-        return [f"{relative_path} must contain a non-empty 'artifacts' list."]
+        errors.append(f"{relative_path} must contain a non-empty 'artifacts' list.")
+        return errors
 
     paths: set[str] = set()
     for index, artifact in enumerate(artifacts, start=1):
@@ -311,6 +421,7 @@ def validate_artifact_manifest(relative_path: str, run_id: str) -> list[str]:
 
 def validate_run(run_id: str) -> int:
     print(f"Checking discovery run package completeness for {run_id}.\n")
+    print("This validator is for the end of the discovery run, after the manifests and reviewer package are fully populated.\n")
 
     required_run_files = [
         f"research-corpus/runs/{run_id}/manifest.json",
@@ -333,24 +444,37 @@ def validate_run(run_id: str) -> int:
     errors: list[str] = []
     errors.extend(validate_research_manifest(f"research-corpus/runs/{run_id}/manifest.json"))
     errors.extend(validate_artifact_manifest(f"artifacts/runs/{run_id}/manifest.json", run_id))
-    errors.extend(validate_markdown(f"artifacts/runs/{run_id}/run-index.md", REQUIRED_RUN_INDEX_HEADINGS))
+    errors.extend(validate_run_index(f"artifacts/runs/{run_id}/run-index.md"))
     errors.extend(validate_markdown(f"artifacts/runs/{run_id}/review-package/research.md"))
     errors.extend(validate_markdown(f"artifacts/runs/{run_id}/review-package/opportunity-scorecard.md"))
     errors.extend(validate_markdown(f"artifacts/runs/{run_id}/review-package/candidate-review.md"))
     errors.extend(validate_markdown(f"artifacts/runs/{run_id}/review-package/validation.md"))
     errors.extend(validate_markdown(f"artifacts/runs/{run_id}/reports/discovery-summary.md"))
-    errors.extend(validate_markdown(f"research-corpus/runs/{run_id}/candidate-links.md"))
+    errors.extend(validate_candidate_links(f"research-corpus/runs/{run_id}/candidate-links.md"))
 
     research_manifest, _ = load_json(f"research-corpus/runs/{run_id}/manifest.json")
+    artifact_manifest, _ = load_json(f"artifacts/runs/{run_id}/manifest.json")
     run_index_text, _ = load_text(f"artifacts/runs/{run_id}/run-index.md")
     candidate_links_text, _ = load_text(f"research-corpus/runs/{run_id}/candidate-links.md")
-    assert research_manifest is not None and run_index_text is not None and candidate_links_text is not None
+    assert (
+        research_manifest is not None
+        and artifact_manifest is not None
+        and run_index_text is not None
+        and candidate_links_text is not None
+    )
 
     documented_exception = exception_is_documented(run_index_text)
     sources = research_manifest.get("sources", [])
     source_count = len(sources)
     source_types = {source.get("source_type") for source in sources if isinstance(source, dict) and source.get("source_type")}
-    candidate_count = sum(1 for line in candidate_links_text.splitlines() if line.strip().startswith("## Candidate:"))
+    candidate_count = count_candidate_sections(candidate_links_text)
+    launch_only = any(
+        marker == LAUNCH_SCAFFOLD_MARKER
+        for marker in [
+            str(research_manifest.get("population_status", "")).strip().lower(),
+            str(artifact_manifest.get("population_status", "")).strip().lower(),
+        ]
+    ) or LAUNCH_SCAFFOLD_MARKER in run_index_text.lower() or LAUNCH_SCAFFOLD_MARKER in candidate_links_text.lower()
 
     boundary_errors: list[str] = []
     if source_count < 6 or source_count > 12:
@@ -379,7 +503,12 @@ def validate_run(run_id: str) -> int:
         return 0
 
     print()
-    print(f"NOT READY  Found {len(errors)} completeness issue(s) in run package {run_id}.")
+    if launch_only and source_count == 0 and candidate_count == 0:
+        print(f"NOT READY  Run package {run_id} has only been launched so far; the research and review package have not been populated yet.")
+        print("NEXT  Save real sources, fill both manifests, complete the reviewer artifacts, then rerun this completion check last.")
+    else:
+        print(f"NOT READY  Found {len(errors)} completeness issue(s) in run package {run_id}.")
+        print("NEXT  Fix the incomplete artifacts listed below, update the manifests and run index, then rerun the completion check.")
     for error in errors:
         print(f"- {error}")
     return 1
@@ -418,7 +547,7 @@ def validate_repo() -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate repo bootstrap readiness or a completed discovery run package.")
+    parser = argparse.ArgumentParser(description="Validate repo startup readiness or the final completeness of a discovery run package.")
     parser.add_argument("--run-id", help="Validate the completed Gate 1 package for the given run ID.")
     args = parser.parse_args()
 

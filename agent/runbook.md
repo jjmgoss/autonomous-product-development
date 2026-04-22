@@ -33,7 +33,7 @@ Read the following before doing substantive work:
 ## Step 3: Create or refresh the lifecycle artifacts
 
 Make sure the docs in `docs/` are present and consistent.
-Treat these docs as reusable framework guidance during the first discovery run.
+Treat these docs as reusable framework guidance during a discovery run.
 If the run is new, read them and use their structure.
 If the run is ongoing after a human-approved go decision, update them rather than duplicating them.
 
@@ -44,6 +44,8 @@ If the run is discovery-first, also initialize a matching run folder in:
 - `artifacts/runs/<run-id>/review-package/`
 
 Prefer `python scripts/start_discovery_run.py` over manual run-folder setup.
+The launcher creates the run shell only.
+After launch, immediately populate the corpus, manifests, review package, and run index before using the completion check.
 
 ## Step 4: Decide the run mode
 
@@ -72,6 +74,13 @@ In discovery-first mode, produce at minimum:
 - `artifacts/runs/<run-id>/review-package/candidate-review.md`
 - `artifacts/runs/<run-id>/review-package/validation.md`
 - `artifacts/runs/<run-id>/reports/discovery-summary.md`
+
+While doing the discovery work:
+
+- add real entries to `research-corpus/runs/<run-id>/manifest.json` as sources are saved
+- keep `research-corpus/runs/<run-id>/candidate-links.md` current while the shortlist changes
+- add completed entries to `artifacts/runs/<run-id>/manifest.json` as reviewer-facing outputs are written
+- treat `artifacts/runs/<run-id>/run-index.md` as the reviewer control document for the whole package
 
 If no opportunity earns a clear go decision, stop there with an explicit recommendation.
 If any artifact is still template-shaped, the run is not ready to stop.
@@ -128,6 +137,8 @@ Before a go decision, confirm that you have answered all of these:
 Also confirm that the strongest claims point back to saved evidence rather than unattributed summaries.
 
 Before stopping a discovery pass, run `python scripts/check_repo_readiness.py --run-id <run-id>`.
+Do not use that command as the next action right after launch.
+Use it only after the package is populated and the run index reflects the final reviewer-facing state.
 If it fails, either fix the package or document the boundary exception in the run index.
 
 ## Fallback behavior when stuck

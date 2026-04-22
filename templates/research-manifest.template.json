@@ -1,5 +1,27 @@
 {
   "run_id": "20260421-theme-slug-r1",
+  "population_status": "completed",
+  "source_requirements": {
+    "minimum_sources": 6,
+    "maximum_sources": 12,
+    "minimum_source_types": 3,
+    "required_fields": [
+      "id",
+      "title",
+      "url",
+      "captured_at",
+      "source_type",
+      "run_id",
+      "raw_path",
+      "normalized_path",
+      "note_path",
+      "speaker_or_org",
+      "workflow",
+      "summary",
+      "why_it_matters",
+      "reliability_notes"
+    ]
+  },
   "sources": [
     {
       "id": "SRC-001",
@@ -17,5 +39,6 @@
       "why_it_matters": "Why this source materially affects candidate ranking or validation.",
       "reliability_notes": "Any caution about bias, anecdotal scope, or missing detail."
     }
-  ]
+  ],
+  "completion_rule": "This manifest is incomplete until real saved source entries are present and every serious claim in the review package can trace back to evidence IDs here."
 }

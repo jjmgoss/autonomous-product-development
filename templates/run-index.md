@@ -1,6 +1,7 @@
 # Run Index Template
 
 Use this file shape for `artifacts/runs/<run-id>/run-index.md`.
+This file should read like a reviewer control document, not a launch note.
 
 ## Run Context
 
@@ -18,6 +19,14 @@ Use this file shape for `artifacts/runs/<run-id>/run-index.md`.
 - actual candidate count:
 - boundary result: pass or exception
 - exception note:
+
+## Execution Checklist
+
+- manifest is populated with real saved source entries:
+- candidate-evidence map is populated with supporting and weakening evidence IDs:
+- artifact manifest is populated with completed artifact entries:
+- review-package files are fully written rather than template-shaped:
+- completion check result:
 
 ## Reviewer Route
 
@@ -43,3 +52,10 @@ Use this file shape for `artifacts/runs/<run-id>/run-index.md`.
 
 - requested human decision:
 - stop status:
+
+## Quality Bar
+
+- Do not leave counts blank.
+- Do not leave recommendation fields unresolved.
+- Do not point the reviewer to files that are still scaffolds.
+- Do not use this file only to say that launch succeeded.

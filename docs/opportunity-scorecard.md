@@ -1,6 +1,6 @@
 # Opportunity Scorecard Guide
 
-Use this file as reusable guidance for `artifacts/runs/<run-id>/review-package/opportunity-scorecard.md` during first-run discovery.
+Use this file as reusable guidance for `artifacts/runs/<run-id>/review-package/opportunity-scorecard.md` during a discovery run.
 Do not treat this file itself as the canonical final run output.
 
 ## Purpose

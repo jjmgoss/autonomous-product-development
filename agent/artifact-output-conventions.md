@@ -59,7 +59,7 @@ Each `artifacts/runs/<run-id>/manifest.json` entry should record:
 
 The run manifest should include entries for the run index, each review-package file, and the discovery summary.
 
-## First-run review package
+## Discovery review package
 
 The review package should usually contain:
 
@@ -69,7 +69,7 @@ The review package should usually contain:
 - `review-package/validation.md`
 - `review-package/product-brief.md` only if the recommendation is `Go now`
 
-These are the canonical first-run review artifacts.
+These are the canonical discovery review artifacts.
 Do not treat `docs/` as the final run package location.
 
 ## Documentation rule

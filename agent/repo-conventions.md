@@ -14,13 +14,13 @@ These conventions keep autonomous work legible and reviewable.
 
 Use the docs for clearly different purposes:
 
-- `docs/research.md` defines the reusable structure for a first-run research artifact and later becomes a living project doc after a go decision.
+- `docs/research.md` defines the reusable structure for a discovery-run research artifact and later becomes a living project doc after a go decision.
 - `docs/opportunity-scorecard.md` defines the reusable scoring frame and later-stage comparison rules.
 - `docs/candidate-review.md` defines the reusable reviewer-facing comparison structure.
 - `docs/validation.md` defines the reusable validation argument structure.
 - `docs/product-brief.md` defines the reusable selected-product structure for post-Gate-1 work.
 
-During the first discovery run, the canonical final outputs live here instead:
+During a discovery run, the canonical final outputs live here instead:
 
 - `artifacts/runs/<run-id>/run-index.md`
 - `artifacts/runs/<run-id>/review-package/research.md`
@@ -105,8 +105,8 @@ Research and validation tasks may stay in the backlog if they are the critical p
 - If a product looks buildable but weakly monetizable, say so.
 - If a product is commercially interesting but operationally unrealistic for an agent-led build, say so.
 
-## First-run review-package rule
+## Discovery review-package rule
 
-For the first live discovery run, do not write the final reviewer package into `docs/`.
+For a discovery run, do not write the final reviewer package into `docs/`.
 Those files are framework guidance.
 The completed Gate 1 package must live inside the run-specific artifact directory.

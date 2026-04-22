@@ -8,7 +8,7 @@ Choose the candidate that best combines painful demand, believable monetization,
 
 ## Procedure
 
-1. Shortlist the strongest candidate wedges from `artifacts/runs/<run-id>/review-package/research.md` during first-run discovery.
+1. Shortlist the strongest candidate wedges from `artifacts/runs/<run-id>/review-package/research.md` during the discovery run.
 
 2. Score each candidate in `artifacts/runs/<run-id>/review-package/opportunity-scorecard.md` on a 1-5 scale for:
    - pain severity

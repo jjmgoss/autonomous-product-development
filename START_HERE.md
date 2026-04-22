@@ -8,11 +8,12 @@ If the prompt is tiny, start here instead of guessing how to launch the repo.
 
 1. Read `ACTIVE_RUN.md`.
 2. Read the boundary file and detailed prompt named there.
-3. Read `theme.md`.
-4. Read the repo operating files named in `agent/runbook.md`.
-5. Run the readiness check declared in `ACTIVE_RUN.md`.
-6. If the active run is discovery and no fresh run has been initialized yet, run the launcher command declared in `ACTIVE_RUN.md`.
-7. Execute the run and write details into the run artifacts, not into chat.
+3. Read `theme.md` and `agent/runbook.md`.
+4. Run the readiness check declared in `ACTIVE_RUN.md`.
+5. If the active run is discovery and the repo is `READY`, run the launcher command declared in `ACTIVE_RUN.md`.
+6. Do the actual run work inside the launched run paths: save sources, update the manifests, populate the reviewer artifacts, and complete the run index.
+7. Run the completion check declared in `ACTIVE_RUN.md` only after the package is fully populated.
+8. Stop at the gate named in `ACTIVE_RUN.md`.
 
 ## Execution Rules
 
@@ -20,12 +21,16 @@ If the prompt is tiny, start here instead of guessing how to launch the repo.
 - Only run scripts that are explicitly named in `ACTIVE_RUN.md` or `scripts/README.md`.
 - Do not invent a missing launcher such as `scripts/first_run_discovery.py`.
 - Use the launcher helper when one is provided instead of manually guessing run IDs or folder structure.
+- Treat the launcher as scaffold creation, not as the research work itself.
+- Treat the completion check as a final validator, not as an early probe to run right after launch.
+- Do not stop after launch, run-folder creation, or scaffold-file creation.
 - Treat `docs/` as reusable guidance unless the active mode explicitly says otherwise.
 
 ## Stop Rule
 
 Stop at the gate or completion point named in `ACTIVE_RUN.md`.
 Do not continue into a later stage just because coding feels more concrete.
+Do not stop early just because the run launched successfully.
 
 ## Response Policy
 

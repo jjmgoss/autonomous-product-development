@@ -65,7 +65,7 @@ The repository includes these reusable framework docs and later-stage living pro
 - `docs/lifecycle-review.md`
 - `docs/operations-gap-analysis.md`
 
-During the first discovery run, use these files as guidance rather than as the canonical final outputs.
+During a discovery run, use these files as guidance rather than as the canonical final outputs.
 After a human-approved go decision, they become the living project docs that should be maintained directly.
 
 During discovery-first runs, maintain the canonical final outputs here:
@@ -80,7 +80,7 @@ During discovery-first runs, maintain the canonical final outputs here:
 - `artifacts/runs/<run-id>/review-package/validation.md`
 - `artifacts/runs/<run-id>/reports/discovery-summary.md`
 
-Only create `artifacts/runs/<run-id>/review-package/product-brief.md` during first-run discovery if one candidate clearly earns a go-now recommendation.
+Only create `artifacts/runs/<run-id>/review-package/product-brief.md` during discovery if one candidate clearly earns a go-now recommendation.
 
 ## Required behavior
 
@@ -99,9 +99,13 @@ At the start of a discovery-first run:
 - use the launcher named in `ACTIVE_RUN.md` to create a fresh run ID unless a human explicitly provides one
 - initialize matching corpus and artifact folders
 - initialize the run-scoped review package under `artifacts/runs/<run-id>/review-package/`
+- treat the launcher output as the start of the run, not the completed run
+- save sources and update the manifests as the research happens
+- complete the run index as a reviewer-facing control document rather than a launch note
 - keep source capture and candidate generation within the limits in `DISCOVERY_RUN_MODE.md`
-- use the files in `docs/` as guidance rather than as final first-run outputs
+- use the files in `docs/` as guidance rather than as final discovery outputs
 - do not treat template-shaped artifacts as complete work
+- do not use the completion check immediately after launch
 - stop at the discovery handoff point unless a human explicitly approves more
 - do not invent launcher scripts or unsupported repo commands
 

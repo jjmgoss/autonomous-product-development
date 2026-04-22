@@ -1,6 +1,8 @@
 # Discovery Summary Template
 
 Use this file shape for `artifacts/runs/<run-id>/reports/discovery-summary.md`.
+Assume the reviewer reads this first.
+It should summarize the completed package, not the launch step.
 
 ## Run context
 
@@ -54,3 +56,9 @@ State what the human should decide at Gate 1.
 ## Stop point
 
 State that the run stopped at the discovery review handoff unless a human approved a next stage.
+
+## Quality bar
+
+- Do not leave the recommendation unresolved.
+- Do not summarize only one candidate if multiple candidates were seriously compared.
+- Do not present claims that cannot be traced back to saved evidence IDs.

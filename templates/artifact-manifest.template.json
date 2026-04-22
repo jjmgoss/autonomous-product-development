@@ -1,5 +1,14 @@
 {
   "run_id": "20260421-theme-slug-r1",
+  "population_status": "completed",
+  "required_artifact_paths": [
+    "artifacts/runs/20260421-theme-slug-r1/run-index.md",
+    "artifacts/runs/20260421-theme-slug-r1/review-package/research.md",
+    "artifacts/runs/20260421-theme-slug-r1/review-package/opportunity-scorecard.md",
+    "artifacts/runs/20260421-theme-slug-r1/review-package/candidate-review.md",
+    "artifacts/runs/20260421-theme-slug-r1/review-package/validation.md",
+    "artifacts/runs/20260421-theme-slug-r1/reports/discovery-summary.md"
+  ],
   "artifacts": [
     {
       "id": "ART-001",
@@ -29,5 +38,6 @@
       "purpose": "Concise run summary for human review.",
       "notes": "List any caveats about how or why this artifact was produced."
     }
-  ]
+  ],
+  "completion_rule": "This manifest is incomplete until the run index, summary, and reviewer artifacts all have completed entries with real inputs and purposes."
 }

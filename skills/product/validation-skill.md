@@ -76,7 +76,7 @@ Default toward go only when most of these are true:
 
 ## Expected outputs
 
-- `artifacts/runs/<run-id>/review-package/validation.md` during first-run discovery
+- `artifacts/runs/<run-id>/review-package/validation.md` during the discovery run
 - a validation argument whose key claims point back to saved evidence IDs
 - an explicit go, continue-validation, or no-go decision
 

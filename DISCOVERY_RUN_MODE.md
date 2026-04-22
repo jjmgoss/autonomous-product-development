@@ -15,6 +15,20 @@ Its job is to:
 
 It is not allowed to drift into implementation just because coding feels more concrete than research.
 
+## Required Sequence
+
+Follow this sequence in order:
+
+1. Run the readiness check.
+2. Run the launcher to create a fresh run ID and scaffold the run files.
+3. Do the middle of the run: save sources, update the research manifest as you go, compare candidates, and fill the review package.
+4. Complete the run index and artifact manifest as reviewer-facing outputs.
+5. Run the completion check only after the package is fully populated.
+6. Stop at Gate 1.
+
+The launcher and the completion check are bookends.
+They do not replace the actual discovery work that happens between them.
+
 ## Default Scope
 
 - Create a fresh run ID using `YYYYMMDD-theme-slug-rN`.
@@ -33,6 +47,17 @@ It is not allowed to drift into implementation just because coding feels more co
 If the run falls short of the source-count target, source-type target, or required review-package files, it is not complete.
 The agent must either fix the gap before stopping or explicitly document why it could not.
 
+## Middle-Of-Run Work
+
+During the run itself:
+
+- save each meaningful source under `research-corpus/runs/<run-id>/`
+- add a real entry to `research-corpus/runs/<run-id>/manifest.json` for each saved source
+- keep `candidate-links.md` current as candidates survive or drop
+- write the review-package files as reviewer-facing deliverables, not as thin placeholders
+- record completed artifact entries in `artifacts/runs/<run-id>/manifest.json`
+- keep `artifacts/runs/<run-id>/run-index.md` accurate enough that a human could review the package from that file alone
+
 ## Required Outputs
 
 - `research-corpus/runs/<run-id>/manifest.json`
@@ -47,6 +72,9 @@ The agent must either fix the gap before stopping or explicitly document why it 
 
 The files under `docs/` are reusable framework guidance and templates.
 They are not the canonical final outputs for a discovery run.
+
+The manifests and run index are part of the required package.
+They are not optional metadata to fill in later if time remains.
 
 ## Evidence Quality Expectations
 
@@ -67,6 +95,10 @@ The review package is incomplete if any of these are true:
 - required sections are blank, one-line stubs, or obviously unresolved
 - the summary only develops one idea while other shortlisted candidates are barely described
 - major claims about pain, ranking, substitutes, or recommendation are not traceable to saved evidence IDs
+- the research manifest still has zero saved sources or missing required source fields
+- the artifact manifest still has zero completed artifact entries or missing required artifact fields
+- the run index still reads like a launch scaffold instead of a reviewer control document
+- the candidate-evidence map names candidates without meaningful supporting and weakening evidence IDs
 
 At minimum, the review package must make it easy for a human to understand:
 
@@ -92,6 +124,8 @@ The discovery handoff package is complete when:
 - the reasons against the leading candidate are written down
 - the review-package files are fully written rather than template-shaped stubs
 - the discovery summary explains both why the top candidate leads and what would overturn that call
+- both manifests are fully populated with real entries rather than scaffold status
+- the run index explains the reviewer route, current counts, recommendation, and requested Gate 1 decision
 
 Gate 1 is the default endpoint.
 Do not continue into implementation, deployment, or external execution unless a human explicitly approves the next stage after reviewing the completed package.
