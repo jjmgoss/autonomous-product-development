@@ -9,6 +9,7 @@ Each serious candidate should have enough detail that a reviewer can see why it 
 - status in ranking:
 - supporting evidence IDs:
 - weakening evidence IDs:
+- key supporting links:
 - substitute pressure notes:
 - open questions that could change ranking:
 
@@ -18,6 +19,7 @@ Each serious candidate should have enough detail that a reviewer can see why it 
 - status in ranking:
 - supporting evidence IDs:
 - weakening evidence IDs:
+- key supporting links:
 - substitute pressure notes:
 - open questions that could change ranking:
 

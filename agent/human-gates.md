@@ -8,9 +8,9 @@ The framework works best when human gates exist at a few high-leverage moments r
 
 ## Suggested gate points
 
-### Gate 1: Before coding begins
+### Checkpoint 1: Before coding begins
 
-Require human review after:
+Review is useful after:
 
 - research is completed
 - top opportunities are scored
@@ -30,7 +30,7 @@ Human should check:
 - do substitutes already solve the problem well enough?
 - is there a better candidate in the comparison set?
 
-Gate 1 should usually be reviewable from these artifacts:
+Checkpoint 1 should usually be reviewable from these artifacts:
 
 - `artifacts/runs/<run-id>/run-index.md`
 - `artifacts/runs/<run-id>/reports/discovery-summary.md`
@@ -42,9 +42,9 @@ Gate 1 should usually be reviewable from these artifacts:
 - `research-corpus/runs/<run-id>/manifest.json`
 - `research-corpus/runs/<run-id>/candidate-links.md`
 
-Gate 1 should not be considered review-ready if the run checker fails, the run index is missing, or any review-package file still looks like an unresolved template.
+Checkpoint 1 should not be considered review-ready if the run checker fails, the run index is missing, or any review-package file still looks like an unresolved template.
 
-Gate 1 rejection triggers:
+Checkpoint 1 rejection triggers:
 
 - the target user is still vague
 - the product only looks good if many future features land
@@ -55,8 +55,9 @@ Gate 1 rejection triggers:
 - the idea requires heavy human services, field work, or compliance before it becomes useful
 - the product looks like a demo, not a viable narrow business seed
 
-When `ACTIVE_RUN.md` selects discovery, Gate 1 is also the default stopping point.
-Do not continue into implementation unless a human explicitly approves the next stage.
+When `ACTIVE_RUN.md` selects discovery, Checkpoint 1 is the default review surface.
+Do not pause there unless `ACTIVE_RUN.md` explicitly says `checkpoint behavior: pause for human review`.
+Do not continue into implementation unless the active run or a human explicitly approves the next stage.
 
 ### Gate 2: Before deployment or public exposure
 
@@ -99,13 +100,13 @@ It should not skip the gate outputs just because no one interrupted it.
 
 These gates are meant to help, not to create bureaucracy.
 
-- Gate 1 should be reviewable in 10-20 minutes.
+- Checkpoint 1 should be reviewable in 10-20 minutes.
 - Gate 2 should be reviewable in 10 minutes if the release and operations artifacts are honest.
 - Gate 3 should be reviewable in 10-15 minutes.
 
 If review takes much longer, the agent should tighten the artifacts rather than produce more prose.
 
-The fastest Gate 1 review path should be:
+The fastest Checkpoint 1 review path should be:
 
 1. run index
 2. discovery summary

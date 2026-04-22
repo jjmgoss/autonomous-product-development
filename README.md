@@ -84,7 +84,7 @@ On a discovery run, the agent should usually stop after producing:
 - a human review artifact comparing the best candidates
 - an explicit recommendation about which idea to prototype first, if any
 
-Those discovery outputs should live under `artifacts/runs/<run-id>/`, with `run-index.md` as the reviewer entry point and `review-package/` as the canonical Gate 1 bundle.
+Those discovery outputs should live under `artifacts/runs/<run-id>/`, with `run-index.md` as the reviewer entry point and `review-package/` as the canonical Checkpoint 1 bundle.
 
 The required discovery sequence is:
 
@@ -93,13 +93,16 @@ The required discovery sequence is:
 3. do the actual research and candidate-comparison work
 4. populate both manifests, the run index, and the reviewer package
 5. run the completion check at the end
-6. stop at Gate 1
+6. record checkpoint status and obey the checkpoint behavior named in `ACTIVE_RUN.md`
 
 The launcher and checker are bookends around the discovery work.
 They do not replace the middle of the run.
 
 Use `DISCOVERY_RUN_MODE.md` as the hard boundary file for that run.
 Use `research-corpus/` to store saved evidence and `artifacts/` to store generated run outputs.
+
+Checkpoint 1 is the default discovery review surface, not an automatic pause.
+The active run must say when to pause.
 
 If no idea earns a clear go decision, the correct result is a documented no-go or more targeted follow-up research.
 
@@ -115,6 +118,8 @@ If no idea earns a clear go decision, the correct result is a documented no-go o
 8. If you need a detailed launch prompt, use `DISCOVERY_RUN_PROMPT.md`.
 9. Use the gate checklists in `agent/human-gates.md` to review research, validation, and release readiness.
 10. Review the run through `artifacts/runs/<run-id>/run-index.md`, then inspect the saved evidence in `research-corpus/` and any later-stage project docs in `docs/`.
+
+For discovery runs, prefer theme-derived slugs and visible source links in the run index and summary over stale config hints or manifest-only evidence.
 
 ## Expected output from a strong run
 

@@ -13,23 +13,24 @@ If the prompt is tiny, start here instead of guessing how to launch the repo.
 5. If the active run is discovery and the repo is `READY`, run the launcher command declared in `ACTIVE_RUN.md`.
 6. Do the actual run work inside the launched run paths: save sources, update the manifests, populate the reviewer artifacts, and complete the run index.
 7. Run the completion check declared in `ACTIVE_RUN.md` only after the package is fully populated.
-8. Stop at the gate named in `ACTIVE_RUN.md`.
+8. Respect the checkpoint behavior and completion point named in `ACTIVE_RUN.md`.
 
 ## Execution Rules
 
 - Treat `ACTIVE_RUN.md` as the canonical run selector.
 - Only run scripts that are explicitly named in `ACTIVE_RUN.md` or `scripts/README.md`.
-- Do not invent a missing launcher such as `scripts/first_run_discovery.py`.
 - Use the launcher helper when one is provided instead of manually guessing run IDs or folder structure.
 - Treat the launcher as scaffold creation, not as the research work itself.
 - Treat the completion check as a final validator, not as an early probe to run right after launch.
 - Do not stop after launch, run-folder creation, or scaffold-file creation.
+- Treat checkpoints as review surfaces, not as automatic pause points, unless `ACTIVE_RUN.md` explicitly says to pause.
 - Treat `docs/` as reusable guidance unless the active mode explicitly says otherwise.
 
 ## Stop Rule
 
-Stop at the gate or completion point named in `ACTIVE_RUN.md`.
-Do not continue into a later stage just because coding feels more concrete.
+Stop only at the completion point named in `ACTIVE_RUN.md`.
+Do not pause early just because a checkpoint label appears in the artifacts.
+Do not continue into a later risky stage just because coding feels more concrete.
 Do not stop early just because the run launched successfully.
 
 ## Response Policy

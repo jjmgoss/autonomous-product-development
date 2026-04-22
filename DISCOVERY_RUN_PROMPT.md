@@ -1,6 +1,6 @@
 # Recommended Discovery Run Prompt
 
-Use this prompt when the framework should execute the actual discovery run and stop at Gate 1 with a complete reviewer package.
+Use this prompt when the framework should execute the actual discovery run through the named completion point with a complete discovery handoff package.
 
 ## Prompt
 
@@ -19,8 +19,9 @@ Before doing anything else:
 5. If the repo is `READY`, run the launcher command named in `ACTIVE_RUN.md`.
 6. After launch, immediately do the actual discovery work inside the new run paths.
 7. Run the completion check named in `ACTIVE_RUN.md` only after the package is fully populated.
+8. Read and obey `checkpoint behavior` and `completion point` from `ACTIVE_RUN.md`.
 
-Start from `theme.md` and look for monetizable, fully virtual, agent-compatible product opportunities that could be primarily built, operated, maintained, and iterated on through software and agent workflows, with human approval at key checkpoints.
+Start from `theme.md` and look for monetizable, fully virtual, agent-compatible product opportunities that could be primarily built, operated, maintained, and iterated on through software and agent workflows, with human approval reserved for risky transitions.
 
 Bias toward products that:
 - can be sold digitally
@@ -35,7 +36,8 @@ Be skeptical of ideas that are interesting but weakly monetizable, operationally
 Do not implement product code.
 Do not deploy anything.
 Do not create noisy external side effects.
-Do not continue past Gate 1 unless a human explicitly approves it.
+Do not pause early just because Checkpoint 1 exists.
+Do not continue into implementation, deployment, publishing, or other risky later-stage work unless `ACTIVE_RUN.md` or a human explicitly approves it.
 
 Important output rule:
 - files under `docs/` are reusable framework guides and templates
@@ -48,18 +50,21 @@ Required workflow:
 2. Use the launcher helper to create a fresh run ID and initialize matching folders.
 3. Save between 6 and 12 meaningful sources with manifest entries, normalized text when useful, and short source notes.
 4. Update `research-corpus/runs/<run-id>/manifest.json` as you save sources. It must contain real source entries before the run can stop.
-5. Use at least 3 source types when practical. If you cannot, explicitly explain why in the run index.
-6. Research repeated pain and unmet needs in the theme area.
-7. Generate at most 5 candidate opportunities from those pain patterns.
-8. Keep `research-corpus/runs/<run-id>/candidate-links.md` meaningfully populated with supporting and weakening evidence IDs for each serious candidate.
-9. Score at most the top 3 candidates in detail.
-10. Produce a reviewer-friendly comparison of the strongest candidates.
-11. Complete `artifacts/runs/<run-id>/manifest.json` and `artifacts/runs/<run-id>/run-index.md` as part of the required package.
-12. Make an explicit recommendation:
+5. Give every serious source a real URL and a source note that repeats that URL near the top.
+6. Surface the most important source URLs directly in the run index and discovery summary so a reviewer can inspect them quickly.
+7. Use at least 3 source types when practical. If you cannot, explicitly explain why in the run index.
+8. Research repeated pain and unmet needs in the theme area.
+9. Generate at most 5 candidate opportunities from those pain patterns.
+10. Keep `research-corpus/runs/<run-id>/candidate-links.md` meaningfully populated with supporting and weakening evidence IDs plus visible supporting links for each serious candidate.
+11. Score at most the top 3 candidates in detail.
+12. Produce a reviewer-friendly comparison of the strongest candidates.
+13. Complete `artifacts/runs/<run-id>/manifest.json` and `artifacts/runs/<run-id>/run-index.md` as part of the required package.
+14. Make an explicit recommendation:
    - prototype candidate A first
    - continue validating candidates A and B
    - no current candidate is strong enough
-13. Run the completion check named in `ACTIVE_RUN.md` before stopping.
+15. Run the completion check named in `ACTIVE_RUN.md` before stopping.
+16. Record checkpoint status and requested human decision in the run index.
 
 Major claims in the ranking and recommendation must cite saved evidence IDs.
 If a claim describes a repeated pattern, back it with more than one evidence ID when possible.
@@ -83,6 +88,8 @@ Completion rules:
 - the run is not complete if only one candidate is developed while the others are just names or thin bullets
 - the run is not complete if the manifests are still empty, still marked as launch scaffolds, or missing required entries
 - the run is not complete if the run index still reads like a launch scaffold or leaves core reviewer fields unresolved
+- the run is not complete if source notes or linked files named in the manifest are missing
+- the run is not complete if the run index and summary bury all real URLs in the manifest instead of surfacing key source links directly
 - the run is not complete if the completion check fails and the run index does not explain an allowed boundary exception
 
 For each top candidate, explain:
@@ -100,4 +107,5 @@ Bound the comparison to the strongest few candidates. Favor evidence density and
 
 Keep chat updates minimal unless blocked.
 Write the details into artifacts, not into chat.
-Stop only after the full Gate 1 package exists and the run has reached the default discovery endpoint.
+Continue by default while discovery work is still in scope.
+Pause only if `ACTIVE_RUN.md` explicitly says `checkpoint behavior: pause for human review` or if a blocker or risky action requires approval.

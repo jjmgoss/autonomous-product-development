@@ -34,7 +34,7 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 	- Assign a stable source ID.
 	- Save raw material when practical.
 	- Save normalized text or a markdown extraction when helpful.
-	- Create a short source note.
+	- Create a short source note with the exact URL near the top.
 	- Add a manifest entry with why the source matters.
 
 5. Log evidence with context, not just quotes.
@@ -66,6 +66,7 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 
 11. Link candidates back to evidence.
 	- Update `candidate-links.md` so each serious candidate has supporting and weakening evidence IDs.
+	- Surface the strongest supporting links directly, not just the IDs.
 	- Do not let candidate ranking float free from saved sources.
 	- If a candidate remains in serious contention, it should have both positive and negative evidence recorded.
 

@@ -30,7 +30,7 @@ artifacts/
 ## What belongs where
 
 - `artifacts/runs/<run-id>/run-index.md` is the reviewer-facing entry point for one run.
-- `artifacts/runs/<run-id>/review-package/` stores the canonical Gate 1 review deliverables for that run.
+- `artifacts/runs/<run-id>/review-package/` stores the canonical Checkpoint 1 handoff deliverables for that run.
 - `artifacts/runs/<run-id>/reports/` stores run summaries and reviewer-facing generated reports.
 - `artifacts/runs/<run-id>/evaluations/` stores score exports, ranking tables, or other generated evaluation outputs.
 - `artifacts/runs/<run-id>/exports/` stores transformed datasets, text bundles, or other run-scoped exports.
@@ -83,3 +83,4 @@ Whenever an agent creates a non-trivial artifact, it should:
 This keeps later reviewers from having to guess which outputs mattered.
 
 The run index should also tell the reviewer what to read first, whether boundaries were met, and what evidence could overturn the current recommendation.
+It should also surface key source links directly.

@@ -11,7 +11,7 @@ Its job is to:
 - collect a bounded research corpus
 - generate a bounded set of candidate ideas
 - compare the strongest candidates
-- recommend one next move for human review
+- recommend one next move for checkpoint review
 
 It is not allowed to drift into implementation just because coding feels more concrete than research.
 
@@ -24,10 +24,12 @@ Follow this sequence in order:
 3. Do the middle of the run: save sources, update the research manifest as you go, compare candidates, and fill the review package.
 4. Complete the run index and artifact manifest as reviewer-facing outputs.
 5. Run the completion check only after the package is fully populated.
-6. Stop at Gate 1.
+6. Record checkpoint status and the requested decision in the run index.
+7. Follow the checkpoint behavior in `ACTIVE_RUN.md`.
 
 The launcher and the completion check are bookends.
 They do not replace the actual discovery work that happens between them.
+Checkpoint 1 is a milestone surface, not a reason to stop early while the package is still incomplete.
 
 ## Default Scope
 
@@ -81,8 +83,10 @@ They are not optional metadata to fill in later if time remains.
 - Prefer repeated pain over topical chatter.
 - Prefer direct complaints, workarounds, reviews, issue threads, and practitioner writeups over generic trend content.
 - Prefer a small number of strong sources over a large pile of weak ones.
+- Prefer sources with real, inspectable URLs over unattributed summaries.
 - Major claims in review artifacts should cite saved evidence IDs.
 - Major ranking, rejection, and recommendation claims should point to more than one evidence ID when the claim spans a pattern rather than a single incident.
+- Source notes should repeat the exact URL near the top and preserve enough local context that a reviewer can inspect the saved file without manifest archaeology.
 
 ## Review-Package Completion Contract
 
@@ -104,15 +108,18 @@ At minimum, the review package must make it easy for a human to understand:
 
 - what the run investigated
 - which sources were saved and why they matter
+- which real source links are most worth opening first
 - which candidates were considered
 - why the leading candidate won
 - why it may still fail
 - which evidence could overturn the ranking
-- what should happen next at Gate 1
+- what should happen next at Checkpoint 1
 
-## Stop Conditions
+## Checkpoint Behavior
 
-Stop the run after the review package is complete unless a human explicitly approves moving forward.
+Treat Checkpoint 1 as a review milestone.
+By default, keep going until the active run's completion point is satisfied.
+Pause only if `ACTIVE_RUN.md` explicitly says `checkpoint behavior: pause for human review`.
 
 The discovery handoff package is complete when:
 
@@ -125,10 +132,10 @@ The discovery handoff package is complete when:
 - the review-package files are fully written rather than template-shaped stubs
 - the discovery summary explains both why the top candidate leads and what would overturn that call
 - both manifests are fully populated with real entries rather than scaffold status
-- the run index explains the reviewer route, current counts, recommendation, and requested Gate 1 decision
+- the run index explains the reviewer route, current counts, recommendation, requested Checkpoint 1 decision, and key source links
 
-Gate 1 is the default endpoint.
-Do not continue into implementation, deployment, or external execution unless a human explicitly approves the next stage after reviewing the completed package.
+Checkpoint 1 is the default discovery review surface.
+Do not continue into implementation, deployment, or external execution unless the active run or a human explicitly authorizes the next stage after the completed discovery handoff.
 
 ## Explicit Prohibitions
 

@@ -15,7 +15,6 @@ As the framework evolves, this is where helper scripts can live for:
 - `check_repo_readiness.py` validates the canonical bootstrap surfaces and also serves as the final discovery-package validator.
 - `start_discovery_run.py` creates a fresh discovery run ID, initializes the run directories, and writes scaffold files for the manifests, run index, review package, and summary.
 - `clean_empty_run_dirs.py` removes only truly empty run subdirectories and reports suspicious partial non-empty run folders.
-- `check_first_run_readiness.py` remains as a compatibility wrapper for older prompts.
 
 The startup sequence for a discovery run is:
 
@@ -26,6 +25,7 @@ The startup sequence for a discovery run is:
 
 Do not run the completion check as the next action right after launch.
 It is intended for the end of the run, after the manifests and reviewer package are fully populated.
+Do not pause at a named checkpoint unless `ACTIVE_RUN.md` explicitly says to pause.
 
 Only run scripts that are explicitly named in `ACTIVE_RUN.md` or in this file.
 
@@ -40,5 +40,11 @@ To inspect and optionally clean empty leftover run folders:
 ```text
 python scripts/clean_empty_run_dirs.py --dry-run
 ```
+
+The cleanup utility is intentionally conservative:
+
+- it removes only truly empty nested run directories
+- it leaves non-empty directories untouched
+- it reports suspicious mismatches such as one-sided run trees or missing manifests
 
 Do not add automation here unless it clearly improves agent execution quality or human review quality.

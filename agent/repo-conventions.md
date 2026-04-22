@@ -10,6 +10,13 @@ These conventions keep autonomous work legible and reviewable.
 - Update existing docs rather than creating near-duplicates.
 - Route startup through `START_HERE.md` and `ACTIVE_RUN.md` instead of scattering launch behavior.
 
+## Operating-surface map
+
+- Active operating surface: `START_HERE.md`, `ACTIVE_RUN.md`, the boundary and prompt files named there, `agent/`, `scripts/`, and `templates/`.
+- Supporting reference: reusable guides in `docs/` and skill files under `skills/`.
+- Historical reference: `docs/history/`.
+- Avoid leaving compatibility aliases or migration notes at the repo root when they are no longer part of the active path.
+
 ## Artifact roles
 
 Use the docs for clearly different purposes:
@@ -49,6 +56,7 @@ Use the same run ID in:
 
 Never reuse an existing run ID by default.
 If a collision exists, increment `rN` until both run roots are unused.
+Prefer theme-derived slugs over manual hints. Only use an override when the human intentionally wants a different slug.
 
 ## Decision logging
 
@@ -101,6 +109,7 @@ Research and validation tasks may stay in the backlog if they are the critical p
 - Always separate raw evidence from your interpretation of it.
 - Give saved evidence stable IDs and cite them in high-stakes claims.
 - Use the run index to connect the human reviewer to the right files without requiring repo archaeology.
+- Surface the strongest source URLs directly in reviewer-facing artifacts.
 - Name substitutes explicitly, including spreadsheets, manual workarounds, and incumbent tools.
 - If a product looks buildable but weakly monetizable, say so.
 - If a product is commercially interesting but operationally unrealistic for an agent-led build, say so.
@@ -109,4 +118,4 @@ Research and validation tasks may stay in the backlog if they are the critical p
 
 For a discovery run, do not write the final reviewer package into `docs/`.
 Those files are framework guidance.
-The completed Gate 1 package must live inside the run-specific artifact directory.
+The completed Checkpoint 1 package must live inside the run-specific artifact directory.

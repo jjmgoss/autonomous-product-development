@@ -62,6 +62,7 @@ For each meaningful source:
 4. Add an entry to `manifest.json`.
 
 If raw capture is not possible, still create a note and manifest entry explaining what was captured and why full raw storage was not practical.
+The manifest alone is not enough. Reviewers should be able to open the saved files named there.
 
 ## Manifest fields
 
@@ -81,6 +82,9 @@ Each manifest entry should record:
 - `summary`
 - `why_it_matters`
 - `reliability_notes`
+
+Each serious source should use a real `http` or `https` URL unless the note explicitly explains why that was impossible.
+Do not let a placeholder domain or a vague source description count as strong evidence.
 
 ## Candidate linkage
 
@@ -108,3 +112,8 @@ Major claims in these docs should point back to saved evidence IDs:
 Do not rely on unattributed summaries when a claim materially affects ranking or recommendation.
 
 If a claim refers to a repeated pattern rather than a single-source incident, cite more than one evidence ID when practical.
+
+## Reviewer link visibility
+
+Source notes should repeat the exact URL near the top.
+The run index and discovery summary should surface the highest-signal URLs directly so a human can inspect the strongest evidence without manifest archaeology.

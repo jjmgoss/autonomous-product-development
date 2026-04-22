@@ -1,32 +1,26 @@
-# Launch Model Summary
+# Framework Hardening Summary
 
-## What changed
+## What this pass fixed
 
-- Added `START_HERE.md` as the canonical bootstrap entrypoint.
-- Added `ACTIVE_RUN.md` as the canonical active-run selector.
-- Generalized the discovery boundary and detailed prompt into `DISCOVERY_RUN_MODE.md` and `DISCOVERY_RUN_PROMPT.md`.
-- Hardened the discovery launcher so it now scaffolds the manifests, run index, summary, and review-package files.
-- Hardened the completion checker so it behaves like a final validator instead of a generic next-step action.
-- Tightened the templates so the manifests, candidate map, summary, and run index are harder to leave structurally incomplete.
-- Reduced live `first-run` wording in the active operating files and moved the canonical discovery skill to `skills/product/discovery-run-skill.md`.
-- Added a cleanup utility for empty run directories under `scripts/`.
-- Archived one-time first-run setup and hardening notes under `docs/history/`.
+- Softened checkpoint behavior for discovery runs: checkpoints are now review surfaces, while pause behavior is set explicitly in `ACTIVE_RUN.md`.
+- Reduced stale theme and slug leakage by deriving launch slugs from `theme.md` by default and warning on legacy mismatches.
+- Surfaced real web links more clearly by reserving reviewer-facing key-source-link sections in the run index, discovery summary, candidate map, and source notes.
+- Hardened evidence traceability by expecting saved source-note and linked-file coverage instead of manifest-only completeness.
+- Cleaned up active wording around hard stops, launch-only success, and migration-era first-run language.
+- Kept the empty-run cleanup utility as the lightweight maintenance path for stray scaffolds.
 
-## How future launch should work
+## How checkpoints work now
 
-Use a tiny prompt such as: `Go. Read START_HERE.md, execute the active run end to end, run the completion check last, and stop at the named gate.`
+Use the checkpoint label as a milestone and review surface.
+Keep going until the named completion point is satisfied.
+Pause only if `ACTIVE_RUN.md` explicitly says `checkpoint behavior: pause for human review` or if a blocker or risky action requires approval.
 
-The model should then:
+## Next lower-cost-model prompt
 
-1. read `START_HERE.md`
-2. read `ACTIVE_RUN.md`
-3. run the readiness check named there
-4. run the launcher named there
-5. do the actual discovery work inside the launched run paths
-6. populate the manifests, candidate map, run index, and reviewer package
-7. run the completion check at the end
-8. stop at the named gate
+Use this prompt:
 
-## Human next step before another lower-cost-model test
+`Go. Read START_HERE.md, execute the active run through the named completion point, record checkpoint status in the artifacts, run the completion check last, and continue unless ACTIVE_RUN.md says to pause.`
 
-Review `ACTIVE_RUN.md`, confirm the run type and slug hint still fit the current theme, optionally run `python scripts/clean_empty_run_dirs.py --dry-run`, and then test the repo with the tiny launch prompt above.
+## Suggested commit message
+
+`Harden discovery checkpoints, evidence traceability, and legacy surface cleanup`

@@ -1,17 +1,45 @@
-# Launch Diagnosis
+# Operating Surface Audit
 
-## Why weaker models invent a launcher
+## Authoritative active files
 
-- The repo previously told the model to read several guidance files and run a readiness checker, but it did not name a canonical startup file or a sanctioned launcher.
-- The presence of `scripts/` plus a checker encouraged an inference that a matching execution script should exist.
-- The old detailed prompt described what a discovery run must produce, but it did not give the repo itself a single executable starting surface.
+- `START_HERE.md`
+- `ACTIVE_RUN.md`
+- `DISCOVERY_RUN_MODE.md`
+- `DISCOVERY_RUN_PROMPT.md`
+- `agent/`
+- `scripts/`
+- `templates/`
 
-## What was ambiguous about startup
+## Supporting reference
 
-- The active run mode was implicit instead of being declared in one canonical file.
-- The boundary file, detailed prompt, readiness check, launcher, and stop gate were spread across multiple documents.
-- The repo did not clearly say that unsupported scripts must not be invented.
-- Run ID creation and collision handling were described as conventions rather than as one supported path.
+- `README.md`
+- reusable guides under `docs/`
+- product skills under `skills/product/`
+
+## Historical or archive-only
+
+- `docs/history/`
+- one-time setup and hardening notes that describe migration events rather than the current operating loop
+
+## Redundant, stale, or confusing patterns to avoid
+
+- root-level compatibility aliases that look like active operating files
+- wording that treats a checkpoint label as an automatic pause point
+- stale slug hints that silently outrank the current theme
+- reviewer artifacts that mention evidence IDs but hide the real URLs
+
+## Wording patterns that encouraged premature stopping
+
+- "stop at Checkpoint 1" when the real intent is only to mark a review milestone
+- "default endpoint" without a separate completion-point concept
+- launch-success language that sounds like the run is complete once folders exist
+
+## Cleanup direction
+
+- keep the active operating path centered on `START_HERE.md` and `ACTIVE_RUN.md`
+- keep checkpoints as review surfaces and make pause behavior explicit in `ACTIVE_RUN.md`
+- prefer theme-derived slugs and visible key-source links
+- move migration residue out of the active path or remove it entirely when it no longer earns its place
 
 ## What a tiny launch prompt was missing
 

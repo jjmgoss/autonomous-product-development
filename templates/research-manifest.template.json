@@ -40,5 +40,5 @@
       "reliability_notes": "Any caution about bias, anecdotal scope, or missing detail."
     }
   ],
-  "completion_rule": "This manifest is incomplete until real saved source entries are present and every serious claim in the review package can trace back to evidence IDs here."
+  "completion_rule": "This manifest is incomplete until every source entry points to real saved files, uses a real URL, and every serious claim in the review package can trace back to evidence IDs here."
 }

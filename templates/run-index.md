@@ -9,6 +9,8 @@ This file should read like a reviewer control document, not a launch note.
 - theme:
 - corpus path:
 - artifact path:
+- checkpoint label:
+- checkpoint behavior:
 
 ## Boundary Status
 
@@ -27,6 +29,11 @@ This file should read like a reviewer control document, not a launch note.
 - artifact manifest is populated with completed artifact entries:
 - review-package files are fully written rather than template-shaped:
 - completion check result:
+
+## Key Source Links
+
+- evidence ID plus direct URL:
+- evidence ID plus direct URL:
 
 ## Reviewer Route
 
@@ -48,14 +55,16 @@ This file should read like a reviewer control document, not a launch note.
 
 - evidence IDs or missing evidence:
 
-## Next Step Requested at Gate 1
+## Next Step Requested at Checkpoint 1
 
 - requested human decision:
-- stop status:
+- checkpoint status:
+- completion point status:
 
 ## Quality Bar
 
 - Do not leave counts blank.
 - Do not leave recommendation fields unresolved.
+- Do not leave key source links blank.
 - Do not point the reviewer to files that are still scaffolds.
 - Do not use this file only to say that launch succeeded.

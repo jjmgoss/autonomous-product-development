@@ -10,7 +10,12 @@ Short source title.
 
 ## URL
 
-Source URL.
+Paste the exact source URL here so a reviewer can click through immediately.
+
+## Saved paths
+
+- raw path:
+- normalized path:
 
 ## Source type
 
@@ -43,3 +48,7 @@ Call out any reasons to discount or qualify the source.
 ## Candidate linkage
 
 List candidate names or IDs this source supports or weakens.
+
+## Direct evidence excerpt
+
+Capture the most concrete complaint, observation, or workflow detail from this source.

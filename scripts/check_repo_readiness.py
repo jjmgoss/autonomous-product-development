@@ -87,6 +87,7 @@ ARTIFACT_MANIFEST_FIELDS = {
 }
 
 LAUNCH_SCAFFOLD_MARKER = "launch scaffold"
+OPTIONAL_EMPTY_VALUES = {"", "none", "n/a", "na", "null"}
 
 FORBIDDEN_PATTERNS = [
     re.compile(r"<run-id>", re.IGNORECASE),
@@ -105,10 +106,10 @@ REQUIRED_RUN_INDEX_HEADINGS = {
     "## run context",
     "## boundary status",
     "## execution checklist",
+    "## key source links",
     "## reviewer route",
     "## recommendation snapshot",
     "## evidence that could overturn the ranking",
-    "## next step requested at gate 1",
 }
 
 REQUIRED_START_HEADINGS = {
@@ -133,7 +134,9 @@ REQUIRED_ACTIVE_RUN_FIELDS = [
     "- launcher command:",
     "- completion check:",
     "- reviewer entry point:",
-    "- stop gate:",
+    "- checkpoint label:",
+    "- checkpoint behavior:",
+    "- completion point:",
 ]
 
 MIN_NONEMPTY_LINES = {
@@ -157,14 +160,16 @@ RUN_INDEX_REQUIRED_FIELDS = {
     "why the leader won",
     "why it may still fail",
     "requested human decision",
-    "stop status",
+    "checkpoint status",
+    "completion point status",
 }
 
 RUN_INDEX_PLACEHOLDER_SNIPPETS = (
     "in progress",
     "replace with",
     "do not fill until",
-    "launch complete, research and package completion still in progress",
+    "not reached yet",
+    "discovery work still in progress",
 )
 
 CANDIDATE_LINK_REQUIRED_BULLETS = {
@@ -172,6 +177,7 @@ CANDIDATE_LINK_REQUIRED_BULLETS = {
     "status in ranking",
     "supporting evidence ids",
     "weakening evidence ids",
+    "key supporting links",
     "substitute pressure notes",
     "open questions that could change ranking",
 }
@@ -210,6 +216,30 @@ def load_text(relative_path: str) -> tuple[str | None, str | None]:
 
 def nonempty_line_count(text: str) -> int:
     return sum(1 for line in text.splitlines() if line.strip())
+
+
+def optional_active_run_field(field_name: str) -> str | None:
+    text, load_error = load_text("ACTIVE_RUN.md")
+    if load_error:
+        return None
+    assert text is not None
+
+    pattern = re.compile(rf"^-\s*{re.escape(field_name)}:\s*(.+)$", re.MULTILINE | re.IGNORECASE)
+    match = pattern.search(text)
+    if not match:
+        return None
+    value = match.group(1).strip().strip("`")
+    if value.lower() in OPTIONAL_EMPTY_VALUES:
+        return None
+    return value
+
+
+def checkpoint_label() -> str:
+    return optional_active_run_field("checkpoint label") or "Checkpoint 1"
+
+
+def http_link_count(text: str) -> int:
+    return len(re.findall(r"https?://", text, re.IGNORECASE))
 
 
 def find_forbidden_matches(text: str) -> list[str]:
@@ -259,6 +289,12 @@ def validate_run_index(relative_path: str) -> list[str]:
         return [load_error]
     assert text is not None
 
+    if f"## next step requested at {checkpoint_label().lower()}" not in text.lower():
+        errors.append(f"{relative_path} is missing the checkpoint handoff section for {checkpoint_label()}.")
+
+    if http_link_count(text) == 0:
+        errors.append(f"{relative_path} must surface at least one real source URL for reviewer inspection.")
+
     bullets = parse_markdown_bullets(text)
     missing_fields = sorted(field for field in RUN_INDEX_REQUIRED_FIELDS if not bullets.get(field))
     if missing_fields:
@@ -295,6 +331,23 @@ def validate_candidate_links(relative_path: str) -> list[str]:
         missing = sorted(field for field in CANDIDATE_LINK_REQUIRED_BULLETS if not bullets.get(field))
         if missing:
             errors.append(f"{relative_path} candidate #{index} is missing fields: {', '.join(missing)}")
+    return errors
+
+
+def validate_source_note(relative_path: str, expected_url: str) -> list[str]:
+    errors = validate_markdown(relative_path)
+    text, load_error = load_text(relative_path)
+    if load_error:
+        return [load_error]
+    assert text is not None
+
+    lowered = text.lower()
+    if "## url" not in lowered:
+        errors.append(f"{relative_path} must include a visible URL section near the top.")
+    if expected_url and expected_url not in text:
+        errors.append(f"{relative_path} must repeat the manifest URL exactly so reviewers can inspect the source directly.")
+    if http_link_count(text) == 0:
+        errors.append(f"{relative_path} must contain at least one real URL.")
     return errors
 
 
@@ -373,6 +426,20 @@ def validate_research_manifest(relative_path: str) -> list[str]:
         missing = sorted(field for field in RESEARCH_MANIFEST_FIELDS if not source.get(field))
         if missing:
             errors.append(f"{relative_path} source #{index} is missing fields: {', '.join(missing)}")
+            continue
+
+        url = str(source.get("url", "")).strip()
+        if not re.fullmatch(r"https?://.+", url, re.IGNORECASE):
+            errors.append(f"{relative_path} source #{index} must use a real http(s) URL.")
+
+        for field_name in ["raw_path", "normalized_path", "note_path"]:
+            referenced_path = ROOT / str(source.get(field_name, "")).strip()
+            if not referenced_path.is_file():
+                errors.append(f"{relative_path} source #{index} references a missing file in {field_name}: {source.get(field_name)}")
+
+        note_path = str(source.get("note_path", "")).strip()
+        if note_path:
+            errors.extend(validate_source_note(note_path, url))
     return errors
 
 
@@ -463,6 +530,13 @@ def validate_run(run_id: str) -> int:
         and candidate_links_text is not None
     )
 
+    summary_text, _ = load_text(f"artifacts/runs/{run_id}/reports/discovery-summary.md")
+    assert summary_text is not None
+    if http_link_count(summary_text) == 0:
+        errors.append(
+            f"artifacts/runs/{run_id}/reports/discovery-summary.md must surface at least one real source URL for fast reviewer inspection."
+        )
+
     documented_exception = exception_is_documented(run_index_text)
     sources = research_manifest.get("sources", [])
     source_count = len(sources)
@@ -499,7 +573,7 @@ def validate_run(run_id: str) -> int:
 
     if not errors:
         print()
-        print(f"READY  Run package {run_id} is complete enough for Gate 1 review.")
+        print(f"READY  Run package {run_id} is complete enough for {checkpoint_label()} review.")
         return 0
 
     print()
@@ -548,7 +622,7 @@ def validate_repo() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate repo startup readiness or the final completeness of a discovery run package.")
-    parser.add_argument("--run-id", help="Validate the completed Gate 1 package for the given run ID.")
+    parser.add_argument("--run-id", help="Validate the completed discovery handoff package for the given run ID.")
     args = parser.parse_args()
 
     if args.run_id:

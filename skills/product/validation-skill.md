@@ -80,7 +80,7 @@ Default toward go only when most of these are true:
 - a validation argument whose key claims point back to saved evidence IDs
 - an explicit go, continue-validation, or no-go decision
 
-If the run is still at Gate 1, the validation artifact should also explain why the winning candidate beat the runner-up and what evidence would overturn that decision.
+If the run is still at Checkpoint 1, the validation artifact should also explain why the winning candidate beat the runner-up and what evidence would overturn that decision.
 
 ## Common failure modes
 

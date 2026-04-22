@@ -21,7 +21,7 @@
         "artifacts/runs/20260421-theme-slug-r1/review-package/candidate-review.md",
         "research-corpus/runs/20260421-theme-slug-r1/manifest.json"
       ],
-      "purpose": "Reviewer-facing entry point for the full Gate 1 package.",
+      "purpose": "Reviewer-facing entry point for the Checkpoint 1 handoff package.",
       "notes": "List any caveats about how or why this artifact was produced."
     },
     {
@@ -39,5 +39,5 @@
       "notes": "List any caveats about how or why this artifact was produced."
     }
   ],
-  "completion_rule": "This manifest is incomplete until the run index, summary, and reviewer artifacts all have completed entries with real inputs and purposes."
+  "completion_rule": "This manifest is incomplete until the run index, summary, and reviewer artifacts all have completed entries with real inputs, purposes, and reviewer-facing evidence links."
 }

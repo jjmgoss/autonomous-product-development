@@ -49,9 +49,9 @@ List verification steps completed.
 
 List the most important unresolved items.
 
-## Gate status
+## Checkpoint status
 
-State whether the work is ready for the next human gate or not.
+State whether the work reached the next checkpoint, whether it should pause, and why.
 
 ## Next action
 

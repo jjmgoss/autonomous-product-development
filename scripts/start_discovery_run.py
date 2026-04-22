@@ -13,6 +13,26 @@ ROOT = Path(__file__).resolve().parent.parent
 ACTIVE_RUN_PATH = ROOT / "ACTIVE_RUN.md"
 THEME_PATH = ROOT / "theme.md"
 
+THEME_SLUG_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "automation",
+    "build",
+    "developer",
+    "development",
+    "discover",
+    "for",
+    "in",
+    "of",
+    "opportunities",
+    "product",
+    "the",
+    "to",
+    "workflow",
+}
+OPTIONAL_EMPTY_VALUES = {"", "none", "n/a", "na", "null"}
+
 DISCOVERY_OUTPUTS = [
     "research-corpus/runs/{run_id}/manifest.json",
     "research-corpus/runs/{run_id}/candidate-links.md",
@@ -73,6 +93,15 @@ def parse_active_run_field(field_name: str) -> str | None:
     return value.strip("`")
 
 
+def optional_active_run_field(field_name: str) -> str | None:
+    value = parse_active_run_field(field_name)
+    if value is None:
+        return None
+    if value.strip().lower() in OPTIONAL_EMPTY_VALUES:
+        return None
+    return value
+
+
 def slugify(value: str) -> str:
     lowered = value.lower()
     normalized = re.sub(r"[^a-z0-9]+", "-", lowered)
@@ -80,49 +109,57 @@ def slugify(value: str) -> str:
     return normalized or "run"
 
 
-def infer_slug_from_theme() -> str:
+def extract_theme_summary() -> str:
     if not THEME_PATH.exists():
         return "theme"
 
     text = read_text(THEME_PATH)
     quote_match = re.search(r"^>\s*(.+)$", text, re.MULTILINE)
     if quote_match:
-        tokens = re.findall(r"[a-z0-9]+", quote_match.group(1).lower())
-    else:
-        tokens = re.findall(r"[a-z0-9]+", text.lower())
+        return quote_match.group(1).strip()
 
-    stopwords = {
-        "a",
-        "an",
-        "and",
-        "automation",
-        "build",
-        "developer",
-        "development",
-        "discover",
-        "for",
-        "in",
-        "of",
-        "opportunities",
-        "product",
-        "the",
-        "to",
-        "workflow",
-    }
-    meaningful = [token for token in tokens if token not in stopwords]
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            return stripped
+    return "theme"
+
+
+def checkpoint_label() -> str:
+    return optional_active_run_field("checkpoint label") or "Checkpoint 1"
+
+
+def checkpoint_behavior() -> str:
+    return optional_active_run_field("checkpoint behavior") or "continue unless blocked"
+
+
+def infer_slug_from_theme() -> str:
+    tokens = re.findall(r"[a-z0-9]+", extract_theme_summary().lower())
+    meaningful = [token for token in tokens if token not in THEME_SLUG_STOPWORDS]
     selected = meaningful[:3] or tokens[:3] or ["theme"]
     return slugify("-".join(selected))
 
 
-def choose_slug(explicit_slug: str | None) -> str:
+def choose_slug(explicit_slug: str | None) -> tuple[str, str | None]:
     if explicit_slug:
-        return slugify(explicit_slug)
+        return slugify(explicit_slug), None
 
-    slug_hint = parse_active_run_field("run slug hint")
-    if slug_hint:
-        return slugify(slug_hint)
+    slug_override = optional_active_run_field("theme slug override") or optional_active_run_field("run slug override")
+    if slug_override:
+        return slugify(slug_override), None
 
-    return infer_slug_from_theme()
+    inferred_slug = infer_slug_from_theme()
+
+    legacy_slug_hint = optional_active_run_field("run slug hint")
+    if legacy_slug_hint:
+        legacy_slug = slugify(legacy_slug_hint)
+        if legacy_slug != inferred_slug:
+            return inferred_slug, (
+                f"Legacy run slug hint '{legacy_slug_hint}' does not match the current theme-derived slug '{inferred_slug}'. "
+                "Using the theme-derived slug. Set 'theme slug override' in ACTIVE_RUN.md only when you intentionally need a different slug."
+            )
+
+    return inferred_slug, None
 
 
 def run_exists(run_id: str) -> bool:
@@ -188,6 +225,7 @@ def candidate_links_stub(run_id: str) -> str:
         - status in ranking:
         - supporting evidence IDs:
         - weakening evidence IDs:
+        - key supporting links:
         - substitute pressure notes:
         - open questions that could change ranking:
         """
@@ -195,18 +233,23 @@ def candidate_links_stub(run_id: str) -> str:
 
 
 def run_index_stub(run_id: str) -> str:
+    theme_summary = extract_theme_summary()
+    current_checkpoint = checkpoint_label()
+    current_behavior = checkpoint_behavior()
     return dedent(
         f"""\
         # Run Index
 
-        Launch scaffold: this run has been initialized, but the research and reviewer package are not complete yet.
+        Launch scaffold: this run has been initialized, but the discovery package is not complete yet.
 
         ## Run Context
 
         - run ID: {run_id}
-        - theme: replace with the current theme in one sentence
+        - theme: {theme_summary}
         - corpus path: research-corpus/runs/{run_id}/
         - artifact path: artifacts/runs/{run_id}/
+        - checkpoint label: {current_checkpoint}
+        - checkpoint behavior: {current_behavior}
 
         ## Boundary Status
 
@@ -224,8 +267,12 @@ def run_index_stub(run_id: str) -> str:
         - [ ] update `candidate-links.md` with serious candidates plus supporting and weakening evidence IDs
         - [ ] write the review-package artifacts with evidence-backed rankings and recommendation
         - [ ] update `artifacts/runs/{run_id}/manifest.json` with completed artifact entries
-        - [ ] replace this launch scaffold note with reviewer-facing completion status
+        - [ ] add key source links with evidence IDs and real URLs in this file
         - [ ] run `python scripts/check_repo_readiness.py --run-id {run_id}` only after the package is complete
+
+        ## Key Source Links
+
+        - add 3-5 high-signal evidence IDs with real URLs once sources are saved
 
         ## Reviewer Route
 
@@ -247,10 +294,11 @@ def run_index_stub(run_id: str) -> str:
 
         - replace with the evidence IDs or missing evidence that could change the current call
 
-        ## Next Step Requested At Gate 1
+        ## Next Step Requested At {current_checkpoint}
 
         - requested human decision: do not fill until the package is complete
-        - stop status: launch complete, research and package completion still in progress
+        - checkpoint status: not reached yet
+        - completion point status: discovery work still in progress
         """
     )
 
@@ -273,6 +321,10 @@ def research_review_stub(run_id: str) -> str:
         ## Repeated Pain Patterns
 
         Explain the strongest recurring workflow pain with evidence IDs.
+
+        ## Key Sources
+
+        List the highest-signal evidence IDs with direct URLs so a reviewer can inspect the strongest sources quickly.
 
         ## Current Workarounds And Substitutes
 
@@ -385,7 +437,7 @@ def validation_stub(run_id: str) -> str:
 
         Explain the disconfirming evidence that would overturn the current ranking.
 
-        ## Gate 1 Request
+        ## Checkpoint 1 Request
 
         State what human decision is being requested once the package is complete.
         """
@@ -393,6 +445,8 @@ def validation_stub(run_id: str) -> str:
 
 
 def discovery_summary_stub(run_id: str) -> str:
+    theme_summary = extract_theme_summary()
+    current_checkpoint = checkpoint_label()
     return dedent(
         f"""\
         # Discovery Summary
@@ -403,11 +457,15 @@ def discovery_summary_stub(run_id: str) -> str:
 
         ## Run Context
 
-        - theme:
+        - theme: {theme_summary}
         - source count:
         - source types used:
         - candidate count:
         - boundary exceptions, if any:
+
+        ## Key Source Links
+
+        List the most important evidence IDs with direct URLs.
 
         ## Top Recommendation
 
@@ -424,9 +482,9 @@ def discovery_summary_stub(run_id: str) -> str:
 
         Explain which missing evidence could materially change the recommendation.
 
-        ## Stop Point
+        ## Completion Point
 
-        State that the run stopped at Gate 1 after the package was completed.
+        State whether the discovery package reached {current_checkpoint} and whether the active run should pause or continue.
         """
     )
 
@@ -487,8 +545,11 @@ def main() -> int:
             print(f"ERROR  Run ID already exists: {run_id}")
             return 1
     else:
-        slug = choose_slug(args.slug)
+        slug, slug_warning = choose_slug(args.slug)
         run_id = next_run_id(date_prefix, slug)
+
+    if not args.run_id and slug_warning:
+        print(f"WARN  {slug_warning}")
 
     research_root, artifact_root = initialize_run(run_id)
 
@@ -497,8 +558,11 @@ def main() -> int:
     print(f"ARTIFACT_ROOT  {artifact_root.relative_to(ROOT).as_posix()}")
     print("READINESS_CHECK  python scripts/check_repo_readiness.py")
     print(f"COMPLETION_CHECK  python scripts/check_repo_readiness.py --run-id {run_id}")
-    print("NEXT_STEP  Launch complete. Do the research work now, fully populate the manifests and reviewer artifacts, then run the completion check last.")
-    print("DO_NOT_STOP  A launched run with scaffold files is not a completed Gate 1 package.")
+    print(f"THEME  {extract_theme_summary()}")
+    print(f"CHECKPOINT  {checkpoint_label()}")
+    print(f"CHECKPOINT_BEHAVIOR  {checkpoint_behavior()}")
+    print("NEXT_STEP  Launch complete. Do the research work now, fully populate the corpus, manifests, links, and reviewer artifacts, then run the completion check last.")
+    print("DO_NOT_PAUSE  A launched run with scaffold files does not satisfy the active completion point.")
     print("REQUIRED_OUTPUTS")
     for output in DISCOVERY_OUTPUTS:
         print(f"- {output.format(run_id=run_id)}")

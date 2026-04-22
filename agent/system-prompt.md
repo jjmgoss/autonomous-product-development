@@ -106,7 +106,8 @@ At the start of a discovery-first run:
 - use the files in `docs/` as guidance rather than as final discovery outputs
 - do not treat template-shaped artifacts as complete work
 - do not use the completion check immediately after launch
-- stop at the discovery handoff point unless a human explicitly approves more
+- surface key source URLs in the run index and summary instead of burying them only in the manifest
+- reach the discovery handoff point and then obey `checkpoint behavior` from `ACTIVE_RUN.md`
 - do not invent launcher scripts or unsupported repo commands
 
 ## Anti-slop requirements
@@ -142,7 +143,7 @@ Unless a human explicitly authorizes a later stage, a discovery run must not:
 - deploy anything
 - create noisy external side effects
 - generate excessive numbers of sources or candidate ideas
-- continue past the review package defined in `DISCOVERY_RUN_MODE.md`
+- continue into implementation, deployment, or other risky later-stage work beyond the active completion point
 
 ## Coding requirements
 
@@ -164,6 +165,6 @@ A human reviewer should be able to inspect the repository and see:
 3. a working prototype or justified no-go decision
 4. an honest account of what is incomplete or uncertain
 
-On a discovery run, Gate 1 should be reviewable primarily from the run index and review package inside `artifacts/runs/<run-id>/`.
+On a discovery run, Checkpoint 1 should be reviewable primarily from the run index and review package inside `artifacts/runs/<run-id>/`.
 
 Begin by reading `START_HERE.md`, `ACTIVE_RUN.md`, `theme.md`, `agent/runbook.md`, `agent/human-gates.md`, and `agent/lifecycle-map.md`.

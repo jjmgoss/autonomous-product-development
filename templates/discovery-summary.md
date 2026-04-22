@@ -13,6 +13,10 @@ It should summarize the completed package, not the launch step.
 - candidate count
 - boundary exceptions, if any
 
+## Key source links
+
+List the highest-signal evidence IDs with direct URLs.
+
 ## What the run investigated
 
 - user/workflow boundary
@@ -51,11 +55,11 @@ List the missing evidence that could materially change the current ranking.
 
 ## Next-step request
 
-State what the human should decide at Gate 1.
+State what the human should decide at Checkpoint 1.
 
-## Stop point
+## Completion point
 
-State that the run stopped at the discovery review handoff unless a human approved a next stage.
+State whether the discovery handoff reached Checkpoint 1 and whether the active run should pause or continue.
 
 ## Quality bar
 

@@ -46,6 +46,7 @@ If the run is discovery-first, also initialize a matching run folder in:
 Prefer `python scripts/start_discovery_run.py` over manual run-folder setup.
 The launcher creates the run shell only.
 After launch, immediately populate the corpus, manifests, review package, and run index before using the completion check.
+Do not pause early just because the run reached a named checkpoint. Follow `checkpoint behavior` and `completion point` from `ACTIVE_RUN.md`.
 
 ## Step 4: Decide the run mode
 
@@ -84,6 +85,7 @@ While doing the discovery work:
 
 If no opportunity earns a clear go decision, stop there with an explicit recommendation.
 If any artifact is still template-shaped, the run is not ready to stop.
+Make the key source URLs visible in the run index and discovery summary so a reviewer does not need to dig through the manifest first.
 
 ## Step 6: Plan before implementation
 
@@ -140,6 +142,7 @@ Before stopping a discovery pass, run `python scripts/check_repo_readiness.py --
 Do not use that command as the next action right after launch.
 Use it only after the package is populated and the run index reflects the final reviewer-facing state.
 If it fails, either fix the package or document the boundary exception in the run index.
+Treat the named checkpoint as a handoff marker, not as the default reason to pause, unless `ACTIVE_RUN.md` says `checkpoint behavior: pause for human review`.
 
 ## Fallback behavior when stuck
 
