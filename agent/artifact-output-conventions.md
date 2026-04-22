@@ -17,6 +17,8 @@ artifacts/
   runs/
     <run-id>/
       manifest.json
+      run-index.md
+      review-package/
       reports/
       evaluations/
       exports/
@@ -27,6 +29,8 @@ artifacts/
 
 ## What belongs where
 
+- `artifacts/runs/<run-id>/run-index.md` is the reviewer-facing entry point for one run.
+- `artifacts/runs/<run-id>/review-package/` stores the canonical Gate 1 review deliverables for that run.
 - `artifacts/runs/<run-id>/reports/` stores run summaries and reviewer-facing generated reports.
 - `artifacts/runs/<run-id>/evaluations/` stores score exports, ranking tables, or other generated evaluation outputs.
 - `artifacts/runs/<run-id>/exports/` stores transformed datasets, text bundles, or other run-scoped exports.
@@ -52,6 +56,21 @@ Each `artifacts/runs/<run-id>/manifest.json` entry should record:
 - `purpose`
 - `notes`
 
+The run manifest should include entries for the run index, each review-package file, and the discovery summary.
+
+## First-run review package
+
+The review package should usually contain:
+
+- `review-package/research.md`
+- `review-package/opportunity-scorecard.md`
+- `review-package/candidate-review.md`
+- `review-package/validation.md`
+- `review-package/product-brief.md` only if the recommendation is `Go now`
+
+These are the canonical first-run review artifacts.
+Do not treat `docs/` as the final run package location.
+
 ## Documentation rule
 
 Whenever an agent creates a non-trivial artifact, it should:
@@ -61,3 +80,5 @@ Whenever an agent creates a non-trivial artifact, it should:
 3. mention it in `docs/work-log.md` if it materially changed the run
 
 This keeps later reviewers from having to guess which outputs mattered.
+
+The run index should also tell the reviewer what to read first, whether boundaries were met, and what evidence could overturn the current recommendation.

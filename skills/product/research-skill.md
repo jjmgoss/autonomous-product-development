@@ -18,6 +18,7 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 	- Create or confirm the current `run-id`.
 	- Create the matching folder under `research-corpus/runs/<run-id>/`.
 	- Prepare `manifest.json`, `candidate-links.md`, and the `raw/`, `normalized/`, and `notes/` subdirectories.
+	- Prepare `artifacts/runs/<run-id>/review-package/research.md` as the canonical research output for the run.
 
 2. Define the user and workflow boundary.
 	- Name likely user segments.
@@ -66,6 +67,7 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 11. Link candidates back to evidence.
 	- Update `candidate-links.md` so each serious candidate has supporting and weakening evidence IDs.
 	- Do not let candidate ranking float free from saved sources.
+	- If a candidate remains in serious contention, it should have both positive and negative evidence recorded.
 
 12. Capture open questions that matter.
 	- Missing evidence is acceptable.
@@ -81,7 +83,7 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 
 ## Output expectations
 
-`docs/research.md` should make it possible for a reviewer to answer:
+`artifacts/runs/<run-id>/review-package/research.md` should make it possible for a reviewer to answer:
 
 - who exactly has the pain
 - what recurring workflow is broken
@@ -89,6 +91,8 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 - why current tools are insufficient or good enough
 - which candidate wedges are emerging
 - which candidates already look weak
+
+When multiple candidates survive the research pass, the research artifact should show enough evidence for a reviewer to understand why more than one candidate remained viable.
 
 The strongest claims should cite evidence IDs that exist in the run corpus.
 

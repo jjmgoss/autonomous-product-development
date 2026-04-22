@@ -1,6 +1,7 @@
-# Opportunity Scorecard
+# Opportunity Scorecard Guide
 
-Score candidate ideas before choosing one.
+Use this file as reusable guidance for `artifacts/runs/<run-id>/review-package/opportunity-scorecard.md` during first-run discovery.
+Do not treat this file itself as the canonical final run output.
 
 ## Purpose
 
@@ -41,11 +42,13 @@ For each opportunity, record:
 - one-sentence problem statement
 - supporting evidence IDs
 - weakening evidence IDs
-- score table
+- score table with the same dimensions used for every scored candidate
 - strongest positive reason
 - strongest reason it may fail
 - fatal blockers, if any
 - recommendation status: pursue, keep alive, or drop
+
+If you score more than one candidate, include a short comparison note explaining why the top score still wins over the runner-up.
 
 ## Decision rule
 

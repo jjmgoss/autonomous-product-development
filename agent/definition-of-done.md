@@ -30,6 +30,16 @@ A task, issue, milestone, or product stage is not complete just because code was
 - validation clearly showed it was not worth building or not yet worth building
 - the reasons are explicit enough for a future reviewer to understand the call
 
+## A first-run discovery package is done when
+
+- the run-scoped review package exists under `artifacts/runs/<run-id>/review-package/`
+- the run index exists and points the reviewer to the right files
+- the corpus manifest and candidate-evidence map exist
+- source-count and candidate-count boundaries are met or explicitly justified
+- major ranking and recommendation claims cite saved evidence IDs
+- no final artifact still contains unresolved template prompts, placeholders, or blank required sections
+- the discovery summary explains both the case for the winner and the reasons it may still fail
+
 ## Things that do not count as done
 
 - code compiles but no behavior was exercised
@@ -37,3 +47,5 @@ A task, issue, milestone, or product stage is not complete just because code was
 - tests were written but not run
 - UI exists but core workflow fails
 - claims of success are based on assumptions rather than evidence
+- framework templates were edited in place and mistaken for completed run outputs
+- a summary exists but the candidate comparison is too thin to support the ranking

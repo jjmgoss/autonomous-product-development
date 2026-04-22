@@ -4,7 +4,7 @@
 
 Run a discovery-first pass that produces a ranked set of candidate opportunities without rushing into implementation.
 
-The first live run should produce a bounded review package, not a sprawling research archive or a premature codebase.
+The first live run should produce a bounded, fully completed review package, not a sprawling research archive or a premature codebase.
 
 ## When to use
 
@@ -15,26 +15,29 @@ The first live run should produce a bounded review package, not a sprawling rese
 ## Procedure
 
 1. Read `theme.md` carefully and extract the preferred product profile.
-2. Read `FIRST_RUN_MODE.md` and adopt its source-count, candidate-count, and stop-boundary rules.
-3. Use the research skill to identify repeated pain and workflow friction.
-4. Keep the saved corpus bounded and auditable.
-5. Generate candidate wedges from the strongest pain patterns.
-6. Limit the serious candidate set to at most 5 ideas and the detailed scorecard to the top 3.
-7. Score the candidates in `docs/opportunity-scorecard.md`.
-8. Use monetization, substitute, and agent-operability skills on the top few candidates.
-9. Create `docs/candidate-review.md` for human review.
-10. Produce a concise run summary in `artifacts/runs/<run-id>/reports/discovery-summary.md`.
-11. Decide whether one candidate earns a go decision, more validation, or no-go.
+2. Read `FIRST_RUN_MODE.md` and adopt its source-count, candidate-count, completion, and stop-boundary rules.
+3. Create the run directory structure, including `artifacts/runs/<run-id>/review-package/`.
+4. Use the research skill to identify repeated pain and workflow friction.
+5. Keep the saved corpus bounded and auditable.
+6. Generate candidate wedges from the strongest pain patterns.
+7. Limit the serious candidate set to at most 5 ideas and the detailed scorecard to the top 3.
+8. Score the candidates in `artifacts/runs/<run-id>/review-package/opportunity-scorecard.md`.
+9. Use monetization, substitute, and agent-operability skills on the top few candidates.
+10. Create `artifacts/runs/<run-id>/review-package/candidate-review.md` for human review.
+11. Create `artifacts/runs/<run-id>/reports/discovery-summary.md` and `artifacts/runs/<run-id>/run-index.md`.
+12. Decide whether one candidate earns a go decision, more validation, or no-go.
+13. Run the first-run checker against the completed run before stopping.
 
 ## Required outputs
 
-- `docs/research.md`
-- `docs/opportunity-scorecard.md`
-- `docs/candidate-review.md`
-- `docs/validation.md`
 - `research-corpus/runs/<run-id>/manifest.json`
 - `research-corpus/runs/<run-id>/candidate-links.md`
 - `artifacts/runs/<run-id>/manifest.json`
+- `artifacts/runs/<run-id>/run-index.md`
+- `artifacts/runs/<run-id>/review-package/research.md`
+- `artifacts/runs/<run-id>/review-package/opportunity-scorecard.md`
+- `artifacts/runs/<run-id>/review-package/candidate-review.md`
+- `artifacts/runs/<run-id>/review-package/validation.md`
 - `artifacts/runs/<run-id>/reports/discovery-summary.md`
 
 ## Default rule
@@ -43,6 +46,16 @@ A first run should usually stop after ranking and recommendation unless one idea
 
 If a human has not explicitly approved moving forward, the review package is the endpoint.
 
+## Completion rule
+
+The package is not complete if:
+
+- placeholders remain
+- unresolved prompts remain
+- only one candidate is meaningfully developed
+- the ranking is not traceable to saved evidence IDs
+- the run checker fails
+
 ## Common failure modes
 
 - treating the first plausible idea as the winner
@@ -50,3 +63,4 @@ If a human has not explicitly approved moving forward, the review package is the
 - producing a long candidate list with no hard ranking or recommendation
 - collecting weak source volume instead of strong evidence density
 - making claims that are not traceable to saved source IDs
+- editing reusable docs in place instead of writing the run-scoped review package

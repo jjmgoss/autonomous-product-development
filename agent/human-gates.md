@@ -15,9 +15,9 @@ Require human review after:
 - research is completed
 - top opportunities are scored
 - a candidate comparison artifact exists
-- one opportunity is selected
+- one opportunity is selected or explicitly not selected
 - validation results are written
-- MVP scope is defined
+- the discovery summary and run index are complete
 
 Human should check:
 
@@ -32,14 +32,17 @@ Human should check:
 
 Gate 1 should usually be reviewable from these artifacts:
 
-- `docs/research.md`
-- `docs/opportunity-scorecard.md`
-- `docs/candidate-review.md`
-- `docs/validation.md`
-- `docs/product-brief.md` if an opportunity was selected
+- `artifacts/runs/<run-id>/run-index.md`
+- `artifacts/runs/<run-id>/reports/discovery-summary.md`
+- `artifacts/runs/<run-id>/review-package/research.md`
+- `artifacts/runs/<run-id>/review-package/opportunity-scorecard.md`
+- `artifacts/runs/<run-id>/review-package/candidate-review.md`
+- `artifacts/runs/<run-id>/review-package/validation.md`
+- `artifacts/runs/<run-id>/review-package/product-brief.md` if an opportunity was selected
 - `research-corpus/runs/<run-id>/manifest.json`
 - `research-corpus/runs/<run-id>/candidate-links.md`
-- `artifacts/runs/<run-id>/reports/discovery-summary.md`
+
+Gate 1 should not be considered review-ready if the run checker fails, the run index is missing, or any review-package file still looks like an unresolved template.
 
 Gate 1 rejection triggers:
 
@@ -47,6 +50,8 @@ Gate 1 rejection triggers:
 - the product only looks good if many future features land
 - willingness to pay is asserted but not argued
 - major claims are not traceable to saved evidence
+- the review package leaves placeholders, unresolved prompts, or blank sections in final artifacts
+- only one candidate is meaningfully developed despite a multi-candidate comparison claim
 - the idea requires heavy human services, field work, or compliance before it becomes useful
 - the product looks like a demo, not a viable narrow business seed
 
@@ -99,3 +104,12 @@ These gates are meant to help, not to create bureaucracy.
 - Gate 3 should be reviewable in 10-15 minutes.
 
 If review takes much longer, the agent should tighten the artifacts rather than produce more prose.
+
+The fastest Gate 1 review path should be:
+
+1. run index
+2. discovery summary
+3. candidate review
+4. validation
+5. scorecard
+6. corpus manifest and candidate-evidence map

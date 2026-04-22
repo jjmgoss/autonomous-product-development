@@ -8,9 +8,9 @@ Choose the candidate that best combines painful demand, believable monetization,
 
 ## Procedure
 
-1. Shortlist the strongest candidate wedges from `docs/research.md`.
+1. Shortlist the strongest candidate wedges from `artifacts/runs/<run-id>/review-package/research.md` during first-run discovery.
 
-2. Score each candidate in `docs/opportunity-scorecard.md` on a 1-5 scale for:
+2. Score each candidate in `artifacts/runs/<run-id>/review-package/opportunity-scorecard.md` on a 1-5 scale for:
    - pain severity
    - frequency or recurrence
    - evidence quality
@@ -32,7 +32,9 @@ Choose the candidate that best combines painful demand, believable monetization,
 4. Compare the top few candidates, not just the top score.
    - Write why each top candidate is promising.
    - Write why each top candidate may still fail.
-   - Produce a reviewer-friendly summary in `docs/candidate-review.md`.
+   - Produce a reviewer-friendly summary in `artifacts/runs/<run-id>/review-package/candidate-review.md`.
+
+If multiple candidates were considered seriously, make at least the top 2 reviewable as real alternatives rather than listing one winner and several names.
 
 5. Use tie-breakers deliberately.
    - Prefer stronger pain and evidence over a clever feature idea.

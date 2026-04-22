@@ -3,14 +3,28 @@
   "artifacts": [
     {
       "id": "ART-001",
-      "artifact_type": "report",
-      "path": "artifacts/runs/20260421-theme-slug-r1/reports/discovery-summary.md",
+      "artifact_type": "index",
+      "path": "artifacts/runs/20260421-theme-slug-r1/run-index.md",
       "created_at": "2026-04-21T12:00:00Z",
       "created_by": "agent",
       "inputs": [
-        "docs/research.md",
-        "docs/opportunity-scorecard.md",
+        "artifacts/runs/20260421-theme-slug-r1/review-package/research.md",
+        "artifacts/runs/20260421-theme-slug-r1/review-package/candidate-review.md",
         "research-corpus/runs/20260421-theme-slug-r1/manifest.json"
+      ],
+      "purpose": "Reviewer-facing entry point for the full Gate 1 package.",
+      "notes": "List any caveats about how or why this artifact was produced."
+    },
+    {
+      "id": "ART-002",
+      "artifact_type": "report",
+      "path": "artifacts/runs/20260421-theme-slug-r1/reports/discovery-summary.md",
+      "created_at": "2026-04-21T12:05:00Z",
+      "created_by": "agent",
+      "inputs": [
+        "artifacts/runs/20260421-theme-slug-r1/review-package/research.md",
+        "artifacts/runs/20260421-theme-slug-r1/review-package/opportunity-scorecard.md",
+        "artifacts/runs/20260421-theme-slug-r1/review-package/validation.md"
       ],
       "purpose": "Concise run summary for human review.",
       "notes": "List any caveats about how or why this artifact was produced."

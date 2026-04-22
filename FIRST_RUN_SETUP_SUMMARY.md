@@ -6,9 +6,10 @@ This setup pass finished the repo work needed to make the first live discovery r
 
 - `FIRST_RUN_MODE.md` now defines the default first-run boundary: discovery only, bounded source count, bounded candidate count, and a hard stop at the review package.
 - `agent/research-corpus-conventions.md` and `research-corpus/` now define how saved sources, normalized text, source notes, and candidate-to-evidence links should be organized.
-- `agent/artifact-output-conventions.md` and `artifacts/` now define where run summaries, evaluations, exports, and later generated projects belong.
+- `agent/artifact-output-conventions.md` and `artifacts/` now define where run summaries, review packages, evaluations, exports, and later generated projects belong.
 - `scripts/check_first_run_readiness.py` now provides a lightweight readiness check before the first live run.
 - discovery docs and skills now require stronger evidence linkage through saved source IDs.
+- the first-run review package now lives under one run-scoped artifact bundle instead of editing reusable docs in place.
 
 ## How research corpus handling works now
 
@@ -30,6 +31,8 @@ Run-scoped outputs belong under `artifacts/runs/<run-id>/`.
 
 Use:
 
+- `run-index.md` for the reviewer-facing entry point to the full run
+- `review-package/` for the canonical Gate 1 deliverables
 - `reports/` for reviewer-facing summaries
 - `evaluations/` for generated scoring or comparison outputs
 - `exports/` for transformed data bundles or text exports
@@ -44,8 +47,10 @@ The boundary layer requires:
 
 - 6 to 12 meaningful saved sources unless a human approves more
 - at most 5 candidates, with detailed scoring focused on the top 3
-- a reviewer package with research, scorecard, candidate review, validation, corpus manifest, candidate-evidence map, and discovery summary
+- a reviewer package with a run index, research, scorecard, candidate review, validation, corpus manifest, candidate-evidence map, and discovery summary
 - a stop after the review package unless a human explicitly approves the next stage
+
+The run is also not complete if the review package still contains unresolved template prompts, placeholders, or blank required sections.
 
 The first live run explicitly does not implement product code, deploy anything, or create noisy external side effects by default.
 
@@ -57,7 +62,9 @@ Run:
 python scripts/check_first_run_readiness.py
 ```
 
-If it prints `READY`, the repo has the required first-run files and directories.
+If it prints `READY`, the repo has the required first-run framework files and directories.
+
+Run it again with `--run-id <run-id>` before stopping a discovery run to validate the completed package.
 
 ## What to do next
 
@@ -65,4 +72,4 @@ If it prints `READY`, the repo has the required first-run files and directories.
 2. Update `theme.md` if the theme needs refinement.
 3. Run `python scripts/check_first_run_readiness.py`.
 4. Start the agent with `FIRST_RUN_PROMPT.md` and keep `FIRST_RUN_MODE.md` in scope.
-5. Review the resulting package at Gate 1 before approving any implementation.
+5. Review the resulting package at Gate 1 through `artifacts/runs/<run-id>/run-index.md` before approving any implementation.

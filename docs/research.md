@@ -1,6 +1,7 @@
-# Research
+# Research Guide
 
-Use this file to capture problem-space research before any product idea is selected.
+Use this file as reusable guidance for `artifacts/runs/<run-id>/review-package/research.md` during first-run discovery.
+Do not treat this file itself as the canonical final run output.
 
 ## Purpose
 
@@ -13,12 +14,15 @@ Document repeated pain, current substitutes, and candidate wedges emerging from 
 - run ID
 - corpus path
 - source-count target and actual source count
+- source-type target and actual source-type count
+- boundary exceptions, if any
 
 ### 2. Theme and research boundary
 
-- Theme under investigation
-- User segments explored
-- Workflow boundaries explored
+- theme under investigation
+- user segments explored
+- workflow boundaries explored
+- what was intentionally excluded
 
 ### 3. Evidence log
 
@@ -71,6 +75,7 @@ For each candidate, record:
 - major concerns
 - supporting evidence IDs
 - weakening evidence IDs
+- current status: advance, keep alive, or drop
 
 ### 7. Open questions
 
@@ -78,6 +83,7 @@ List the uncertainties that would materially change ranking or validation.
 
 ## Quality bar
 
-This file should make it obvious that the candidate ideas came from repeated observations rather than imagination.
+This artifact should make it obvious that the candidate ideas came from repeated observations rather than imagination.
 
 If the evidence is thin, say so explicitly.
+If multiple candidates remain viable, develop them enough that a reviewer can understand why they survived.

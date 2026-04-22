@@ -42,9 +42,9 @@ Use this repository when you want an agent to:
 - `skills/engineering/` - implementation loop, debugging, testing, review, release, and deployment guidance
 - `skills/meta/` - anti-slop, evidence, critic, scope-cutting, and stuck-recovery guidance
 - `skills/operations/` - observability, incident readiness, and feedback-loop guidance for MVP operation
-- `docs/` - living artifacts the agent updates during each run
+- `docs/` - reusable framework guides for discovery outputs and later-stage living project docs after a human-approved go decision
 - `research-corpus/` - saved raw sources, normalized text, source notes, and candidate-to-evidence links
-- `artifacts/` - run-scoped reports, evaluations, exports, and later generated projects
+- `artifacts/` - run-scoped review packages, reports, evaluations, exports, and later generated projects
 - `.github/` - issue templates, labels, milestone notes, and PR template
 - `templates/` - reusable status and reporting blocks
 
@@ -74,6 +74,8 @@ On a first live run, the agent should usually stop after producing:
 - a human review artifact comparing the best candidates
 - an explicit recommendation about which idea to prototype first, if any
 
+Those first-run outputs should live under `artifacts/runs/<run-id>/`, with `run-index.md` as the review entry point and `review-package/` as the canonical Gate 1 bundle.
+
 Use `FIRST_RUN_MODE.md` as the hard boundary file for that run.
 Use `research-corpus/` to store saved evidence and `artifacts/` to store generated run outputs.
 
@@ -86,7 +88,7 @@ If no idea earns a clear go decision, the correct result is a documented no-go o
 3. Read or provide `FIRST_RUN_PROMPT.md` to the agent for discovery-first work.
 4. Let the agent follow the instructions in `agent/`, `FIRST_RUN_MODE.md`, and the skill packs in `skills/`.
 5. Use the gate checklists in `agent/human-gates.md` to review research, validation, and release readiness.
-6. Review the living artifacts in `docs/`, the saved evidence in `research-corpus/`, and any run outputs in `artifacts/`.
+6. Review the run through `artifacts/runs/<run-id>/run-index.md`, then inspect the saved evidence in `research-corpus/` and any later-stage project docs in `docs/`.
 
 ## Expected output from a strong run
 
@@ -96,7 +98,7 @@ A strong run should leave behind:
 - a saved research corpus with evidence IDs and notes
 - a ranked set of candidate opportunities
 - explicit monetization and agent-operability judgments
-- run-scoped artifacts that summarize what was produced
+- a clean run-scoped review package with a clear reviewer entry point
 - a selected product brief or a justified no-go
 - clear requirements, design, and roadmap artifacts if the idea earns a go decision
 - honest verification and lifecycle review

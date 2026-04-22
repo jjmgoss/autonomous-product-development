@@ -24,13 +24,15 @@ Read the following before doing substantive work:
 ## Step 3: Create or refresh the lifecycle artifacts
 
 Make sure the docs in `docs/` are present and consistent.
-If the run is new, initialize them.
-If the run is ongoing, update them rather than duplicating them.
+Treat these docs as reusable framework guidance during the first discovery run.
+If the run is new, read them and use their structure.
+If the run is ongoing after a human-approved go decision, update them rather than duplicating them.
 
 If the run is discovery-first, also initialize a matching run folder in:
 
 - `research-corpus/runs/<run-id>/`
 - `artifacts/runs/<run-id>/`
+- `artifacts/runs/<run-id>/review-package/`
 
 ## Step 4: Decide the run mode
 
@@ -50,16 +52,18 @@ Do not start coding until the validation stage produces a clear go decision.
 
 In discovery-first mode, produce at minimum:
 
-- `docs/research.md`
-- `docs/opportunity-scorecard.md`
-- `docs/candidate-review.md`
-- `docs/validation.md`
 - `research-corpus/runs/<run-id>/manifest.json`
 - `research-corpus/runs/<run-id>/candidate-links.md`
 - `artifacts/runs/<run-id>/manifest.json`
+- `artifacts/runs/<run-id>/run-index.md`
+- `artifacts/runs/<run-id>/review-package/research.md`
+- `artifacts/runs/<run-id>/review-package/opportunity-scorecard.md`
+- `artifacts/runs/<run-id>/review-package/candidate-review.md`
+- `artifacts/runs/<run-id>/review-package/validation.md`
 - `artifacts/runs/<run-id>/reports/discovery-summary.md`
 
 If no opportunity earns a clear go decision, stop there with an explicit recommendation.
+If any artifact is still template-shaped, the run is not ready to stop.
 
 ## Step 6: Plan before implementation
 
@@ -111,6 +115,9 @@ Before a go decision, confirm that you have answered all of these:
 - Does it avoid immediate dependence on heavy compliance, services, or enterprise sales?
 
 Also confirm that the strongest claims point back to saved evidence rather than unattributed summaries.
+
+Before stopping a first-run discovery pass, run `python scripts/check_first_run_readiness.py --run-id <run-id>`.
+If it fails, either fix the package or document the boundary exception in the run index.
 
 ## Fallback behavior when stuck
 

@@ -13,3 +13,5 @@ Each run folder should contain:
 - `raw/`
 - `normalized/`
 - `notes/`
+
+The matching reviewer-facing outputs for the same run should live in `artifacts/runs/<run-id>/`.

@@ -5,6 +5,7 @@ Use this file shape for `research-corpus/runs/<run-id>/candidate-links.md`.
 ## Candidate: <name>
 
 - short thesis:
+- current status: advance, keep alive, or drop
 - supporting evidence IDs:
 - weakening evidence IDs:
 - substitute pressure notes:
@@ -13,6 +14,7 @@ Use this file shape for `research-corpus/runs/<run-id>/candidate-links.md`.
 ## Candidate: <name>
 
 - short thesis:
+- current status: advance, keep alive, or drop
 - supporting evidence IDs:
 - weakening evidence IDs:
 - substitute pressure notes:

@@ -47,7 +47,7 @@ Use the source ID in:
 - `manifest.json`
 - normalized filenames when practical
 - note filenames
-- research and validation docs
+- reviewer-facing run artifacts
 
 ## What to save
 
@@ -84,17 +84,24 @@ Each manifest entry should record:
 Maintain `candidate-links.md` with a short section for each candidate:
 
 - candidate name
+- short thesis
 - evidence IDs that support the pain claim
 - evidence IDs that weaken or challenge the opportunity
 - notes on substitute pressure
+- open questions that could overturn ranking
+
+For any serious candidate, do not leave either the supporting or weakening side empty unless you explicitly state why evidence is missing.
 
 ## Citation rule
 
 Major claims in these docs should point back to saved evidence IDs:
 
-- `docs/research.md`
-- `docs/opportunity-scorecard.md`
-- `docs/candidate-review.md`
-- `docs/validation.md`
+- `artifacts/runs/<run-id>/review-package/research.md`
+- `artifacts/runs/<run-id>/review-package/opportunity-scorecard.md`
+- `artifacts/runs/<run-id>/review-package/candidate-review.md`
+- `artifacts/runs/<run-id>/review-package/validation.md`
+- `artifacts/runs/<run-id>/reports/discovery-summary.md`
 
 Do not rely on unattributed summaries when a claim materially affects ranking or recommendation.
+
+If a claim refers to a repeated pattern rather than a single-source incident, cite more than one evidence ID when practical.

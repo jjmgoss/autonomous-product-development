@@ -1,6 +1,7 @@
-# Validation
+# Validation Guide
 
-Use this file to determine whether the selected idea deserves implementation now.
+Use this file as reusable guidance for `artifacts/runs/<run-id>/review-package/validation.md` during first-run discovery.
+Do not treat this file itself as the canonical final run output.
 
 ## Purpose
 
@@ -60,13 +61,15 @@ Describe the smallest experiment or prototype that could disprove the thesis.
 
 ### 8. Decision
 
-Choose one:
+State one explicit decision:
 
 - Go now
 - Continue validation before building
 - No-go
 
-Include a short explanation of what would change the decision.
+Explain what would change the decision.
+Explain why the selected candidate beat the runner-up.
+State what evidence would overturn the current ranking.
 
 ## Rule
 
