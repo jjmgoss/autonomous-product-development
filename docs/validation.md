@@ -15,14 +15,17 @@ Make a real go, continue-validation, or no-go decision.
 - painful problem
 - narrow product wedge
 - why this wedge might matter commercially
+- core supporting evidence IDs
 
 ### 2. Strongest evidence in favor
 
 List the best evidence, not all evidence.
+Each item should cite saved evidence IDs.
 
 ### 3. Strongest evidence against
 
 List the facts that weaken the idea, including good-enough substitutes and adoption barriers.
+Each item should cite saved evidence IDs.
 
 ### 4. Substitute and incumbent analysis
 
@@ -31,6 +34,7 @@ Record:
 - what users use today
 - why they keep using it
 - what would need to improve for them to switch or pay
+- evidence IDs for the most important substitute claims
 
 ### 5. Monetization sanity check
 
@@ -40,6 +44,7 @@ Record:
 - willingness-to-pay signals
 - whether the pain connects to time, money, quality, or risk
 - whether recurring value exists
+- evidence IDs behind the strongest commercial claims
 
 ### 6. Agent-operability and virtual-operations check
 
@@ -47,6 +52,7 @@ Record:
 
 - why this can be built and maintained mostly through software and agent workflows
 - where human service, compliance, trust, or support burden may break that assumption
+- evidence IDs behind the strongest operational-fit claims
 
 ### 7. Smallest falsification step
 

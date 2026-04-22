@@ -1,0 +1,21 @@
+{
+  "run_id": "20260421-theme-slug-r1",
+  "sources": [
+    {
+      "id": "SRC-001",
+      "title": "Example source title",
+      "url": "https://example.com/source",
+      "captured_at": "2026-04-21T12:00:00Z",
+      "source_type": "forum-thread",
+      "run_id": "20260421-theme-slug-r1",
+      "raw_path": "research-corpus/runs/20260421-theme-slug-r1/raw/src-001.html",
+      "normalized_path": "research-corpus/runs/20260421-theme-slug-r1/normalized/src-001.md",
+      "note_path": "research-corpus/runs/20260421-theme-slug-r1/notes/SRC-001.md",
+      "speaker_or_org": "Example practitioner",
+      "workflow": "Example workflow",
+      "summary": "Short factual summary of what the source says.",
+      "why_it_matters": "Why this source materially affects candidate ranking or validation.",
+      "reliability_notes": "Any caution about bias, anecdotal scope, or missing detail."
+    }
+  ]
+}

@@ -19,6 +19,7 @@ After opportunity selection and before requirements or implementation.
 2. Build an evidence ledger.
    - Record the strongest evidence for the idea.
    - Record the strongest evidence against the idea.
+   - Cite saved evidence IDs rather than unattributed summaries.
    - Separate source facts from your interpretation.
 
 3. Judge evidence quality.
@@ -76,6 +77,7 @@ Default toward go only when most of these are true:
 ## Expected outputs
 
 - `docs/validation.md`
+- a validation argument whose key claims point back to saved evidence IDs
 - an explicit go, continue-validation, or no-go decision
 
 ## Common failure modes

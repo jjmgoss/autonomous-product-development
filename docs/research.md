@@ -8,24 +8,32 @@ Document repeated pain, current substitutes, and candidate wedges emerging from 
 
 ## Minimum structure
 
-### 1. Theme and research boundary
+### 1. Run context
+
+- run ID
+- corpus path
+- source-count target and actual source count
+
+### 2. Theme and research boundary
 
 - Theme under investigation
 - User segments explored
 - Workflow boundaries explored
 
-### 2. Evidence log
+### 3. Evidence log
 
 For each strong source or cluster of sources, record:
 
+- source ID
 - source type
+- saved paths
 - who is speaking
 - workflow context
 - pain described
 - current workaround or substitute
 - why the evidence matters
 
-### 3. Repeated pain patterns
+### 4. Repeated pain patterns
 
 For each pattern, record:
 
@@ -34,8 +42,9 @@ For each pattern, record:
 - repeated pain
 - severity and recurrence
 - signs that people already spend time, money, or attention on it
+- evidence IDs
 
-### 4. Current substitutes and incumbents
+### 5. Current substitutes and incumbents
 
 Name what users use today, including:
 
@@ -47,7 +56,9 @@ Name what users use today, including:
 
 Say whether each substitute looks weak, good enough, or hard to displace.
 
-### 5. Candidate opportunity wedges
+Add evidence IDs for the strongest substitute claims.
+
+### 6. Candidate opportunity wedges
 
 For each candidate, record:
 
@@ -58,8 +69,10 @@ For each candidate, record:
 - why it might be monetizable
 - why it might be agent-operable
 - major concerns
+- supporting evidence IDs
+- weakening evidence IDs
 
-### 6. Open questions
+### 7. Open questions
 
 List the uncertainties that would materially change ranking or validation.
 

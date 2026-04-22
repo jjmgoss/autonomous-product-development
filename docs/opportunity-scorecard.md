@@ -39,9 +39,12 @@ For each opportunity, record:
 - short name
 - target user
 - one-sentence problem statement
+- supporting evidence IDs
+- weakening evidence IDs
 - score table
 - strongest positive reason
 - strongest reason it may fail
+- fatal blockers, if any
 - recommendation status: pursue, keep alive, or drop
 
 ## Decision rule

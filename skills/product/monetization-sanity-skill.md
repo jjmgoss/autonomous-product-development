@@ -35,6 +35,8 @@ Determine whether an opportunity is merely interesting, genuinely useful, or pla
 5. Check sales simplicity.
    - prefer products that can be adopted by a small team or individual without a long enterprise process
 6. Record what would make the idea commercially weak even if it is technically buildable.
+7. Anchor commercial claims to evidence.
+   - Cite the saved evidence IDs behind willingness-to-pay, current spend, or workaround-cost claims.
 
 ## Questions to answer
 

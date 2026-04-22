@@ -14,15 +14,23 @@ Read the following before doing substantive work:
 - `agent/system-prompt.md`
 - `agent/human-gates.md`
 - `agent/repo-conventions.md`
+- `agent/research-corpus-conventions.md`
+- `agent/artifact-output-conventions.md`
 - `agent/definition-of-done.md`
 - `agent/lifecycle-map.md`
 - `agent/orchestration-v3.md`
+- `FIRST_RUN_MODE.md` when the run is discovery-first
 
 ## Step 3: Create or refresh the lifecycle artifacts
 
 Make sure the docs in `docs/` are present and consistent.
 If the run is new, initialize them.
 If the run is ongoing, update them rather than duplicating them.
+
+If the run is discovery-first, also initialize a matching run folder in:
+
+- `research-corpus/runs/<run-id>/`
+- `artifacts/runs/<run-id>/`
 
 ## Step 4: Decide the run mode
 
@@ -32,6 +40,8 @@ Before deeper work, decide which of these two modes fits the current run:
 - Build-forward mode: used only after one opportunity clearly earns a go decision
 
 Default to discovery-first mode unless the existing docs already contain a strong validated opportunity.
+
+On the first live run, follow `FIRST_RUN_MODE.md` as a hard boundary file.
 
 ## Step 5: Research before building
 
@@ -44,6 +54,10 @@ In discovery-first mode, produce at minimum:
 - `docs/opportunity-scorecard.md`
 - `docs/candidate-review.md`
 - `docs/validation.md`
+- `research-corpus/runs/<run-id>/manifest.json`
+- `research-corpus/runs/<run-id>/candidate-links.md`
+- `artifacts/runs/<run-id>/manifest.json`
+- `artifacts/runs/<run-id>/reports/discovery-summary.md`
 
 If no opportunity earns a clear go decision, stop there with an explicit recommendation.
 
@@ -95,6 +109,8 @@ Before a go decision, confirm that you have answered all of these:
 - Can a solo operator with agents plausibly build and maintain it?
 - Is it compatible with mostly virtual operations?
 - Does it avoid immediate dependence on heavy compliance, services, or enterprise sales?
+
+Also confirm that the strongest claims point back to saved evidence rather than unattributed summaries.
 
 ## Fallback behavior when stuck
 

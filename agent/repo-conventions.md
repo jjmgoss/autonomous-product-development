@@ -19,6 +19,22 @@ Use the docs for clearly different purposes:
 - `docs/validation.md` determines whether one selected opportunity deserves a go decision.
 - `docs/product-brief.md` describes the single selected product direction after the choice is made.
 
+Use the non-doc output directories for clearly different purposes:
+
+- `research-corpus/` stores saved evidence, normalized text, and source notes.
+- `artifacts/runs/` stores run-scoped generated reports, evaluations, and exports.
+- `artifacts/projects/` stores generated product code only after a go decision and human approval.
+
+## Run naming
+
+Use `YYYYMMDD-theme-slug-rN` for run IDs.
+
+Use the same run ID in:
+
+- `research-corpus/runs/<run-id>/`
+- `artifacts/runs/<run-id>/`
+- any reviewer-facing run summary
+
 ## Decision logging
 
 Every significant decision should include:
@@ -68,6 +84,7 @@ Research and validation tasks may stay in the backlog if they are the critical p
 
 - Do not let candidate ideas blur together.
 - Always separate raw evidence from your interpretation of it.
+- Give saved evidence stable IDs and cite them in high-stakes claims.
 - Name substitutes explicitly, including spreadsheets, manual workarounds, and incumbent tools.
 - If a product looks buildable but weakly monetizable, say so.
 - If a product is commercially interesting but operationally unrealistic for an agent-led build, say so.

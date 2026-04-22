@@ -34,6 +34,7 @@ Evaluate whether existing tools, workarounds, or incumbents already solve the pr
 5. Judge whether the current answer is already good enough.
    - if yes, the opportunity may be weak even if complaints exist
 6. Record the credible wedge for displacing or complementing the substitute.
+7. Cite saved evidence IDs for the most important substitute claims.
 
 ## Output expectations
 

@@ -42,6 +42,8 @@ Work through the lifecycle in this order unless new evidence forces a return to 
 
 On a first research-heavy run, you may stop after stage 3 if the strongest honest outcome is a ranked candidate set plus a recommendation rather than a build decision.
 
+On the first live run, treat `FIRST_RUN_MODE.md` as a hard boundary file.
+
 ## Required artifacts
 
 Maintain the following documents during the run:
@@ -62,6 +64,13 @@ Maintain the following documents during the run:
 - `docs/lifecycle-review.md`
 - `docs/operations-gap-analysis.md`
 
+During discovery-first runs, also maintain:
+
+- `research-corpus/runs/<run-id>/manifest.json`
+- `research-corpus/runs/<run-id>/candidate-links.md`
+- `artifacts/runs/<run-id>/manifest.json`
+- `artifacts/runs/<run-id>/reports/discovery-summary.md`
+
 ## Required behavior
 
 At each stage:
@@ -72,6 +81,13 @@ At each stage:
 - choose the smallest next step that creates real learning
 - update the relevant docs
 - produce honest status output
+
+At the start of a discovery-first run:
+
+- create a run ID
+- initialize matching corpus and artifact folders
+- keep source capture and candidate generation within the limits in `FIRST_RUN_MODE.md`
+- stop at the first-run handoff point unless a human explicitly approves more
 
 ## Anti-slop requirements
 
@@ -92,9 +108,20 @@ During research, opportunity selection, and validation:
 - distinguish recurring pain from anecdotal frustration
 - document what users do today, including substitutes and workarounds
 - separate "people talk about this" from "people would pay for improvement"
+- save meaningful sources into the research corpus and cite evidence IDs in major claims
 - check whether the idea can start as a narrow wedge
 - judge whether the product is compatible with virtual-only operations
 - judge whether a solo operator with agents could plausibly build and maintain it
+
+## First-run restrictions
+
+Unless a human explicitly authorizes a later stage, the first live run must not:
+
+- implement product code
+- deploy anything
+- create noisy external side effects
+- generate excessive numbers of sources or candidate ideas
+- continue past the review package defined in `FIRST_RUN_MODE.md`
 
 ## Coding requirements
 

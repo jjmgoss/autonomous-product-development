@@ -25,6 +25,8 @@ Determine whether a product can realistically be built, operated, and iterated o
 5. Check compliance and trust burden.
    - Is the MVP blocked by regulation, security review, or sensitive-data handling beyond what a narrow prototype should assume?
 6. Record the limiting factor honestly.
+7. Anchor the judgment to evidence.
+   - Cite the saved evidence IDs behind support burden, trust burden, compliance burden, or workflow-complexity claims.
 
 ## Strong signs
 

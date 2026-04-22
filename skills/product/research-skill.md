@@ -14,43 +14,60 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 
 ## Procedure
 
-1. Define the user and workflow boundary.
+1. Initialize the research corpus.
+	- Create or confirm the current `run-id`.
+	- Create the matching folder under `research-corpus/runs/<run-id>/`.
+	- Prepare `manifest.json`, `candidate-links.md`, and the `raw/`, `normalized/`, and `notes/` subdirectories.
+
+2. Define the user and workflow boundary.
 	- Name likely user segments.
 	- Name the workflow you are investigating.
 	- Avoid vague groups such as "business users" or "creators" unless later narrowed.
 
-2. Gather evidence from multiple source types.
+3. Gather evidence from multiple source types.
 	- Look for issue trackers, forum threads, review sites, Reddit, community discussions, changelog complaints, workflow writeups, and expert commentary.
 	- Prefer a mix of direct complaints, workaround descriptions, and evidence of current tool usage.
+	- Stay within the source-count limits for the current run mode unless a human explicitly approves a wider pass.
 
-3. Log evidence with context, not just quotes.
+4. Save each meaningful source in the corpus.
+	- Assign a stable source ID.
+	- Save raw material when practical.
+	- Save normalized text or a markdown extraction when helpful.
+	- Create a short source note.
+	- Add a manifest entry with why the source matters.
+
+5. Log evidence with context, not just quotes.
 	- Capture who is speaking, what workflow they are in, what goes wrong, and what they do instead.
 	- Separate the source from your interpretation.
 
-4. Synthesize pain patterns.
+6. Synthesize pain patterns.
 	- Group complaints that point to the same broken workflow.
 	- Separate repeated pain from one-off friction.
 	- Treat a pattern as stronger when it appears across multiple sources, users, or contexts.
 
-5. Judge the pain, not just the noise.
+7. Judge the pain, not just the noise.
 	- Distinguish annoying friction from expensive, frequent, risky, or time-consuming pain.
 	- Ask whether the pain touches budgets, throughput, quality, compliance risk, or recurring operational work.
 
-6. Name substitutes and workarounds.
+8. Name substitutes and workarounds.
 	- Record the direct tools, manual processes, spreadsheets, scripts, or service work people use today.
 	- Good substitutes can kill an otherwise interesting idea.
 
-7. Generate candidate opportunity wedges.
+9. Generate candidate opportunity wedges.
 	- Frame narrow product responses, not full platforms.
 	- Each candidate should describe one user, one workflow, one pain point, and one wedge.
 
-8. Apply early fit filters.
+10. Apply early fit filters.
 	- Can this be sold or monetized digitally?
 	- Can it operate mostly virtually?
 	- Could a solo operator with agent assistance plausibly build and maintain it?
 	- Does it avoid immediate dependence on heavy services, compliance, or enterprise sales?
 
-9. Capture open questions that matter.
+11. Link candidates back to evidence.
+	- Update `candidate-links.md` so each serious candidate has supporting and weakening evidence IDs.
+	- Do not let candidate ranking float free from saved sources.
+
+12. Capture open questions that matter.
 	- Missing evidence is acceptable.
 	- Hidden uncertainty is not.
 
@@ -72,6 +89,8 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 - why current tools are insufficient or good enough
 - which candidate wedges are emerging
 - which candidates already look weak
+
+The strongest claims should cite evidence IDs that exist in the run corpus.
 
 ## Common failure modes
 

@@ -37,14 +37,21 @@ Gate 1 should usually be reviewable from these artifacts:
 - `docs/candidate-review.md`
 - `docs/validation.md`
 - `docs/product-brief.md` if an opportunity was selected
+- `research-corpus/runs/<run-id>/manifest.json`
+- `research-corpus/runs/<run-id>/candidate-links.md`
+- `artifacts/runs/<run-id>/reports/discovery-summary.md`
 
 Gate 1 rejection triggers:
 
 - the target user is still vague
 - the product only looks good if many future features land
 - willingness to pay is asserted but not argued
+- major claims are not traceable to saved evidence
 - the idea requires heavy human services, field work, or compliance before it becomes useful
 - the product looks like a demo, not a viable narrow business seed
+
+On the first live run, Gate 1 is also the default stopping point.
+Do not continue into implementation unless a human explicitly approves the next stage.
 
 ### Gate 2: Before deployment or public exposure
 

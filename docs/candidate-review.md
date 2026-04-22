@@ -19,6 +19,8 @@ For each top candidate, include:
 - narrow wedge or MVP angle
 - monetization angle
 - why agent-led build and operation are plausible
+- strongest evidence IDs
+- strongest weakening evidence IDs
 - strongest reason it is promising
 - strongest reason it may fail
 
@@ -43,6 +45,10 @@ Choose one:
 
 Explain why.
 
+State what evidence would most likely overturn the recommendation.
+
 ## Quality bar
 
 A human reviewer should be able to read this file in a few minutes and understand which idea looks strongest, why it looks strongest, and what may still kill it.
+
+The reviewer should also be able to trace the headline claims back to saved evidence IDs without searching the whole repo.
