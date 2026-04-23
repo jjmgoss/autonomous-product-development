@@ -25,7 +25,7 @@ The startup sequence for a discovery run is:
 
 Do not run the completion check as the next action right after launch.
 It is intended for the end of the run, after the manifests and reviewer package are fully populated.
-Do not pause at a named checkpoint unless `ACTIVE_RUN.md` explicitly says to pause.
+Do not pause at a named checkpoint by default. Treat checkpoints as status markers and inspectable artifacts unless `ACTIVE_RUN.md` explicitly ends the run there.
 
 Only run scripts that are explicitly named in `ACTIVE_RUN.md` or in this file.
 
@@ -47,4 +47,4 @@ The cleanup utility is intentionally conservative:
 - it leaves non-empty directories untouched
 - it reports suspicious mismatches such as one-sided run trees or missing manifests
 
-Do not add automation here unless it clearly improves agent execution quality or human review quality.
+Do not add automation here unless it clearly improves execution quality, evidence quality, or safe continuation through the loop.

@@ -63,6 +63,7 @@ For each meaningful source:
 
 If raw capture is not possible, still create a note and manifest entry explaining what was captured and why full raw storage was not practical.
 The manifest alone is not enough. Reviewers should be able to open the saved files named there.
+Broad topic hubs, tag pages, and landing pages can be saved as context, but they should not dominate the core evidence set.
 
 ## Manifest fields
 
@@ -85,6 +86,7 @@ Each manifest entry should record:
 
 Each serious source should use a real `http` or `https` URL unless the note explicitly explains why that was impossible.
 Do not let a placeholder domain or a vague source description count as strong evidence.
+Aim for at least several concrete complaint, workaround, review, issue, or practitioner sources in each complete run.
 
 ## Candidate linkage
 
@@ -98,6 +100,7 @@ Maintain `candidate-links.md` with a short section for each candidate:
 - open questions that could overturn ranking
 
 For any serious candidate, do not leave either the supporting or weakening side empty unless you explicitly state why evidence is missing.
+Also record the first buyer and first wedge for any serious candidate that remains in contention.
 
 ## Citation rule
 

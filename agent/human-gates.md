@@ -1,116 +1,55 @@
-# Human Gates
+# Hard Boundaries
 
-Use this file to determine when the agent should pause for a human decision.
+Use this file to identify the few actions that actually require human approval.
 
-## Default recommendation
+## Default policy
 
-The framework works best when human gates exist at a few high-leverage moments rather than after every tiny action.
+Continue by default through research, opportunity selection, validation, requirements, design, planning, local implementation, and local verification.
 
-## Suggested gate points
+Generated artifacts remain useful for asynchronous human inspection, but they do not create an automatic pause.
 
-### Checkpoint 1: Before coding begins
+## Approval is required for these boundary types
 
-Review is useful after:
+### Boundary 1: Destructive or hard-to-reverse actions
 
-- research is completed
-- top opportunities are scored
-- a candidate comparison artifact exists
-- one opportunity is selected or explicitly not selected
-- validation results are written
-- the discovery summary and run index are complete
+Require approval before:
 
-Human should check:
+- deleting or overwriting important user data
+- destructive repo or environment actions outside the current safe working flow
+- irreversible migrations or bulk data rewrites
 
-- is the problem painful enough to matter, not just interesting to discuss?
-- is there clear evidence of recurring pain rather than isolated complaints?
-- does the top-ranked idea have a believable narrow wedge?
-- is the monetization angle plausible for a digital product?
-- is the idea compatible with mostly virtual operations?
-- could a solo operator with agents plausibly build and maintain it?
-- do substitutes already solve the problem well enough?
-- is there a better candidate in the comparison set?
+### Boundary 2: Deployment or public exposure
 
-Checkpoint 1 should usually be reviewable from these artifacts:
+Require approval before:
 
-- `artifacts/runs/<run-id>/run-index.md`
-- `artifacts/runs/<run-id>/reports/discovery-summary.md`
-- `artifacts/runs/<run-id>/review-package/research.md`
-- `artifacts/runs/<run-id>/review-package/opportunity-scorecard.md`
-- `artifacts/runs/<run-id>/review-package/candidate-review.md`
-- `artifacts/runs/<run-id>/review-package/validation.md`
-- `artifacts/runs/<run-id>/review-package/product-brief.md` if an opportunity was selected
-- `research-corpus/runs/<run-id>/manifest.json`
-- `research-corpus/runs/<run-id>/candidate-links.md`
+- deploying to a real environment
+- exposing an app, API, dataset, or credentials externally
+- enabling outbound automation that could affect real users or systems
 
-Checkpoint 1 should not be considered review-ready if the run checker fails, the run index is missing, or any review-package file still looks like an unresolved template.
+### Boundary 3: External publishing or communication
 
-Checkpoint 1 rejection triggers:
+Require approval before:
 
-- the target user is still vague
-- the product only looks good if many future features land
-- willingness to pay is asserted but not argued
-- major claims are not traceable to saved evidence
-- the review package leaves placeholders, unresolved prompts, or blank sections in final artifacts
-- only one candidate is meaningfully developed despite a multi-candidate comparison claim
-- the idea requires heavy human services, field work, or compliance before it becomes useful
-- the product looks like a demo, not a viable narrow business seed
+- publishing content publicly
+- sending emails, messages, or other outbound communications
+- creating external tickets, issues, pull requests, or boards when those actions are externally consequential
 
-When `ACTIVE_RUN.md` selects discovery, Checkpoint 1 is the default review surface.
-Do not pause there unless `ACTIVE_RUN.md` explicitly says `checkpoint behavior: pause for human review`.
-Do not continue into implementation unless the active run or a human explicitly approves the next stage.
+### Boundary 4: Financial, legal, or credential-sensitive actions
 
-### Gate 2: Before deployment or public exposure
+Require approval before:
 
-Require human review when:
+- spending money or creating paid accounts
+- entering secrets or credentials into external systems
+- taking actions that materially change legal, privacy, or compliance exposure
 
-- the prototype is functionally complete enough to run
-- deployment configuration is present
-- the agent is about to expose the app or data externally
+## Discovery milestone policy
 
-Human should check:
+Checkpoint 1 is a status marker and async review surface.
+Do not pause there by default.
 
-- security and privacy risk
-- whether the app is worth exposing yet
-- whether there are obvious quality or cost problems
-- whether the support burden is realistic for a solo operator
-- whether observability and rollback are good enough for the intended exposure level
+If the discovery package is complete and the winning candidate earns a go-now recommendation, continue into the next non-risky stage unless `ACTIVE_RUN.md` explicitly ends the run at discovery.
 
-### Gate 3: Before merge to the mainline release path
+## Escalation rule
 
-Require human review when:
-
-- the agent believes the prototype is complete
-- the release notes are drafted
-- verification is done
-
-Human should check:
-
-- does this meet the stated goal?
-- is the implementation coherent?
-- should the next step be iteration, pivot, or stop?
-- are the release claims matched by actual evidence?
-- are the remaining risks acceptable for the next step?
-
-## Fully autonomous mode
-
-If the run is configured to be fully autonomous, the agent should still generate the review artifacts that a human would have inspected.
-It should not skip the gate outputs just because no one interrupted it.
-
-## Review speed guideline
-
-These gates are meant to help, not to create bureaucracy.
-
-- Checkpoint 1 should be reviewable in 10-20 minutes.
-- Gate 2 should be reviewable in 10 minutes if the release and operations artifacts are honest.
-- Gate 3 should be reviewable in 10-15 minutes.
-
-If review takes much longer, the agent should tighten the artifacts rather than produce more prose.
-
-The fastest Checkpoint 1 review path should be:
-
-1. run index
-2. discovery summary
-3. candidate review
-4. validation
-5. scorecard
-6. corpus manifest and candidate-evidence map
+If an action is internal, reversible, and quiet, continue.
+If an action is external, noisy, destructive, costly, or hard to reverse, treat it as a hard boundary and ask for approval.

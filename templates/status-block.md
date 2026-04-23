@@ -49,9 +49,9 @@ List verification steps completed.
 
 List the most important unresolved items.
 
-## Checkpoint status
+## Milestone and boundary status
 
-State whether the work reached the next checkpoint, whether it should pause, and why.
+State which milestone was reached, whether a hard boundary applies, and why the loop should continue or stop.
 
 ## Next action
 

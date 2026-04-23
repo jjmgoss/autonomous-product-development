@@ -2,7 +2,7 @@
 
 ## Goal
 
-Run a bounded discovery pass that reaches the active completion point with a fully populated Checkpoint 1 handoff package.
+Run a bounded discovery pass that reaches the active completion point with a fully populated milestone package and a clear continuation status.
 
 The discovery run is complete only after the middle of the run has happened:
 
@@ -12,6 +12,8 @@ The discovery run is complete only after the middle of the run has happened:
 - candidates are compared with supporting and weakening evidence
 - key source URLs are visible in reviewer-facing artifacts
 - the run index and review package are fully written
+- the leading candidate has a clear first buyer and first wedge when the call is `prototype candidate X first`
+- the package explains why the leader is not a broad platform fantasy
 - the completion check passes at the end
 
 ## When to use
@@ -33,7 +35,7 @@ The discovery run is complete only after the middle of the run has happened:
 9. Complete the reviewer artifacts and record them in `artifacts/runs/<run-id>/manifest.json`.
 10. Complete `artifacts/runs/<run-id>/run-index.md` as the reviewer control document, including key source links.
 11. Run `python scripts/check_repo_readiness.py --run-id <run-id>` only after the package is complete.
-12. Record checkpoint status in the run index and obey `checkpoint behavior` from `ACTIVE_RUN.md`.
+12. Record milestone status, recommended next stage, and hard-boundary status in the run index.
 
 ## Required outputs
 
@@ -58,6 +60,8 @@ The package is not complete if:
 - the candidate map is thin or missing weakening evidence or key links
 - the run index still looks like a launch note instead of a reviewer-facing control document
 - the ranking is not traceable to saved evidence IDs and visible source URLs
+- the shortlist does not name a first buyer and first wedge for the leading candidate when recommending a go-now move
+- the package drifts into a broad platform story without naming the smaller sellable wedge
 - the completion check fails
 
 ## Common failure modes

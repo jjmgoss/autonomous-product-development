@@ -223,10 +223,13 @@ def candidate_links_stub(run_id: str) -> str:
 
         - short thesis:
         - status in ranking:
+        - first buyer/user:
+        - first wedge:
         - supporting evidence IDs:
         - weakening evidence IDs:
         - key supporting links:
         - substitute pressure notes:
+        - why this is not a platform fantasy:
         - open questions that could change ranking:
         """
     )
@@ -286,6 +289,9 @@ def run_index_stub(run_id: str) -> str:
 
         - recommended outcome: in progress
         - leading candidate: in progress
+        - first buyer/user: replace with the first user who gets clear value
+        - first wedge: replace with the smallest sellable workflow slice
+        - why this is not a platform fantasy: replace with the narrowness test that keeps the idea bounded
         - runner-up: in progress
         - why the leader won: replace with evidence-backed summary
         - why it may still fail: replace with disconfirming evidence and open risks
@@ -294,10 +300,11 @@ def run_index_stub(run_id: str) -> str:
 
         - replace with the evidence IDs or missing evidence that could change the current call
 
-        ## Next Step Requested At {current_checkpoint}
+        ## Continuation Status
 
-        - requested human decision: do not fill until the package is complete
-        - checkpoint status: not reached yet
+        - recommended next stage: do not fill until the package is complete
+        - status marker: {current_checkpoint} not reached yet
+        - hard-boundary status: none triggered yet
         - completion point status: discovery work still in progress
         """
     )
@@ -333,6 +340,7 @@ def research_review_stub(run_id: str) -> str:
         ## Candidate Directions Emerging From Research
 
         List only serious candidate wedges and cite the evidence IDs that support or weaken them.
+        Name one buyer, one workflow, and one wedge per candidate.
 
         ## Research Gaps That Still Matter
 
@@ -358,9 +366,12 @@ def opportunity_scorecard_stub(run_id: str) -> str:
 
         - user and workflow:
         - pain severity:
+        - first buyer/user:
+        - first wedge:
         - substitute pressure:
         - monetization angle:
         - agent-operability judgment:
+        - why this is not a platform fantasy:
         - strongest supporting evidence IDs:
         - strongest weakening evidence IDs:
         - current rank:
@@ -393,9 +404,17 @@ def candidate_review_stub(run_id: str) -> str:
 
         Explain the ranking with evidence IDs, monetization logic, and substitute pressure.
 
+        ## First Wedge
+
+        Name the first buyer, first workflow, first wedge, and first monetization path for the leader.
+
         ## Why The Runner-Up Lost
 
         Explain why the next-best option did not win.
+
+        ## Why This Is Not A Platform Fantasy
+
+        Explain what keeps the recommendation narrow, concrete, and sellable.
 
         ## Why The Leader May Still Fail
 
@@ -437,9 +456,9 @@ def validation_stub(run_id: str) -> str:
 
         Explain the disconfirming evidence that would overturn the current ranking.
 
-        ## Checkpoint 1 Request
+        ## Continuation Recommendation
 
-        State what human decision is being requested once the package is complete.
+        State the recommended next stage, whether any hard boundary blocks it, and what evidence would justify changing course.
         """
     )
 
@@ -471,7 +490,10 @@ def discovery_summary_stub(run_id: str) -> str:
 
         - recommended outcome:
         - leading candidate:
+        - first buyer/user:
+        - first wedge:
         - why it leads:
+        - why this is not a platform fantasy:
         - what may still kill it:
 
         ## Ranked Shortlist
@@ -482,9 +504,9 @@ def discovery_summary_stub(run_id: str) -> str:
 
         Explain which missing evidence could materially change the recommendation.
 
-        ## Completion Point
+        ## Continuation Status
 
-        State whether the discovery package reached {current_checkpoint} and whether the active run should pause or continue.
+        State whether the discovery package reached {current_checkpoint}, what the recommended next stage is, whether any hard boundary applies, and whether the loop should continue.
         """
     )
 

@@ -4,14 +4,14 @@ Use this file when `ACTIVE_RUN.md` selects a discovery run.
 
 ## Objective
 
-The default discovery run is discovery-only.
+The default discovery run is discovery-first.
 
 Its job is to:
 
 - collect a bounded research corpus
 - generate a bounded set of candidate ideas
 - compare the strongest candidates
-- recommend one next move for checkpoint review
+- recommend one narrow next move with a concrete continuation path
 
 It is not allowed to drift into implementation just because coding feels more concrete than research.
 
@@ -24,12 +24,12 @@ Follow this sequence in order:
 3. Do the middle of the run: save sources, update the research manifest as you go, compare candidates, and fill the review package.
 4. Complete the run index and artifact manifest as reviewer-facing outputs.
 5. Run the completion check only after the package is fully populated.
-6. Record checkpoint status and the requested decision in the run index.
-7. Follow the checkpoint behavior in `ACTIVE_RUN.md`.
+6. Record checkpoint status, recommended next stage, and hard-boundary status in the run index.
+7. Continue by default unless the active completion point ends here or a hard boundary is triggered.
 
 The launcher and the completion check are bookends.
 They do not replace the actual discovery work that happens between them.
-Checkpoint 1 is a milestone surface, not a reason to stop early while the package is still incomplete.
+Checkpoint 1 is a milestone surface, not a reason to stop early while the package is still incomplete or to stop automatically once it becomes reviewable.
 
 ## Default Scope
 
@@ -46,6 +46,8 @@ Checkpoint 1 is a milestone surface, not a reason to stop early while the packag
   - continue validating the top 2 candidates
   - no current candidate is strong enough
 
+If one candidate wins, the package must state the first buyer, first workflow, first wedge, first monetization path, and why the recommendation is not a broad platform fantasy.
+
 If the run falls short of the source-count target, source-type target, or required review-package files, it is not complete.
 The agent must either fix the gap before stopping or explicitly document why it could not.
 
@@ -59,6 +61,7 @@ During the run itself:
 - write the review-package files as reviewer-facing deliverables, not as thin placeholders
 - record completed artifact entries in `artifacts/runs/<run-id>/manifest.json`
 - keep `artifacts/runs/<run-id>/run-index.md` accurate enough that a human could review the package from that file alone
+- keep broad sources as supporting context only; do not let them dominate the shortlist logic or key-link sections
 
 ## Required Outputs
 
@@ -84,6 +87,9 @@ They are not optional metadata to fill in later if time remains.
 - Prefer direct complaints, workarounds, reviews, issue threads, and practitioner writeups over generic trend content.
 - Prefer a small number of strong sources over a large pile of weak ones.
 - Prefer sources with real, inspectable URLs over unattributed summaries.
+- Treat generic topic hubs, broad tag pages, landing pages, and top-level community homepages as weak supporting context unless paired with concrete complaint evidence.
+- Let concrete complaint or workaround evidence dominate the key-source-link list and the final ranking.
+- Each serious candidate should be traceable to concrete evidence about one workflow, one user, and one specific pain pattern.
 - Major claims in review artifacts should cite saved evidence IDs.
 - Major ranking, rejection, and recommendation claims should point to more than one evidence ID when the claim spans a pattern rather than a single incident.
 - Source notes should repeat the exact URL near the top and preserve enough local context that a reviewer can inspect the saved file without manifest archaeology.
@@ -113,13 +119,13 @@ At minimum, the review package must make it easy for a human to understand:
 - why the leading candidate won
 - why it may still fail
 - which evidence could overturn the ranking
-- what should happen next at Checkpoint 1
+- what should happen next
 
-## Checkpoint Behavior
+## Continuation Model
 
-Treat Checkpoint 1 as a review milestone.
-By default, keep going until the active run's completion point is satisfied.
-Pause only if `ACTIVE_RUN.md` explicitly says `checkpoint behavior: pause for human review`.
+Treat Checkpoint 1 as a status milestone.
+By default, keep going until the active run's completion point is satisfied and continue into the next non-risky stage if `ACTIVE_RUN.md` says to continue.
+Pause only at a hard boundary or if `ACTIVE_RUN.md` explicitly makes the completed discovery package the end of the current run.
 
 The discovery handoff package is complete when:
 
@@ -128,14 +134,16 @@ The discovery handoff package is complete when:
 - the run index exists
 - the ranked shortlist exists with at least 2 meaningfully developed candidates when multiple candidates were considered
 - a recommendation exists
+- the first wedge, first buyer, and first workflow are explicit for the leading candidate when the result is `prototype candidate X first`
+- the package explains why the recommendation is not a broad platform fantasy
 - the reasons against the leading candidate are written down
 - the review-package files are fully written rather than template-shaped stubs
 - the discovery summary explains both why the top candidate leads and what would overturn that call
 - both manifests are fully populated with real entries rather than scaffold status
-- the run index explains the reviewer route, current counts, recommendation, requested Checkpoint 1 decision, and key source links
+- the run index explains the reviewer route, current counts, recommendation, continuation status, and key source links
 
-Checkpoint 1 is the default discovery review surface.
-Do not continue into implementation, deployment, or external execution unless the active run or a human explicitly authorizes the next stage after the completed discovery handoff.
+Checkpoint 1 is the default discovery status surface.
+Do not continue into deployment, publishing, or other hard-boundary actions unless the active run or a human explicitly authorizes that step.
 
 ## Explicit Prohibitions
 

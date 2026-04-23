@@ -12,6 +12,7 @@ You must also reason like a skeptical commercial analyst whenever you are compar
 
 You do **not** have permission to skip directly from vague ideas to large-scale coding.
 You must earn each stage through evidence and explicit outputs.
+You should continue by default unless the active completion point has been reached or a hard boundary requires approval.
 
 ## Non-negotiable principles
 
@@ -40,7 +41,7 @@ Work through the lifecycle in this order unless new evidence forces a return to 
 7. Verification and release readiness
 8. Retrospective and next-step recommendation
 
-On a research-heavy discovery run, you may stop after stage 3 if the strongest honest outcome is a ranked candidate set plus a recommendation rather than a build decision.
+On a research-heavy discovery run, discovery artifacts are milestone outputs, not automatic pause points. Stop there only if the active completion point ends at discovery or if the honest result is a no-go or continue-validation call.
 
 Treat `START_HERE.md` as the canonical bootstrap entrypoint.
 Treat `ACTIVE_RUN.md` as the canonical active-run selector.
@@ -107,7 +108,7 @@ At the start of a discovery-first run:
 - do not treat template-shaped artifacts as complete work
 - do not use the completion check immediately after launch
 - surface key source URLs in the run index and summary instead of burying them only in the manifest
-- reach the discovery handoff point and then obey `checkpoint behavior` from `ACTIVE_RUN.md`
+- reach the discovery completion point and then obey `post-discovery default` and `hard boundaries` from `ACTIVE_RUN.md`
 - do not invent launcher scripts or unsupported repo commands
 
 ## Anti-slop requirements
@@ -116,6 +117,7 @@ At the start of a discovery-first run:
 - Reject ideas that are already solved well enough unless a specific underserved niche is identified.
 - Reject products that require a sales motion, compliance burden, or proprietary access before they can help anyone.
 - Reject ideas that only look attractive because the imagined future platform is larger than the actual wedge.
+- Reject ideas whose first sellable version is still vague after you try to name one buyer, one workflow, and one pain point.
 - Reject ideas that appear buildable but look weak as monetizable, virtual businesses.
 - Reject ideas that cannot plausibly be maintained mostly through software and agent workflows.
 - Reject ideas that are too broad to prototype coherently.
@@ -130,6 +132,8 @@ During research, opportunity selection, and validation:
 - document what users do today, including substitutes and workarounds
 - separate "people talk about this" from "people would pay for improvement"
 - save meaningful sources into the research corpus and cite evidence IDs in major claims
+- let concrete complaint, workaround, review, issue, and practitioner evidence dominate the final ranking
+- treat generic topic pages, tag pages, landing pages, and broad community homepages as weak supporting context unless paired with concrete workflow evidence
 - check whether the idea can start as a narrow wedge
 - judge whether the product is compatible with virtual-only operations
 - judge whether a solo operator with agents could plausibly build and maintain it
@@ -144,6 +148,8 @@ Unless a human explicitly authorizes a later stage, a discovery run must not:
 - create noisy external side effects
 - generate excessive numbers of sources or candidate ideas
 - continue into implementation, deployment, or other risky later-stage work beyond the active completion point
+
+Hard boundaries still require approval even when the loop would otherwise continue by default.
 
 ## Coding requirements
 
@@ -166,5 +172,7 @@ A human reviewer should be able to inspect the repository and see:
 4. an honest account of what is incomplete or uncertain
 
 On a discovery run, Checkpoint 1 should be reviewable primarily from the run index and review package inside `artifacts/runs/<run-id>/`.
+
+Checkpoint 1 does not by itself require a pause.
 
 Begin by reading `START_HERE.md`, `ACTIVE_RUN.md`, `theme.md`, `agent/runbook.md`, `agent/human-gates.md`, and `agent/lifecycle-map.md`.

@@ -26,7 +26,6 @@ REQUIRED_FILES = [
     "docs/opportunity-scorecard.md",
     "docs/candidate-review.md",
     "docs/validation.md",
-    "docs/launch-diagnosis.md",
     "skills/product/research-skill.md",
     "skills/product/discovery-run-skill.md",
     "skills/product/monetization-sanity-skill.md",
@@ -110,6 +109,7 @@ REQUIRED_RUN_INDEX_HEADINGS = {
     "## reviewer route",
     "## recommendation snapshot",
     "## evidence that could overturn the ranking",
+    "## continuation status",
 }
 
 REQUIRED_START_HEADINGS = {
@@ -136,6 +136,8 @@ REQUIRED_ACTIVE_RUN_FIELDS = [
     "- reviewer entry point:",
     "- checkpoint label:",
     "- checkpoint behavior:",
+    "- post-discovery default:",
+    "- hard boundaries:",
     "- completion point:",
 ]
 
@@ -157,10 +159,14 @@ RUN_INDEX_REQUIRED_FIELDS = {
     "actual candidate count",
     "recommended outcome",
     "leading candidate",
+    "first buyer/user",
+    "first wedge",
+    "why this is not a platform fantasy",
     "why the leader won",
     "why it may still fail",
-    "requested human decision",
-    "checkpoint status",
+    "recommended next stage",
+    "status marker",
+    "hard-boundary status",
     "completion point status",
 }
 
@@ -170,17 +176,31 @@ RUN_INDEX_PLACEHOLDER_SNIPPETS = (
     "do not fill until",
     "not reached yet",
     "discovery work still in progress",
+    "requested human decision",
 )
 
 CANDIDATE_LINK_REQUIRED_BULLETS = {
     "short thesis",
     "status in ranking",
+    "first buyer/user",
+    "first wedge",
     "supporting evidence ids",
     "weakening evidence ids",
     "key supporting links",
     "substitute pressure notes",
+    "why this is not a platform fantasy",
     "open questions that could change ranking",
 }
+
+WEAK_SUPPORTING_SOURCE_PATTERNS = [
+    re.compile(r"https?://(?:www\.)?producthunt\.com/topics/[^/]+/?$", re.IGNORECASE),
+    re.compile(r"https?://(?:www\.)?dev\.to/t/[^/]+/?$", re.IGNORECASE),
+    re.compile(r"https?://(?:www\.)?reddit\.com/r/[^/]+/?$", re.IGNORECASE),
+    re.compile(r"https?://(?:www\.)?[^/]+/(?:topics|topic|tags|tag)/[^/]+/?$", re.IGNORECASE),
+]
+
+MIN_KEY_SOURCE_URLS = 2
+MIN_CONCRETE_SOURCES = 3
 
 
 def check_paths(paths: list[str], expect_dir: bool) -> list[str]:
@@ -242,6 +262,38 @@ def http_link_count(text: str) -> int:
     return len(re.findall(r"https?://", text, re.IGNORECASE))
 
 
+def resolve_repo_relative_path(base_relative_path: str, referenced_path: str) -> str | None:
+    raw_value = str(referenced_path).strip()
+    if not raw_value:
+        return None
+
+    referenced = Path(raw_value)
+    if referenced.is_absolute():
+        try:
+            return referenced.relative_to(ROOT).as_posix()
+        except ValueError:
+            return referenced.as_posix()
+
+    root_candidate = ROOT / referenced
+    if root_candidate.exists():
+        return root_candidate.relative_to(ROOT).as_posix()
+
+    base_candidate = (ROOT / base_relative_path).parent / referenced
+    return base_candidate.relative_to(ROOT).as_posix()
+
+
+def referenced_file_exists(base_relative_path: str, referenced_path: str) -> bool:
+    normalized = resolve_repo_relative_path(base_relative_path, referenced_path)
+    if not normalized:
+        return False
+    return (ROOT / normalized).is_file()
+
+
+def is_weak_supporting_source(url: str) -> bool:
+    stripped = url.strip()
+    return any(pattern.fullmatch(stripped) for pattern in WEAK_SUPPORTING_SOURCE_PATTERNS)
+
+
 def find_forbidden_matches(text: str) -> list[str]:
     matches: list[str] = []
     for pattern in FORBIDDEN_PATTERNS:
@@ -289,11 +341,10 @@ def validate_run_index(relative_path: str) -> list[str]:
         return [load_error]
     assert text is not None
 
-    if f"## next step requested at {checkpoint_label().lower()}" not in text.lower():
-        errors.append(f"{relative_path} is missing the checkpoint handoff section for {checkpoint_label()}.")
-
-    if http_link_count(text) == 0:
-        errors.append(f"{relative_path} must surface at least one real source URL for reviewer inspection.")
+    if http_link_count(text) < MIN_KEY_SOURCE_URLS:
+        errors.append(
+            f"{relative_path} must surface at least {MIN_KEY_SOURCE_URLS} real source URLs for fast inspection."
+        )
 
     bullets = parse_markdown_bullets(text)
     missing_fields = sorted(field for field in RUN_INDEX_REQUIRED_FIELDS if not bullets.get(field))
@@ -348,6 +399,8 @@ def validate_source_note(relative_path: str, expected_url: str) -> list[str]:
         errors.append(f"{relative_path} must repeat the manifest URL exactly so reviewers can inspect the source directly.")
     if http_link_count(text) == 0:
         errors.append(f"{relative_path} must contain at least one real URL.")
+    if "## direct evidence excerpt" not in lowered and "## key insights" not in lowered:
+        errors.append(f"{relative_path} must capture a direct evidence excerpt or a key-insights section.")
     return errors
 
 
@@ -419,6 +472,9 @@ def validate_research_manifest(relative_path: str) -> list[str]:
         errors.append(f"{relative_path} must contain a non-empty 'sources' list.")
         return errors
 
+    weak_supporting_sources = 0
+    concrete_sources = 0
+
     for index, source in enumerate(sources, start=1):
         if not isinstance(source, dict):
             errors.append(f"{relative_path} source #{index} is not an object.")
@@ -431,15 +487,28 @@ def validate_research_manifest(relative_path: str) -> list[str]:
         url = str(source.get("url", "")).strip()
         if not re.fullmatch(r"https?://.+", url, re.IGNORECASE):
             errors.append(f"{relative_path} source #{index} must use a real http(s) URL.")
+        elif is_weak_supporting_source(url):
+            weak_supporting_sources += 1
+        else:
+            concrete_sources += 1
 
         for field_name in ["raw_path", "normalized_path", "note_path"]:
-            referenced_path = ROOT / str(source.get(field_name, "")).strip()
-            if not referenced_path.is_file():
+            referenced_path = str(source.get(field_name, "")).strip()
+            if not referenced_file_exists(relative_path, referenced_path):
                 errors.append(f"{relative_path} source #{index} references a missing file in {field_name}: {source.get(field_name)}")
 
-        note_path = str(source.get("note_path", "")).strip()
+        note_path = resolve_repo_relative_path(relative_path, str(source.get("note_path", "")).strip())
         if note_path:
             errors.extend(validate_source_note(note_path, url))
+
+    if len(sources) >= 6 and concrete_sources < MIN_CONCRETE_SOURCES:
+        errors.append(
+            f"{relative_path} has only {concrete_sources} concrete sources. At least {MIN_CONCRETE_SOURCES} should be complaint, workaround, review, issue, or practitioner evidence rather than broad supporting pages."
+        )
+    if weak_supporting_sources > max(2, len(sources) // 2):
+        errors.append(
+            f"{relative_path} relies too heavily on broad supporting pages ({weak_supporting_sources} of {len(sources)} sources). Use them as context, not as the majority of core evidence."
+        )
     return errors
 
 
@@ -469,7 +538,13 @@ def validate_artifact_manifest(relative_path: str, run_id: str) -> list[str]:
         if missing:
             errors.append(f"{relative_path} artifact #{index} is missing fields: {', '.join(missing)}")
             continue
-        paths.add(str(artifact["path"]))
+        normalized_path = resolve_repo_relative_path(relative_path, str(artifact["path"]))
+        if not normalized_path:
+            errors.append(f"{relative_path} artifact #{index} has an invalid path field: {artifact.get('path')}")
+            continue
+        paths.add(normalized_path)
+        if not (ROOT / normalized_path).is_file():
+            errors.append(f"{relative_path} artifact #{index} points to a missing file: {artifact.get('path')}")
 
     expected_paths = {
         f"artifacts/runs/{run_id}/run-index.md",
@@ -523,18 +598,20 @@ def validate_run(run_id: str) -> int:
     artifact_manifest, _ = load_json(f"artifacts/runs/{run_id}/manifest.json")
     run_index_text, _ = load_text(f"artifacts/runs/{run_id}/run-index.md")
     candidate_links_text, _ = load_text(f"research-corpus/runs/{run_id}/candidate-links.md")
-    assert (
-        research_manifest is not None
-        and artifact_manifest is not None
-        and run_index_text is not None
-        and candidate_links_text is not None
-    )
+    if research_manifest is None or artifact_manifest is None or run_index_text is None or candidate_links_text is None:
+        print()
+        print(f"NOT READY  Found {len(errors)} completeness issue(s) in run package {run_id}.")
+        print("NEXT  Fix the incomplete artifacts listed below, update the manifests and run index, then rerun the completion check.")
+        for error in errors:
+            print(f"- {error}")
+        return 1
 
     summary_text, _ = load_text(f"artifacts/runs/{run_id}/reports/discovery-summary.md")
-    assert summary_text is not None
-    if http_link_count(summary_text) == 0:
+    if summary_text is None:
+        errors.append(f"artifacts/runs/{run_id}/reports/discovery-summary.md could not be loaded.")
+    elif http_link_count(summary_text) < MIN_KEY_SOURCE_URLS:
         errors.append(
-            f"artifacts/runs/{run_id}/reports/discovery-summary.md must surface at least one real source URL for fast reviewer inspection."
+            f"artifacts/runs/{run_id}/reports/discovery-summary.md must surface at least {MIN_KEY_SOURCE_URLS} real source URLs for fast reviewer inspection."
         )
 
     documented_exception = exception_is_documented(run_index_text)
@@ -573,7 +650,7 @@ def validate_run(run_id: str) -> int:
 
     if not errors:
         print()
-        print(f"READY  Run package {run_id} is complete enough for {checkpoint_label()} review.")
+        print(f"READY  Run package {run_id} is complete at the current discovery milestone and ready for continuation or async inspection.")
         return 0
 
     print()

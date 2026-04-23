@@ -22,6 +22,11 @@ Choose the candidate that best combines painful demand, believable monetization,
    - substitute weakness
    - distribution tractability
 
+   Also write:
+   - first buyer/user
+   - first wedge
+   - why this is not a platform fantasy
+
 3. Record red flags separately from scores.
    - Heavy compliance at MVP stage
    - Requires field operations or inventory
@@ -62,3 +67,4 @@ If no candidate clears that bar, do not force a selection.
 - confusing direct competitors with current substitutes and workarounds
 - ranking buildability above user pain and commercial relevance
 - choosing a product that is only compelling if many future features also land
+- picking a platform story when the first sellable wedge is still fuzzy

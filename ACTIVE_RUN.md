@@ -5,8 +5,8 @@ This file is the canonical run selector.
 ## Current Run
 
 - run type: discovery
-- status: ready to execute discovery run
-- objective: execute a bounded discovery run from `theme.md` and produce a complete discovery handoff package for Checkpoint 1
+- status: discovery-first and continue-by-default
+- objective: execute a bounded discovery run from `theme.md`, choose a narrow wedge, and record the continuation state for the next non-risky stage
 - theme file: `theme.md`
 - theme slug override: none
 - boundary file: `DISCOVERY_RUN_MODE.md`
@@ -16,8 +16,10 @@ This file is the canonical run selector.
 - completion check: `python scripts/check_repo_readiness.py --run-id RUN_ID`
 - reviewer entry point: `artifacts/runs/RUN_ID/run-index.md`
 - checkpoint label: Checkpoint 1
-- checkpoint behavior: continue unless blocked
-- completion point: completion-checked discovery handoff package ready for Checkpoint 1 review
+- checkpoint behavior: status marker only; continue by default
+- post-discovery default: if one candidate earns a go-now recommendation and no hard boundary applies, continue into product brief, requirements, design, roadmap, and backlog without waiting
+- hard boundaries: destructive actions, deployment or public exposure, external publishing, externally consequential tickets or PRs, purchases or credentials, and other noisy or hard-to-reverse side effects
+- completion point: completion-checked discovery package with continuation status recorded and no unresolved scaffold content
 
 ## Startup Order
 
@@ -29,22 +31,26 @@ This file is the canonical run selector.
 6. If the readiness check returns `READY`, run the launcher command to create a fresh run path.
 7. Use the launched run path to do the actual discovery work: save sources, update manifests, fill the reviewer artifacts, and complete the run index.
 8. Run the completion check only after the package is complete.
-9. Record checkpoint status in the run index and stop only when the completion point named above has been reached.
+9. Record checkpoint status as a milestone, then keep going unless the completion point or a hard boundary says to stop.
 
 ## Execution Contract
 
-- The required discovery sequence is: readiness check -> launcher -> research work -> manifest population -> reviewer package completion -> completion check -> checkpoint status update -> completion point reached.
+- The required discovery sequence is: readiness check -> launcher -> research work -> manifest population -> reviewer package completion -> completion check -> checkpoint status update -> continuation decision recorded.
 - Launch alone does not count as discovery progress complete.
 - The completion check is the last step before stopping, not the next step after launch.
 - `artifacts/runs/RUN_ID/run-index.md` must be a reviewer-facing control document, not a stub.
 - `research-corpus/runs/RUN_ID/manifest.json` and `artifacts/runs/RUN_ID/manifest.json` are required outputs, not optional bookkeeping.
-- Checkpoint labels mark review surfaces. They do not by themselves authorize a pause or implementation.
+- Checkpoint labels mark status milestones. They do not by themselves authorize a pause or end the loop.
+- Reviewable artifacts are asynchronous inspection surfaces, not default stopping points.
+- Broad sources may support context, but concrete complaint, workaround, review, issue, and practitioner evidence should dominate the package.
+- If the strongest candidate still looks like a platform fantasy, narrow the wedge before you call the package complete.
 
-## Checkpoint Policy
+## Hard Boundary Policy
 
-- `continue`: keep moving through the active run unless a risky action or blocker requires human input.
-- `continue unless blocked`: the default for discovery. Keep going until the named completion point is satisfied or a real blocker appears.
-- `pause for human review`: stop after the completion check and handoff package, then wait for explicit human direction.
+- Continue through discovery, validation, planning, local implementation, and local verification by default.
+- Ask for approval only at the hard boundaries named above or when a real blocker prevents safe continuation.
+- A checkpoint label or reviewable package alone does not require approval.
+- If the current run is meant to end at discovery, the completion point says so explicitly. Otherwise keep moving.
 
 ## Run ID Policy
 
@@ -60,4 +66,4 @@ This file is the canonical run selector.
 - Do not assume an unnamed launcher exists.
 - Do not stop at a planning response, a launch response, or a completion-check failure.
 - Write the details into artifacts and keep the final chat response short.
-- During discovery, do not pause just because Checkpoint 1 exists. Follow `checkpoint behavior` and `completion point` explicitly.
+- During discovery, do not pause just because Checkpoint 1 exists. Follow `completion point`, `post-discovery default`, and `hard boundaries` explicitly.

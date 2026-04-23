@@ -21,6 +21,11 @@ Paste the exact source URL here so a reviewer can click through immediately.
 
 Forum thread, issue tracker, review, blog post, documentation, community discussion, or other.
 
+## Evidence strength
+
+Mark whether this source is core evidence or weak supporting context.
+Generic topic hubs, tag pages, and broad community homepages should usually be supporting context only.
+
 ## Who is speaking
 
 Name the speaker, organization, or role when known.

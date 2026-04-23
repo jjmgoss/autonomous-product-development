@@ -47,6 +47,9 @@ This file should read like a reviewer control document, not a launch note.
 
 - recommended outcome:
 - leading candidate:
+- first buyer/user:
+- first wedge:
+- why this is not a platform fantasy:
 - runner-up:
 - why the leader won:
 - why it may still fail:
@@ -55,10 +58,11 @@ This file should read like a reviewer control document, not a launch note.
 
 - evidence IDs or missing evidence:
 
-## Next Step Requested at Checkpoint 1
+## Continuation Status
 
-- requested human decision:
-- checkpoint status:
+- recommended next stage:
+- status marker:
+- hard-boundary status:
 - completion point status:
 
 ## Quality Bar

@@ -25,10 +25,9 @@ Read the following before doing substantive work:
 - `agent/repo-conventions.md`
 - `agent/research-corpus-conventions.md`
 - `agent/artifact-output-conventions.md`
-- `agent/definition-of-done.md`
-- `agent/lifecycle-map.md`
-- `agent/orchestration-v3.md`
 - `DISCOVERY_RUN_MODE.md` when the run is discovery-first
+
+Read `agent/definition-of-done.md`, `agent/lifecycle-map.md`, and `agent/orchestration-v3.md` only when the current stage needs them.
 
 ## Step 3: Create or refresh the lifecycle artifacts
 
@@ -46,7 +45,7 @@ If the run is discovery-first, also initialize a matching run folder in:
 Prefer `python scripts/start_discovery_run.py` over manual run-folder setup.
 The launcher creates the run shell only.
 After launch, immediately populate the corpus, manifests, review package, and run index before using the completion check.
-Do not pause early just because the run reached a named checkpoint. Follow `checkpoint behavior` and `completion point` from `ACTIVE_RUN.md`.
+Do not pause early just because the run reached a named checkpoint. Follow the `completion point`, `post-discovery default`, and `hard boundaries` from `ACTIVE_RUN.md`.
 
 ## Step 4: Decide the run mode
 
@@ -86,6 +85,7 @@ While doing the discovery work:
 If no opportunity earns a clear go decision, stop there with an explicit recommendation.
 If any artifact is still template-shaped, the run is not ready to stop.
 Make the key source URLs visible in the run index and discovery summary so a reviewer does not need to dig through the manifest first.
+If one candidate clearly earns a go-now recommendation and no hard boundary applies, continue into product brief, requirements, design, roadmap, and backlog rather than waiting for review by default.
 
 ## Step 6: Plan before implementation
 
@@ -121,7 +121,7 @@ Finish with:
 - `docs/release.md`
 - `docs/retrospective.md`
 - `docs/lifecycle-review.md`
-- an explicit recommendation: iterate, pivot, pause, or archive
+- an explicit recommendation: iterate, pivot, stop, or archive
 
 ## Required product-discovery checks
 
@@ -137,12 +137,13 @@ Before a go decision, confirm that you have answered all of these:
 - Does it avoid immediate dependence on heavy compliance, services, or enterprise sales?
 
 Also confirm that the strongest claims point back to saved evidence rather than unattributed summaries.
+Also confirm that the winning candidate has a specific first buyer, first workflow, first wedge, and first monetization path.
 
 Before stopping a discovery pass, run `python scripts/check_repo_readiness.py --run-id <run-id>`.
 Do not use that command as the next action right after launch.
 Use it only after the package is populated and the run index reflects the final reviewer-facing state.
 If it fails, either fix the package or document the boundary exception in the run index.
-Treat the named checkpoint as a handoff marker, not as the default reason to pause, unless `ACTIVE_RUN.md` says `checkpoint behavior: pause for human review`.
+Treat the named checkpoint as a status marker, not as the default reason to pause.
 
 ## Fallback behavior when stuck
 

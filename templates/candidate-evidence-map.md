@@ -7,20 +7,26 @@ Each serious candidate should have enough detail that a reviewer can see why it 
 
 - short thesis:
 - status in ranking:
+- first buyer/user:
+- first wedge:
 - supporting evidence IDs:
 - weakening evidence IDs:
 - key supporting links:
 - substitute pressure notes:
+- why this is not a platform fantasy:
 - open questions that could change ranking:
 
 ## Candidate: <name>
 
 - short thesis:
 - status in ranking:
+- first buyer/user:
+- first wedge:
 - supporting evidence IDs:
 - weakening evidence IDs:
 - key supporting links:
 - substitute pressure notes:
+- why this is not a platform fantasy:
 - open questions that could change ranking:
 
 ## Quality Bar
@@ -28,3 +34,4 @@ Each serious candidate should have enough detail that a reviewer can see why it 
 - Do not leave a candidate with only positive evidence.
 - Do not list a serious candidate without weakening evidence or open questions.
 - Do not let this file stay empty while the run index claims a completed shortlist.
+- Do not leave the first buyer or first wedge vague if the candidate is still serious.

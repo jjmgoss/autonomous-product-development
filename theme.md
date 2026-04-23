@@ -78,13 +78,13 @@ Use this section to keep the agent away from dead ends.
 
 Choose one:
 
-- Fully autonomous until completion
-- Human gates enabled
-- Human gates enabled only before coding, before deployment, and before merge
+- Hard boundaries only
+- Hard boundaries plus manual discovery stop
+- Hard boundaries plus manual release stop
 
 **Current posture:**
 
-> Human gates enabled only before coding, before deployment, and before merge.
+> Hard boundaries only.
 
 ## Discovery-run preference
 

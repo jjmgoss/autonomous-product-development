@@ -40,7 +40,7 @@ Use the non-doc output directories for clearly different purposes:
 
 - `research-corpus/` stores saved evidence, normalized text, and source notes.
 - `artifacts/runs/` stores run-scoped generated reports, the review package, evaluations, exports, and a reviewer-facing run index.
-- `artifacts/projects/` stores generated product code only after a go decision and human approval.
+- `artifacts/projects/` stores generated product code only after a go decision and when the active run permits continued execution.
 
 ## Run naming
 
@@ -110,9 +110,11 @@ Research and validation tasks may stay in the backlog if they are the critical p
 - Give saved evidence stable IDs and cite them in high-stakes claims.
 - Use the run index to connect the human reviewer to the right files without requiring repo archaeology.
 - Surface the strongest source URLs directly in reviewer-facing artifacts.
+- Keep broad topic pages and landing pages in a supporting role rather than letting them dominate the recommendation.
 - Name substitutes explicitly, including spreadsheets, manual workarounds, and incumbent tools.
 - If a product looks buildable but weakly monetizable, say so.
 - If a product is commercially interesting but operationally unrealistic for an agent-led build, say so.
+- If the idea still sounds like a platform, force the first buyer and first wedge into the artifact before calling it viable.
 
 ## Discovery review-package rule
 

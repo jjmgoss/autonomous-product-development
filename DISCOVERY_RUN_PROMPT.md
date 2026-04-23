@@ -19,7 +19,7 @@ Before doing anything else:
 5. If the repo is `READY`, run the launcher command named in `ACTIVE_RUN.md`.
 6. After launch, immediately do the actual discovery work inside the new run paths.
 7. Run the completion check named in `ACTIVE_RUN.md` only after the package is fully populated.
-8. Read and obey `checkpoint behavior` and `completion point` from `ACTIVE_RUN.md`.
+8. Read and obey the `completion point`, `post-discovery default`, and `hard boundaries` from `ACTIVE_RUN.md`.
 
 Start from `theme.md` and look for monetizable, fully virtual, agent-compatible product opportunities that could be primarily built, operated, maintained, and iterated on through software and agent workflows, with human approval reserved for risky transitions.
 
@@ -27,17 +27,19 @@ Bias toward products that:
 - can be sold digitally
 - do not require physical inventory, physical delivery, or in-person operations
 - can start as a narrow useful wedge
+- have one clear first buyer and one clear first workflow
 - can be validated and prototyped by a solo operator with agent assistance
 - do not depend on large enterprise sales motions before they become useful
 - do not require deep proprietary data or compliance-heavy infrastructure at MVP stage
 
 Be skeptical of ideas that are interesting but weakly monetizable, operationally awkward, too broad, or already solved well enough by substitutes.
+Treat broad platform visions as a failure mode unless you can name the smaller sellable wedge that should exist first.
 
 Do not implement product code.
 Do not deploy anything.
 Do not create noisy external side effects.
 Do not pause early just because Checkpoint 1 exists.
-Do not continue into implementation, deployment, publishing, or other risky later-stage work unless `ACTIVE_RUN.md` or a human explicitly approves it.
+Do not continue into deployment, publishing, destructive actions, or other hard-boundary work unless `ACTIVE_RUN.md` or a human explicitly approves it.
 
 Important output rule:
 - files under `docs/` are reusable framework guides and templates
@@ -54,17 +56,20 @@ Required workflow:
 6. Surface the most important source URLs directly in the run index and discovery summary so a reviewer can inspect them quickly.
 7. Use at least 3 source types when practical. If you cannot, explicitly explain why in the run index.
 8. Research repeated pain and unmet needs in the theme area.
-9. Generate at most 5 candidate opportunities from those pain patterns.
-10. Keep `research-corpus/runs/<run-id>/candidate-links.md` meaningfully populated with supporting and weakening evidence IDs plus visible supporting links for each serious candidate.
-11. Score at most the top 3 candidates in detail.
-12. Produce a reviewer-friendly comparison of the strongest candidates.
-13. Complete `artifacts/runs/<run-id>/manifest.json` and `artifacts/runs/<run-id>/run-index.md` as part of the required package.
-14. Make an explicit recommendation:
+9. Let concrete complaint, workaround, review, issue, and practitioner evidence drive the ranking. Use broad topic hubs only as supporting context.
+10. Generate at most 5 candidate opportunities from those pain patterns.
+11. Keep `research-corpus/runs/<run-id>/candidate-links.md` meaningfully populated with supporting and weakening evidence IDs plus visible supporting links for each serious candidate.
+12. Force each serious candidate into a narrow wedge frame: first buyer, first workflow, first pain, first monetization path.
+13. Explain why the leading candidate is not a broad platform fantasy.
+14. Score at most the top 3 candidates in detail.
+15. Produce a reviewer-friendly comparison of the strongest candidates.
+16. Complete `artifacts/runs/<run-id>/manifest.json` and `artifacts/runs/<run-id>/run-index.md` as part of the required package.
+17. Make an explicit recommendation:
    - prototype candidate A first
    - continue validating candidates A and B
    - no current candidate is strong enough
-15. Run the completion check named in `ACTIVE_RUN.md` before stopping.
-16. Record checkpoint status and requested human decision in the run index.
+18. Run the completion check named in `ACTIVE_RUN.md` before stopping.
+19. Record checkpoint status, recommended next stage, and hard-boundary status in the run index.
 
 Major claims in the ranking and recommendation must cite saved evidence IDs.
 If a claim describes a repeated pattern, back it with more than one evidence ID when possible.
@@ -96,9 +101,11 @@ For each top candidate, explain:
 - target user
 - painful workflow
 - narrow wedge or MVP angle
+- first monetization path
 - why existing substitutes are insufficient or good enough
 - monetization angle
 - why agent-led build and operation are or are not plausible
+- why this is not a platform fantasy
 - top risks
 - why it may fail
 - what evidence would overturn the current ranking
@@ -108,4 +115,4 @@ Bound the comparison to the strongest few candidates. Favor evidence density and
 Keep chat updates minimal unless blocked.
 Write the details into artifacts, not into chat.
 Continue by default while discovery work is still in scope.
-Pause only if `ACTIVE_RUN.md` explicitly says `checkpoint behavior: pause for human review` or if a blocker or risky action requires approval.
+Pause only if a hard boundary or blocker requires approval, or if `ACTIVE_RUN.md` explicitly ends the current run at the completed discovery package.

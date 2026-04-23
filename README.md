@@ -8,7 +8,7 @@ Its job is to help an agent move from a broad theme to one of two honest outcome
 2. a clearly documented no-go decision.
 
 The repository is designed so the human mainly edits one file at the start of a run: `theme.md`.
-Everything else exists to steer the agent, sharpen decisions, and leave behind inspectable artifacts.
+Everything else exists to steer the agent, sharpen decisions, and leave behind inspectable artifacts while the loop continues by default.
 
 The canonical bootstrap path is:
 
@@ -73,38 +73,24 @@ It biases toward:
 - agent-compatible execution over ideas that require large human teams
 - honest no-go calls over forced implementation
 
-## Discovery mode
+## Operating model
 
-The default operating mode for a new theme is discovery-first, not implementation-first.
+The default operating mode is continue-by-default.
 
-On a discovery run, the agent should usually stop after producing:
+The agent should:
 
-- a strong research summary
-- a scored candidate list
-- a human review artifact comparing the best candidates
-- an explicit recommendation about which idea to prototype first, if any
+1. research real workflow pain
+2. compare narrow candidate wedges
+3. validate the strongest option honestly
+4. continue into the next non-risky stage when the active run says to continue
+5. stop only at the active completion point or a true hard boundary
 
-Those discovery outputs should live under `artifacts/runs/<run-id>/`, with `run-index.md` as the reviewer entry point and `review-package/` as the canonical Checkpoint 1 bundle.
+Discovery packages live under `artifacts/runs/<run-id>/`, with `run-index.md` as the reviewer entry point and `review-package/` as the canonical milestone bundle.
 
-The required discovery sequence is:
+Reviewable artifacts are asynchronous inspection surfaces.
+They are not automatic pause points.
 
-1. run the readiness check
-2. run the launcher
-3. do the actual research and candidate-comparison work
-4. populate both manifests, the run index, and the reviewer package
-5. run the completion check at the end
-6. record checkpoint status and obey the checkpoint behavior named in `ACTIVE_RUN.md`
-
-The launcher and checker are bookends around the discovery work.
-They do not replace the middle of the run.
-
-Use `DISCOVERY_RUN_MODE.md` as the hard boundary file for that run.
-Use `research-corpus/` to store saved evidence and `artifacts/` to store generated run outputs.
-
-Checkpoint 1 is the default discovery review surface, not an automatic pause.
-The active run must say when to pause.
-
-If no idea earns a clear go decision, the correct result is a documented no-go or more targeted follow-up research.
+Hard boundaries remain for destructive actions, deployment or public exposure, external publishing, externally consequential tickets or PRs, purchases or credentials, and other noisy or hard-to-reverse side effects.
 
 ## How to use it
 
@@ -116,7 +102,7 @@ If no idea earns a clear go decision, the correct result is a documented no-go o
 6. Do the actual discovery work inside the launched run paths.
 7. Run `python scripts/check_repo_readiness.py --run-id <run-id>` only after the package is complete.
 8. If you need a detailed launch prompt, use `DISCOVERY_RUN_PROMPT.md`.
-9. Use the gate checklists in `agent/human-gates.md` to review research, validation, and release readiness.
+9. Use `agent/human-gates.md` only for true hard-boundary decisions.
 10. Review the run through `artifacts/runs/<run-id>/run-index.md`, then inspect the saved evidence in `research-corpus/` and any later-stage project docs in `docs/`.
 
 For discovery runs, prefer theme-derived slugs and visible source links in the run index and summary over stale config hints or manifest-only evidence.
@@ -129,6 +115,7 @@ A strong run should leave behind:
 - a saved research corpus with evidence IDs and notes
 - a ranked set of candidate opportunities
 - explicit monetization and agent-operability judgments
+- an explicit first buyer, first workflow, and first wedge for any leading candidate
 - a clean run-scoped review package with a clear reviewer entry point
 - a selected product brief or a justified no-go
 - clear requirements, design, and roadmap artifacts if the idea earns a go decision

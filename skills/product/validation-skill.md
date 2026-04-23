@@ -15,6 +15,7 @@ After opportunity selection and before requirements or implementation.
    - Workflow: what recurring job are they trying to complete?
    - Pain: what is costly, risky, or frustrating?
    - Wedge: what narrow product would improve that workflow?
+   - Why now: what first monetization path makes this worth trying?
 
 2. Build an evidence ledger.
    - Record the strongest evidence for the idea.
@@ -81,6 +82,7 @@ Default toward go only when most of these are true:
 - an explicit go, continue-validation, or no-go decision
 
 If the run is still at Checkpoint 1, the validation artifact should also explain why the winning candidate beat the runner-up and what evidence would overturn that decision.
+If the recommendation is `Go now`, it should also state the recommended next stage and whether any hard boundary blocks continuation.
 
 ## Common failure modes
 

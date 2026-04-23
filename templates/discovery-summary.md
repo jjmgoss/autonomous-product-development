@@ -27,8 +27,11 @@ List the highest-signal evidence IDs with direct URLs.
 
 - recommended outcome
 - leading candidate
+- first buyer/user
+- first wedge
 - why it leads
 - why the runner-up lost
+- why this is not a platform fantasy
 - what may still kill the leading idea
 
 ## Ranked shortlist
@@ -38,6 +41,8 @@ For each shortlisted candidate, include:
 - rank
 - short name
 - problem and user
+- first buyer/user
+- first wedge
 - monetization angle
 - agent-operability judgment
 - strongest evidence IDs
@@ -53,13 +58,9 @@ List the candidates or directions dropped and why.
 
 List the missing evidence that could materially change the current ranking.
 
-## Next-step request
+## Continuation status
 
-State what the human should decide at Checkpoint 1.
-
-## Completion point
-
-State whether the discovery handoff reached Checkpoint 1 and whether the active run should pause or continue.
+State the current milestone, the recommended next stage, whether any hard boundary applies, and whether the loop should continue.
 
 ## Quality bar
 

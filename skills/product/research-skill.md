@@ -28,6 +28,7 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 3. Gather evidence from multiple source types.
 	- Look for issue trackers, forum threads, review sites, Reddit, community discussions, changelog complaints, workflow writeups, and expert commentary.
 	- Prefer a mix of direct complaints, workaround descriptions, and evidence of current tool usage.
+	- Treat generic topic hubs, landing pages, and broad community homepages as weak supporting context unless paired with concrete workflow evidence.
 	- Stay within the source-count limits for the current run mode unless a human explicitly approves a wider pass.
 
 4. Save each meaningful source in the corpus.
@@ -56,7 +57,7 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 
 9. Generate candidate opportunity wedges.
 	- Frame narrow product responses, not full platforms.
-	- Each candidate should describe one user, one workflow, one pain point, and one wedge.
+	- Each candidate should describe one user, one workflow, one pain point, one wedge, and one first monetization path.
 
 10. Apply early fit filters.
 	- Can this be sold or monetized digitally?
@@ -81,6 +82,7 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 - Treat generic enthusiasm as weak evidence.
 - Treat explicit workarounds, complaints, switching behavior, and budget-linked frustration as stronger evidence.
 - Do not confuse a broad market category with a narrow product opportunity.
+- If the idea still sounds like a platform, keep narrowing until you can name the smallest sellable wedge.
 
 ## Output expectations
 
