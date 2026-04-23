@@ -1,55 +1,59 @@
 # Discovery Run Mode
 
-Use this file when `ACTIVE_RUN.md` selects a discovery run.
+Use this file when `ACTIVE_RUN.md` selects a discovery-to-planning run.
 
 ## Objective
 
-The default discovery run is discovery-first.
+The default run is discovery-first, but not discovery-only.
 
 Its job is to:
 
-- collect a bounded research corpus
+- collect a mode-bounded research corpus
 - generate a bounded set of candidate ideas
-- compare the strongest candidates
+- compare the strongest candidates honestly
 - recommend one narrow next move with a concrete continuation path
+- continue into prototype-planning docs when one candidate clearly earns a go-now recommendation
 
 It is not allowed to drift into implementation just because coding feels more concrete than research.
+
+## Run Modes
+
+The kickoff command must name one explicit mode.
+
+`test` mode:
+- save between 6 and 12 meaningful sources
+- use at least 3 source types when possible
+- generate at most 5 serious candidates
+- score at most the top 3 candidates in detail
+- optimize for a compact but completion-checked package
+- if one candidate wins, continue into lean prototype-planning docs before stopping
+
+`real` mode:
+- save between 10 and 24 meaningful sources
+- use at least 4 source types when possible
+- generate at most 7 serious candidates
+- score at most the top 4 candidates in detail
+- spend more effort on disconfirming evidence and substitute pressure
+- if one candidate wins, continue further into fuller prototype-planning docs before stopping
+
+If the run falls short of the mode target, it is not complete unless the run index documents an explicit exception.
 
 ## Required Sequence
 
 Follow this sequence in order:
 
 1. Run the readiness check.
-2. Run the launcher to create a fresh run ID and scaffold the run files.
+2. Run the kickoff command to create a fresh run ID and scaffold the run files with explicit mode and direct intent.
 3. Do the middle of the run: save sources, update the research manifest as you go, compare candidates, and fill the review package.
 4. Complete the run index and artifact manifest as reviewer-facing outputs.
 5. Run the completion check only after the package is fully populated.
 6. Record checkpoint status, recommended next stage, and hard-boundary status in the run index.
-7. Continue by default unless the active completion point ends here or a hard boundary is triggered.
+7. If the recommendation is go-now and no hard boundary applies, continue into prototype-planning docs.
+8. Stop only when the active completion point is satisfied.
 
-The launcher and the completion check are bookends.
+The kickoff command and the completion check are bookends.
 They do not replace the actual discovery work that happens between them.
 Checkpoint 1 is a milestone surface, not a reason to stop early while the package is still incomplete or to stop automatically once it becomes reviewable.
-
-## Default Scope
-
-- Create a fresh run ID using `YYYYMMDD-theme-slug-rN`.
-- Initialize `research-corpus/runs/<run-id>/`.
-- Initialize `artifacts/runs/<run-id>/`.
-- Initialize `artifacts/runs/<run-id>/review-package/`.
-- Save between 6 and 12 meaningful sources unless a human explicitly approves a wider pass.
-- Use at least 3 source types when possible.
-- Generate at most 5 candidate ideas.
-- Score at most the top 3 candidates in detail.
-- Recommend only one of these outcomes:
-  - prototype candidate X first
-  - continue validating the top 2 candidates
-  - no current candidate is strong enough
-
-If one candidate wins, the package must state the first buyer, first workflow, first wedge, first monetization path, and why the recommendation is not a broad platform fantasy.
-
-If the run falls short of the source-count target, source-type target, or required review-package files, it is not complete.
-The agent must either fix the gap before stopping or explicitly document why it could not.
 
 ## Middle-Of-Run Work
 
@@ -62,6 +66,7 @@ During the run itself:
 - record completed artifact entries in `artifacts/runs/<run-id>/manifest.json`
 - keep `artifacts/runs/<run-id>/run-index.md` accurate enough that a human could review the package from that file alone
 - keep broad sources as supporting context only; do not let them dominate the shortlist logic or key-link sections
+- if the leading recommendation becomes go-now, move into `docs/product-brief.md`, `docs/requirements.md`, `docs/design.md`, `docs/roadmap.md`, and `docs/backlog.md`
 
 ## Required Outputs
 
@@ -75,8 +80,8 @@ During the run itself:
 - `artifacts/runs/<run-id>/review-package/validation.md`
 - `artifacts/runs/<run-id>/reports/discovery-summary.md`
 
-The files under `docs/` are reusable framework guidance and templates.
-They are not the canonical final outputs for a discovery run.
+The files under `docs/` are reusable framework guidance during discovery.
+Once a candidate earns a go-now recommendation, they become the prototype-planning surface that the agent should update directly.
 
 The manifests and run index are part of the required package.
 They are not optional metadata to fill in later if time remains.
@@ -127,30 +132,18 @@ Treat Checkpoint 1 as a status milestone.
 By default, keep going until the active run's completion point is satisfied and continue into the next non-risky stage if `ACTIVE_RUN.md` says to continue.
 Pause only at a hard boundary or if `ACTIVE_RUN.md` explicitly makes the completed discovery package the end of the current run.
 
-The discovery handoff package is complete when:
-
-- the corpus manifest exists
-- the candidate-to-evidence linkage exists
-- the run index exists
-- the ranked shortlist exists with at least 2 meaningfully developed candidates when multiple candidates were considered
-- a recommendation exists
-- the first wedge, first buyer, and first workflow are explicit for the leading candidate when the result is `prototype candidate X first`
-- the package explains why the recommendation is not a broad platform fantasy
-- the reasons against the leading candidate are written down
-- the review-package files are fully written rather than template-shaped stubs
-- the discovery summary explains both why the top candidate leads and what would overturn that call
-- both manifests are fully populated with real entries rather than scaffold status
-- the run index explains the reviewer route, current counts, recommendation, continuation status, and key source links
+When the result is `prototype candidate X first`, the package is only half-finished until the next-stage docs are updated.
+At minimum, continuation should name the first buyer, first workflow, first wedge, success criteria, scope boundary, first prototype slice, and immediate backlog shape.
 
 Checkpoint 1 is the default discovery status surface.
 Do not continue into deployment, publishing, or other hard-boundary actions unless the active run or a human explicitly authorizes that step.
 
 ## Explicit Prohibitions
 
-- Do not implement product code.
+- Do not implement product code during this run mode unless `ACTIVE_RUN.md` explicitly changes the completion point.
 - Do not deploy anything.
 - Do not create noisy external side effects unless a human explicitly allows them.
 - Do not create GitHub issues, PRs, or project boards for product implementation.
 - Do not gather excessive numbers of weak sources to simulate rigor.
-- Do not create more files than needed to support evidence, comparison, and review.
+- Do not create more files than needed to support evidence, comparison, review, and prototype planning.
 - Do not treat partially completed templates as finished artifacts.

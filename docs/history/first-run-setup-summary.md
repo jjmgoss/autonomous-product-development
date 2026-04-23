@@ -3,6 +3,9 @@
 Archived historical note from the initial bootstrap pass.
 The durable operating surfaces now live in `START_HERE.md`, `ACTIVE_RUN.md`, `DISCOVERY_RUN_MODE.md`, and `scripts/check_repo_readiness.py`.
 
+This file reflects the earlier theme-driven kickoff model and discovery-only stopping behavior.
+Use the current kickoff-command and mode-aware flow from the active operating files instead.
+
 ## What was added
 
 - `FIRST_RUN_MODE.md` now defines the default first-run boundary: discovery only, bounded source count, bounded candidate count, and a hard stop at the review package.
@@ -70,7 +73,7 @@ Run it again with `--run-id <run-id>` before stopping a discovery run to validat
 ## What to do next
 
 1. Create a fresh branch for the first live discovery pass.
-2. Update `theme.md` if the theme needs refinement.
+2. Update the direct kickoff intent and `theme.md` defaults if the defaults need refinement.
 3. Run `python scripts/check_first_run_readiness.py`.
 4. Start the agent with `FIRST_RUN_PROMPT.md` and keep `FIRST_RUN_MODE.md` in scope.
 5. Review the resulting package at Gate 1 through `artifacts/runs/<run-id>/run-index.md` before approving any implementation.

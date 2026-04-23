@@ -8,6 +8,8 @@ Create the simplest technical design that can support the validated wedge credib
 
 After requirements are defined and before meaningful implementation.
 
+In the active framework, this usually happens as the direct continuation after a go-now discovery result.
+
 ## Procedure
 
 1. Define the core user flow end to end.

@@ -27,9 +27,9 @@ research-corpus/
 
 ## Run ID convention
 
-Use `YYYYMMDD-theme-slug-rN`.
+Use `YYYYMMDD-intent-slug-rN`.
 
-Prefer `python scripts/start_discovery_run.py` to create discovery-run IDs and matching folders.
+Prefer `python scripts/autopd.py MODE "DIRECT_INTENT"` to create discovery-run IDs and matching folders.
 If you are not using the helper, you must still choose a fresh unused ID and check both run roots before writing files.
 
 Examples:

@@ -8,6 +8,8 @@ Translate a validated opportunity into explicit, testable requirements for a nar
 
 After a clear go decision.
 
+In the active framework, this usually means immediately after a completion-checked discovery package recommends `Go now` and no hard boundary blocks continuation.
+
 ## Procedure
 
 1. Restate the target user, workflow, and pain in plain language.

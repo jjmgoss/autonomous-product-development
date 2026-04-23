@@ -1,14 +1,15 @@
-# Theme
+# Run Defaults
 
-This is the main human-edited run configuration.
+This file keeps background defaults for kickoff-driven runs.
 
-The best use of this repository is to describe the opportunity space and the constraints clearly enough that an agent can perform strong discovery before it tries to build anything.
+The direct kickoff intent should come from the user prompt or `python scripts/autopd.py MODE "DIRECT_INTENT"`.
+Use this file for reusable defaults, constraints, and preferences that should shape the run after the direct intent is already clear.
 
 ## Focus area
 
-Describe the broad domain to investigate.
+Describe the default domain bias to use when the direct kickoff intent is adjacent or under-specified.
 
-**Current theme:**
+**Current default focus area:**
 
 > Discover product opportunities in autonomous product development and developer workflow automation.
 

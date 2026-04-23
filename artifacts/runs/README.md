@@ -2,7 +2,7 @@
 
 Create one folder per run using the same run ID used in `research-corpus/runs/`.
 
-For discovery runs, prefer `python scripts/start_discovery_run.py` so the artifact tree and corpus tree are initialized together.
+For discovery runs, prefer `python scripts/autopd.py MODE "DIRECT_INTENT"` so the artifact tree and corpus tree are initialized together.
 
 Each run folder should contain:
 

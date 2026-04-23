@@ -10,21 +10,23 @@ As the framework evolves, this is where helper scripts can live for:
 - validating that required lifecycle artifacts exist
 - cleaning empty run directories left behind by failed or partial launches
 
-## Included helper
+## Included helpers
 
 - `check_repo_readiness.py` validates the canonical bootstrap surfaces and also serves as the final discovery-package validator.
-- `start_discovery_run.py` creates a fresh discovery run ID, initializes the run directories, and writes scaffold files for the manifests, run index, review package, and summary.
+- `autopd.py` is the primary kickoff helper. It accepts `test` or `real` plus a direct intent, creates a fresh run ID, initializes the run directories, and writes scaffold files for the manifests, run index, review package, and summary.
+- `start_discovery_run.py` is the older theme-driven launcher and should not be used for the active kickoff model.
 - `clean_empty_run_dirs.py` removes only truly empty run subdirectories and reports suspicious partial non-empty run folders.
 
-The startup sequence for a discovery run is:
+The startup sequence for a discovery-to-planning run is:
 
 1. `python scripts/check_repo_readiness.py`
-2. `python scripts/start_discovery_run.py`
+2. `python scripts/autopd.py test "DIRECT_INTENT"` or `python scripts/autopd.py real "DIRECT_INTENT"`
 3. do the actual discovery work inside the launched run paths
 4. `python scripts/check_repo_readiness.py --run-id <run-id>`
+5. if the recommendation is go-now, continue into the planning docs named in `ACTIVE_RUN.md`
 
 Do not run the completion check as the next action right after launch.
-It is intended for the end of the run, after the manifests and reviewer package are fully populated.
+It is intended for the end of the discovery package, after the manifests and reviewer package are fully populated.
 Do not pause at a named checkpoint by default. Treat checkpoints as status markers and inspectable artifacts unless `ACTIVE_RUN.md` explicitly ends the run there.
 
 Only run scripts that are explicitly named in `ACTIVE_RUN.md` or in this file.
@@ -33,6 +35,18 @@ Run the readiness check from the repo root with:
 
 ```text
 python scripts/check_repo_readiness.py
+```
+
+Kick off a compact validation run with:
+
+```text
+python scripts/autopd.py test "DIRECT_INTENT"
+```
+
+Kick off a deeper execution run with:
+
+```text
+python scripts/autopd.py real "DIRECT_INTENT"
 ```
 
 To inspect and optionally clean empty leftover run folders:

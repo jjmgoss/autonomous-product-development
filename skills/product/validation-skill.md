@@ -54,6 +54,12 @@ After opportunity selection and before requirements or implementation.
    - Continue validation before building
    - No-go
 
+9. If the call is Go now, specify the continuation payload immediately.
+   - What belongs in `docs/product-brief.md`
+   - What the first requirements slice must cover
+   - What the first design questions are
+   - What the first prototype slice should prove
+
 ## Go criteria
 
 Default toward go only when most of these are true:
@@ -83,6 +89,7 @@ Default toward go only when most of these are true:
 
 If the run is still at Checkpoint 1, the validation artifact should also explain why the winning candidate beat the runner-up and what evidence would overturn that decision.
 If the recommendation is `Go now`, it should also state the recommended next stage and whether any hard boundary blocks continuation.
+If the recommendation is `Go now`, it should make continuation into the planning docs obvious rather than leaving the next stage underspecified.
 
 ## Common failure modes
 

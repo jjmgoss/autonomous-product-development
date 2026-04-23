@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Generated autonomous run outputs
+research-corpus/runs/*
+artifacts/runs/*
+
+# Keep the run container docs/structure
+!research-corpus/runs/README.md
+!artifacts/runs/README.md
+
+# If you keep shared/reference artifacts in git
+!research-corpus/shared/
+!artifacts/shared/
+!artifacts/projects/
+
+# Optional: keep intentionally preserved example runs
+#!research-corpus/runs/examples/
+#!artifacts/runs/examples/

@@ -48,6 +48,10 @@ If multiple candidates were considered seriously, make at least the top 2 review
 
 6. Select one candidate only if it still looks strong after the negative case is written.
 
+7. Set up the continuation path at the same time you choose the winner.
+   - Name the first prototype slice, not just the abstract wedge.
+   - Name what should land next in `docs/product-brief.md`, `docs/requirements.md`, and `docs/design.md` if the call is go-now.
+
 ## Decision rule
 
 Default toward the opportunity that:
@@ -59,6 +63,8 @@ Default toward the opportunity that:
 - does not require enterprise machinery before it becomes useful
 
 If no candidate clears that bar, do not force a selection.
+
+If one candidate does clear that bar, the output should make it easy to move directly into prototype-planning docs without reopening the ranking from scratch.
 
 ## Common failure modes
 

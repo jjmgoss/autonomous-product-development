@@ -8,6 +8,8 @@ Break the MVP into milestones and issue-sized slices that preserve learning spee
 
 After requirements and design are stable enough to plan real work.
 
+In the active framework, roadmap and backlog updates are part of the default continuation path once discovery produces a go-now recommendation and no hard boundary blocks planning.
+
 ## Procedure
 
 1. Define the first meaningful vertical slice.

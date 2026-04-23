@@ -44,9 +44,9 @@ Use the non-doc output directories for clearly different purposes:
 
 ## Run naming
 
-Use `YYYYMMDD-theme-slug-rN` for run IDs.
+Use `YYYYMMDD-intent-slug-rN` for run IDs.
 
-Use `python scripts/start_discovery_run.py` when discovery mode is active unless a human explicitly provides a run ID.
+Use `python scripts/autopd.py MODE "DIRECT_INTENT"` when discovery mode is active unless a human explicitly provides a run ID.
 
 Use the same run ID in:
 
@@ -56,7 +56,7 @@ Use the same run ID in:
 
 Never reuse an existing run ID by default.
 If a collision exists, increment `rN` until both run roots are unused.
-Prefer theme-derived slugs over manual hints. Only use an override when the human intentionally wants a different slug.
+Prefer direct-intent slugs over manual hints. Only use an override when the human intentionally wants a different slug.
 
 ## Decision logging
 

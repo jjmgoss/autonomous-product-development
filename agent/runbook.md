@@ -11,10 +11,11 @@ If startup instructions are not otherwise explicit, begin with:
 
 Do not invent launcher scripts or startup paths that the repo does not name.
 
-## Step 1: Read the theme and constraints
+## Step 1: Identify direct intent and defaults
 
-Start every run by reading `theme.md`.
-Do not infer the theme from old docs or repository history if `theme.md` is present.
+Start every run by identifying the direct kickoff intent from the user prompt or kickoff command.
+If direct intent is missing, ask for it instead of inferring it from repository history or `theme.md`.
+Read `theme.md` after that as background defaults and constraints.
 
 ## Step 2: Read the operating instructions
 
@@ -34,7 +35,7 @@ Read `agent/definition-of-done.md`, `agent/lifecycle-map.md`, and `agent/orchest
 Make sure the docs in `docs/` are present and consistent.
 Treat these docs as reusable framework guidance during a discovery run.
 If the run is new, read them and use their structure.
-If the run is ongoing after a human-approved go decision, update them rather than duplicating them.
+If the run is ongoing after a go decision, update them rather than duplicating them.
 
 If the run is discovery-first, also initialize a matching run folder in:
 
@@ -42,21 +43,22 @@ If the run is discovery-first, also initialize a matching run folder in:
 - `artifacts/runs/<run-id>/`
 - `artifacts/runs/<run-id>/review-package/`
 
-Prefer `python scripts/start_discovery_run.py` over manual run-folder setup.
-The launcher creates the run shell only.
+Prefer `python scripts/autopd.py MODE "DIRECT_INTENT"` over manual run-folder setup.
+The kickoff command creates the run shell only.
 After launch, immediately populate the corpus, manifests, review package, and run index before using the completion check.
 Do not pause early just because the run reached a named checkpoint. Follow the `completion point`, `post-discovery default`, and `hard boundaries` from `ACTIVE_RUN.md`.
 
 ## Step 4: Decide the run mode
 
-Before deeper work, decide which of these two modes fits the current run:
+Before deeper work, decide both the lifecycle stage and the execution depth:
 
-- Discovery-first mode: used for first runs, idea generation, market mapping, and opportunity ranking
-- Build-forward mode: used only after one opportunity clearly earns a go decision
+- Discovery-first stage: used for first runs, idea generation, market mapping, and opportunity ranking
+- Build-forward stage: used only after one opportunity clearly earns a go decision
+- `test` mode: compact validation pass with bounded evidence and lightweight prototype-planning continuation
+- `real` mode: deeper pass with more evidence, more disconfirmation, and fuller prototype-planning continuation
 
-Default to discovery-first mode unless the existing docs already contain a strong validated opportunity.
-
-When `ACTIVE_RUN.md` selects discovery, follow `DISCOVERY_RUN_MODE.md` as a hard boundary file.
+Default to discovery-first stage unless the existing docs already contain a strong validated opportunity.
+When `ACTIVE_RUN.md` selects discovery, follow `DISCOVERY_RUN_MODE.md` as the boundary file for both `test` and `real` modes.
 
 ## Step 5: Research before building
 
@@ -85,7 +87,7 @@ While doing the discovery work:
 If no opportunity earns a clear go decision, stop there with an explicit recommendation.
 If any artifact is still template-shaped, the run is not ready to stop.
 Make the key source URLs visible in the run index and discovery summary so a reviewer does not need to dig through the manifest first.
-If one candidate clearly earns a go-now recommendation and no hard boundary applies, continue into product brief, requirements, design, roadmap, and backlog rather than waiting for review by default.
+If one candidate clearly earns a go-now recommendation and no hard boundary applies, continue into `docs/product-brief.md`, `docs/requirements.md`, `docs/design.md`, `docs/roadmap.md`, and `docs/backlog.md` rather than waiting for review by default.
 
 ## Step 6: Plan before implementation
 

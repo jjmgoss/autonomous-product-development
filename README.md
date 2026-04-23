@@ -2,13 +2,14 @@
 
 This repository is an opinionated framework for autonomous product development, not a generic coding template.
 
-Its job is to help an agent move from a broad theme to one of two honest outcomes:
+Its job is to help an agent move from a direct user intent to one of two honest outcomes:
 
-1. a validated, narrowly scoped product prototype with traceable reasoning, or
+1. a validated, narrowly scoped product prototype path with traceable reasoning, or
 2. a clearly documented no-go decision.
 
-The repository is designed so the human mainly edits one file at the start of a run: `theme.md`.
-Everything else exists to steer the agent, sharpen decisions, and leave behind inspectable artifacts while the loop continues by default.
+The repository is now kickoff-command driven.
+The human gives the research target directly in the kickoff prompt or command, for example `python scripts/autopd.py test "Investigate ..."`.
+`theme.md` remains as a background defaults file, not the main run-target surface.
 
 The canonical bootstrap path is:
 
@@ -44,9 +45,9 @@ Use this repository when you want an agent to:
 
 - `START_HERE.md` - canonical repo bootstrap entrypoint for agents
 - `ACTIVE_RUN.md` - canonical active-run selector and launch contract
-- `theme.md` - the main human-edited run configuration
-- `DISCOVERY_RUN_MODE.md` - boundary file for discovery runs
-- `DISCOVERY_RUN_PROMPT.md` - detailed discovery-run prompt when a tiny prompt is not enough
+- `theme.md` - background defaults and constraints for kickoff-driven runs
+- `DISCOVERY_RUN_MODE.md` - boundary file for discovery-to-planning runs
+- `DISCOVERY_RUN_PROMPT.md` - detailed discovery-to-planning prompt when a tiny prompt is not enough
 - `agent/` - repo-wide operating instructions, gates, lifecycle map, and conventions
 - `skills/product/` - discovery, scoring, validation, monetization, operability, requirements, design, and planning skills
 - `skills/engineering/` - implementation loop, debugging, testing, review, release, and deployment guidance
@@ -94,18 +95,27 @@ Hard boundaries remain for destructive actions, deployment or public exposure, e
 
 ## How to use it
 
-1. Edit `theme.md`.
+1. Decide the direct intent you want the run to investigate.
 2. Read `START_HERE.md`.
 3. Confirm or update `ACTIVE_RUN.md`.
 4. Run `python scripts/check_repo_readiness.py`.
-5. For discovery runs, run `python scripts/start_discovery_run.py`.
+5. Launch the run with `python scripts/autopd.py test "DIRECT_INTENT"` or `python scripts/autopd.py real "DIRECT_INTENT"`.
 6. Do the actual discovery work inside the launched run paths.
 7. Run `python scripts/check_repo_readiness.py --run-id <run-id>` only after the package is complete.
-8. If you need a detailed launch prompt, use `DISCOVERY_RUN_PROMPT.md`.
-9. Use `agent/human-gates.md` only for true hard-boundary decisions.
-10. Review the run through `artifacts/runs/<run-id>/run-index.md`, then inspect the saved evidence in `research-corpus/` and any later-stage project docs in `docs/`.
+8. If the result is go-now, continue into `docs/product-brief.md`, `docs/requirements.md`, `docs/design.md`, `docs/roadmap.md`, and `docs/backlog.md` before stopping.
+9. If you need a detailed launch prompt, use `DISCOVERY_RUN_PROMPT.md`.
+10. Use `agent/human-gates.md` only for true hard-boundary decisions.
+11. Review the run through `artifacts/runs/<run-id>/run-index.md`, then inspect the saved evidence in `research-corpus/` and any later-stage planning docs in `docs/`.
 
-For discovery runs, prefer theme-derived slugs and visible source links in the run index and summary over stale config hints or manifest-only evidence.
+For discovery runs, prefer direct-intent slugs and visible source links in the run index and summary over stale config hints or manifest-only evidence.
+
+## Modes
+
+`test` mode is the compact validation path.
+Use it when you want one strong bounded pass with full completion discipline and a lightweight continuation into prototype planning if a winner emerges.
+
+`real` mode is the deeper execution path.
+Use it when you want more evidence, more disconfirming work, and a stronger continuation push into prototype-planning docs.
 
 ## Expected output from a strong run
 

@@ -44,6 +44,7 @@ REQUIRED_FILES = [
     "artifacts/runs/README.md",
     "artifacts/projects/README.md",
     "artifacts/shared/README.md",
+    "scripts/autopd.py",
     "scripts/start_discovery_run.py",
     "scripts/clean_empty_run_dirs.py",
     "LAUNCH_MODEL_SUMMARY.md",
@@ -87,6 +88,20 @@ ARTIFACT_MANIFEST_FIELDS = {
 
 LAUNCH_SCAFFOLD_MARKER = "launch scaffold"
 OPTIONAL_EMPTY_VALUES = {"", "none", "n/a", "na", "null"}
+RUN_MODE_PROFILES = {
+    "test": {
+        "minimum_sources": 6,
+        "maximum_sources": 12,
+        "minimum_source_types": 3,
+        "maximum_candidates": 5,
+    },
+    "real": {
+        "minimum_sources": 10,
+        "maximum_sources": 24,
+        "minimum_source_types": 4,
+        "maximum_candidates": 7,
+    },
+}
 
 FORBIDDEN_PATTERNS = [
     re.compile(r"<run-id>", re.IGNORECASE),
@@ -128,10 +143,13 @@ REQUIRED_ACTIVE_RUN_HEADINGS = {
 
 REQUIRED_ACTIVE_RUN_FIELDS = [
     "- run type:",
+    "- intent source:",
+    "- defaults file:",
+    "- mode model:",
     "- boundary file:",
     "- detailed prompt:",
     "- readiness check:",
-    "- launcher command:",
+    "- kickoff command:",
     "- completion check:",
     "- reviewer entry point:",
     "- checkpoint label:",
@@ -154,6 +172,9 @@ MIN_NONEMPTY_LINES = {
 }
 
 RUN_INDEX_REQUIRED_FIELDS = {
+    "mode",
+    "kickoff command",
+    "intent",
     "actual source count",
     "actual source-type count",
     "actual candidate count",
@@ -256,6 +277,32 @@ def optional_active_run_field(field_name: str) -> str | None:
 
 def checkpoint_label() -> str:
     return optional_active_run_field("checkpoint label") or "Checkpoint 1"
+
+
+def run_mode_from_manifest(data: dict) -> str:
+    raw_mode = str(data.get("mode", "")).strip().lower()
+    if raw_mode in RUN_MODE_PROFILES:
+        return raw_mode
+    return "test"
+
+
+def effective_run_profile(data: dict) -> dict[str, int]:
+    profile = dict(RUN_MODE_PROFILES[run_mode_from_manifest(data)])
+
+    source_requirements = data.get("source_requirements")
+    if isinstance(source_requirements, dict):
+        if isinstance(source_requirements.get("minimum_sources"), int):
+            profile["minimum_sources"] = source_requirements["minimum_sources"]
+        if isinstance(source_requirements.get("maximum_sources"), int):
+            profile["maximum_sources"] = source_requirements["maximum_sources"]
+        if isinstance(source_requirements.get("minimum_source_types"), int):
+            profile["minimum_source_types"] = source_requirements["minimum_source_types"]
+
+    candidate_requirements = data.get("candidate_requirements")
+    if isinstance(candidate_requirements, dict) and isinstance(candidate_requirements.get("maximum_candidates"), int):
+        profile["maximum_candidates"] = candidate_requirements["maximum_candidates"]
+
+    return profile
 
 
 def http_link_count(text: str) -> int:
@@ -461,6 +508,7 @@ def validate_research_manifest(relative_path: str) -> list[str]:
     if load_error:
         return [load_error]
     assert data is not None
+    profile = effective_run_profile(data)
 
     if str(data.get("population_status", "")).strip().lower() == LAUNCH_SCAFFOLD_MARKER:
         errors.append(
@@ -501,7 +549,7 @@ def validate_research_manifest(relative_path: str) -> list[str]:
         if note_path:
             errors.extend(validate_source_note(note_path, url))
 
-    if len(sources) >= 6 and concrete_sources < MIN_CONCRETE_SOURCES:
+    if len(sources) >= profile["minimum_sources"] and concrete_sources < MIN_CONCRETE_SOURCES:
         errors.append(
             f"{relative_path} has only {concrete_sources} concrete sources. At least {MIN_CONCRETE_SOURCES} should be complaint, workaround, review, issue, or practitioner evidence rather than broad supporting pages."
         )
@@ -627,15 +675,24 @@ def validate_run(run_id: str) -> int:
         ]
     ) or LAUNCH_SCAFFOLD_MARKER in run_index_text.lower() or LAUNCH_SCAFFOLD_MARKER in candidate_links_text.lower()
 
+    run_mode = run_mode_from_manifest(research_manifest)
+    profile = effective_run_profile(research_manifest)
+
     boundary_errors: list[str] = []
-    if source_count < 6 or source_count > 12:
-        boundary_errors.append(f"Source count {source_count} is outside the 6-12 target.")
-    if len(source_types) < 3:
-        boundary_errors.append(f"Source type count {len(source_types)} is below the 3-type target.")
+    if source_count < profile["minimum_sources"] or source_count > profile["maximum_sources"]:
+        boundary_errors.append(
+            f"Source count {source_count} is outside the {profile['minimum_sources']}-{profile['maximum_sources']} target for {run_mode} mode."
+        )
+    if len(source_types) < profile["minimum_source_types"]:
+        boundary_errors.append(
+            f"Source type count {len(source_types)} is below the {profile['minimum_source_types']}-type target for {run_mode} mode."
+        )
     if candidate_count == 0:
         boundary_errors.append("Candidate map does not contain any candidates.")
-    elif candidate_count > 5:
-        boundary_errors.append(f"Candidate count {candidate_count} exceeds the limit of 5.")
+    elif candidate_count > profile["maximum_candidates"]:
+        boundary_errors.append(
+            f"Candidate count {candidate_count} exceeds the limit of {profile['maximum_candidates']} for {run_mode} mode."
+        )
 
     if boundary_errors:
         if documented_exception:
@@ -644,6 +701,7 @@ def validate_run(run_id: str) -> int:
         else:
             errors.extend(boundary_errors)
 
+    print(f"INFO  mode={run_mode}")
     print(f"INFO  source_count={source_count}")
     print(f"INFO  source_type_count={len(source_types)}")
     print(f"INFO  candidate_count={candidate_count}")

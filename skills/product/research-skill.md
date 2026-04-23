@@ -1,6 +1,6 @@
 # Product Skill: Research
 
-Use this skill when exploring a theme for real product opportunities.
+Use this skill when exploring a direct intent for real product opportunities.
 
 ## Goal
 
@@ -19,6 +19,7 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 	- Create the matching folder under `research-corpus/runs/<run-id>/`.
 	- Prepare `manifest.json`, `candidate-links.md`, and the `raw/`, `normalized/`, and `notes/` subdirectories.
 	- Prepare `artifacts/runs/<run-id>/review-package/research.md` as the canonical research output for the run.
+	- Record the active mode and direct intent so the research boundary is explicit.
 
 2. Define the user and workflow boundary.
 	- Name likely user segments.
@@ -58,6 +59,7 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 9. Generate candidate opportunity wedges.
 	- Frame narrow product responses, not full platforms.
 	- Each candidate should describe one user, one workflow, one pain point, one wedge, and one first monetization path.
+	- If a candidate cannot be expressed that narrowly, it is not ready to survive the shortlist.
 
 10. Apply early fit filters.
 	- Can this be sold or monetized digitally?
@@ -74,6 +76,10 @@ Find repeated, valuable pain inside a specific workflow and turn that pain into 
 12. Capture open questions that matter.
 	- Missing evidence is acceptable.
 	- Hidden uncertainty is not.
+
+13. Prepare continuation hooks as soon as one candidate begins to lead.
+	- Capture the likely first buyer, first workflow, first wedge, and first prototype slice.
+	- Gather the evidence you will need later in `docs/product-brief.md`, `docs/requirements.md`, and `docs/design.md` if the run becomes a go-now decision.
 
 ## Research quality rules
 
@@ -106,3 +112,4 @@ The strongest claims should cite evidence IDs that exist in the run corpus.
 - jumping to solution design before the workflow is concrete
 - ignoring substitutes because the new idea feels cleaner
 - selecting pain that is real but too small, too rare, or too weakly monetizable
+- letting the direct kickoff intent drift into a broader market category without naming the narrower workflow boundary

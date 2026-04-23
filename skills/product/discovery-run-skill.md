@@ -2,7 +2,7 @@
 
 ## Goal
 
-Run a bounded discovery pass that reaches the active completion point with a fully populated milestone package and a clear continuation status.
+Run a mode-aware discovery pass that reaches the active completion point with a fully populated milestone package and a clear continuation status.
 
 The discovery run is complete only after the middle of the run has happened:
 
@@ -18,7 +18,7 @@ The discovery run is complete only after the middle of the run has happened:
 
 ## When to use
 
-- a fresh discovery pass for the current theme
+- a fresh discovery pass for the current direct intent
 - any run where the goal is to decide what to build next
 - any run where the current opportunity set is weak or stale
 
@@ -26,16 +26,17 @@ The discovery run is complete only after the middle of the run has happened:
 
 1. Read `START_HERE.md`, `ACTIVE_RUN.md`, and `DISCOVERY_RUN_MODE.md`.
 2. Run the readiness check named in `ACTIVE_RUN.md`.
-3. Run `python scripts/start_discovery_run.py` to create the run shell.
+3. Run `python scripts/autopd.py MODE "DIRECT_INTENT"` to create the run shell.
 4. Use the research skill to identify repeated pain and workflow friction.
 5. Save each meaningful source, create a source note, and update `research-corpus/runs/<run-id>/manifest.json` as you go.
 6. Keep `research-corpus/runs/<run-id>/candidate-links.md` current while the shortlist changes.
-7. Limit the serious candidate set to at most 5 ideas and the detailed scorecard to the top 3.
+7. Apply the current mode bounds from `ACTIVE_RUN.md` and `DISCOVERY_RUN_MODE.md` instead of assuming one fixed source or candidate count.
 8. Use monetization, substitute, and agent-operability skills on the top few candidates.
 9. Complete the reviewer artifacts and record them in `artifacts/runs/<run-id>/manifest.json`.
 10. Complete `artifacts/runs/<run-id>/run-index.md` as the reviewer control document, including key source links.
 11. Run `python scripts/check_repo_readiness.py --run-id <run-id>` only after the package is complete.
 12. Record milestone status, recommended next stage, and hard-boundary status in the run index.
+13. If the result is go-now and no hard boundary applies, continue into `docs/product-brief.md`, `docs/requirements.md`, `docs/design.md`, `docs/roadmap.md`, and `docs/backlog.md` before stopping.
 
 ## Required outputs
 
@@ -63,6 +64,7 @@ The package is not complete if:
 - the shortlist does not name a first buyer and first wedge for the leading candidate when recommending a go-now move
 - the package drifts into a broad platform story without naming the smaller sellable wedge
 - the completion check fails
+- the run earned a go-now result but the prototype-planning docs are still missing or obviously unresolved
 
 ## Common failure modes
 
@@ -72,3 +74,4 @@ The package is not complete if:
 - creating the files but leaving the contents structurally incomplete
 - producing one attractive candidate and barely developing the alternatives
 - editing reusable docs in place instead of writing the run-scoped package
+- treating `theme.md` as the primary intent surface after the kickoff command already named the target
