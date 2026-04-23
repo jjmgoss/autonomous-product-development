@@ -1,49 +1,25 @@
 # Framework Hardening Summary
 
-## What changed in the kickoff model
+## What changed
 
-- The framework now takes direct user intent from the kickoff prompt or command.
-- The primary launcher is now `python scripts/autopd.py MODE "DIRECT_INTENT"`.
-- `theme.md` remains as background defaults and constraints, not as the main run-target surface.
+- The repo now has an explicit build-forward boundary in `BUILD_RUN.md` instead of treating prototype work as an implied continuation.
+- `docs/prototype-standard.md` now defines what counts as a UI shell, working demo, or real local prototype.
+- The working docs under `docs/` were reset from run-specific product content back to reusable framework surfaces for the next selected product.
+- A shared scaffold now lives under `artifacts/shared/prototype-scaffold/`, with `python scripts/init_prototype_scaffold.py` to copy it into `artifacts/projects/<project-slug>/`.
 
-## New mode model
+## What is stricter now
 
-- `test` mode is the compact validation path with 6-12 sources, at least 3 source types, at most 5 serious candidates, and at most 3 deeply scored candidates.
-- `real` mode is the deeper path with 10-24 sources, at least 4 source types, at most 7 serious candidates, and at most 4 deeply scored candidates.
-- The launcher, scaffolds, and checker now carry mode metadata so validation can follow the active mode instead of one hardcoded discovery shape.
+- A discovery package is not treated as prototype-ready unless it names the first buyer, first workflow, first wedge, prototype success event, first monetization path, and why the idea is not a platform fantasy.
+- The run index, candidate map, generator stubs, templates, and validator now all enforce that sharper handoff.
+- The lifecycle is now explicitly separated into prototype, hardening, polish, and productionization so later work can stay honest about maturity.
+- Future roadmap and backlog surfaces now include `AI progress monitor / agent progress observability` as a framework-dogfood direction.
 
-## New completion model
+## Recommended next prompt
 
-- `ACTIVE_RUN.md` now defines the kickoff model, direct intent source, mode model, completion point, post-discovery default, and hard boundaries explicitly.
-- A completed discovery package is still a milestone, not an endpoint by itself.
-- If a candidate earns a go-now recommendation and no hard boundary applies, the framework now points the agent into `docs/product-brief.md`, `docs/requirements.md`, `docs/design.md`, `docs/roadmap.md`, and `docs/backlog.md` before stopping.
+Use a fresh prompt like this for the next unrelated end-to-end run:
 
-## Hard boundaries that still remain
-
-- destructive or hard-to-reverse actions
-- deployment or public exposure
-- external publishing or outbound communication
-- externally consequential tickets, PRs, or issue creation
-- financial, credential-sensitive, legal, privacy, or compliance-relevant actions
-
-## Stronger evidence expectations
-
-- The checker distinguishes broad supporting pages from more concrete evidence and flags runs that lean too heavily on generic sources.
-- The run index and discovery summary require stronger URL visibility.
-- Source notes are expected to carry a direct evidence excerpt or key-insights section, not just a title and URL.
-- Prompts, docs, and skills push complaint threads, reviews, issues, workarounds, and practitioner evidence ahead of broad category pages.
-
-## Narrower wedge discipline
-
-- The leading candidate must now name a first buyer, first wedge, and why it is not a platform fantasy.
-- Prompts, docs, skills, and checker fields all reinforce the smaller sellable wedge instead of broad-platform drift.
-
-## Prompt for the next 4.1 test run
-
-Use this pattern:
-
-`Go. Read START_HERE.md and ACTIVE_RUN.md, run python scripts/check_repo_readiness.py, launch python scripts/autopd.py test "DIRECT_INTENT", fully populate the run package, continue into prototype-planning docs if the winner is go-now, stop only at a true hard boundary or the named completion point, and end with a suggested commit message.`
+`Go. Read START_HERE.md, ACTIVE_RUN.md, and BUILD_RUN.md. Run python scripts/check_repo_readiness.py. Launch python scripts/autopd.py real "Investigate a painful recurring workflow for a specific buyer and select one narrow software wedge worth prototyping". Complete the discovery package, and if the winner earns go-now, continue through docs/product-brief.md, docs/requirements.md, docs/design.md, docs/roadmap.md, and docs/backlog.md, initialize artifacts/projects/<project-slug>/ from the shared prototype scaffold, build only the smallest credible local slice, verify it locally, and stop only at a true hard boundary or the named completion point.`
 
 ## Suggested commit message
 
-`Shift kickoff to direct intent with explicit test and real modes`
+`Make prototype mode explicit with scaffold, stage model, and stricter discovery handoff`

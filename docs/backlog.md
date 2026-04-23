@@ -1,44 +1,53 @@
 # Backlog
 
-Run ID: 20260422-investigate-internal-recruiting-operations-r1
-Product: Hiring Loop Coordinator
+Track the remaining work honestly.
 
 ## Active Now
 
-- Define the candidate loop state model and reminder timing rules
-- Build the recruiter queue for blocked and overdue loops
-- Draft the first decision packet format
+- keep only the critical-path work for the current stage here
+- if the product is still at prototype stage, this section should stay narrow
 
 ## Next Up
 
-- Implement email reminder and escalation delivery
-- Add a simple ATS import adapter for one candidate-loop source
-- Test whether recruiters trust the packet enough to use it in real decisions
+- use this section for the next small batch after the current active work
 
 ## Blocked By Missing Evidence
 
-- Which ATS the first pilot buyer already uses
-- Whether buyers care more about interview feedback chase or offer approvals in the first purchase
-- Whether Slack is a must-have channel for the first users
+- keep discovery or validation gaps here when they block continuation
 
 ## Deferred
 
-- Candidate-facing communications automation
-- Offer approval workflow expansion
-- Full interview scheduling features
+- list work that is probably useful later but not needed now
+
+## Prototype Hardening
+
+- reliability improvements that stay inside the same wedge
+- verification gaps that are too large to ignore forever but do not block the first prototype cut
+
+## Polish
+
+- clarity, UX, copy, and reviewer-quality improvements that should happen after the prototype is honestly working
+
+## Productionization
+
+- deployment, monitoring, security, privacy, rollback, and support work that belongs after prototype and hardening
 
 ## Rejected
 
-- Standalone interview scheduling coordinator: too exposed to strong generic substitutes
-- Full recruiting operations platform: too broad for the first wedge
+- keep a short reason so weak ideas are not revived accidentally
 
 ## Technical Debt
 
-- Integration abstractions may overcomplicate the first prototype if added too early
-- Summary generation should stay inspectable and avoid opaque AI-only decisions
+- track only debt created by real choices, not speculative future cleanup
 
 ## Future Experiments
 
-- Compare recruiter time saved before and after reminder automation
-- Test a decision-packet only workflow with no reminder engine
-- Validate whether approval routing becomes the better upsell after the first wedge works
+- keep experiments testable and falsifiable
+
+## Future Product Areas
+
+- AI progress monitor / agent progress observability: monitor what autonomous agents are doing across runs, stages, artifacts, blockers, and outcomes; keep this as a strong future dogfood or internal product area after the shared prototype scaffold and build-forward rules are more stable.
+
+## Rule
+
+Keep the backlog honest.

@@ -13,6 +13,7 @@ The discovery run is complete only after the middle of the run has happened:
 - key source URLs are visible in reviewer-facing artifacts
 - the run index and review package are fully written
 - the leading candidate has a clear first buyer and first wedge when the call is `prototype candidate X first`
+- the leading candidate also has a clear first workflow, prototype success event, and first monetization path when the call is `prototype candidate X first`
 - the package explains why the leader is not a broad platform fantasy
 - the completion check passes at the end
 
@@ -37,6 +38,7 @@ The discovery run is complete only after the middle of the run has happened:
 11. Run `python scripts/check_repo_readiness.py --run-id <run-id>` only after the package is complete.
 12. Record milestone status, recommended next stage, and hard-boundary status in the run index.
 13. If the result is go-now and no hard boundary applies, continue into `docs/product-brief.md`, `docs/requirements.md`, `docs/design.md`, `docs/roadmap.md`, and `docs/backlog.md` before stopping.
+14. Do not call the handoff complete until those docs make prototype mode specific enough that a later build-forward run does not need to rediscover the wedge.
 
 ## Required outputs
 
@@ -62,6 +64,7 @@ The package is not complete if:
 - the run index still looks like a launch note instead of a reviewer-facing control document
 - the ranking is not traceable to saved evidence IDs and visible source URLs
 - the shortlist does not name a first buyer and first wedge for the leading candidate when recommending a go-now move
+- the shortlist still leaves the first workflow, prototype success event, or first monetization path vague for the leading candidate
 - the package drifts into a broad platform story without naming the smaller sellable wedge
 - the completion check fails
 - the run earned a go-now result but the prototype-planning docs are still missing or obviously unresolved
@@ -73,5 +76,6 @@ The package is not complete if:
 - collecting sources without updating the manifest or creating source notes
 - creating the files but leaving the contents structurally incomplete
 - producing one attractive candidate and barely developing the alternatives
+- forcing a go-now result before the prototype success event is concrete enough to test
 - editing reusable docs in place instead of writing the run-scoped package
 - treating `theme.md` as the primary intent surface after the kickoff command already named the target

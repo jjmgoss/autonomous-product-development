@@ -11,10 +11,12 @@ During all coding phases.
 1. Restate the issue and acceptance criteria.
 2. Inspect the codebase before changing it.
 3. Reconfirm that the issue still supports the validated wedge rather than future scope.
-4. Identify the smallest viable change.
-5. Implement narrowly.
-6. Run targeted checks first, then broaden testing when needed.
-7. Update docs if behavior, scope, or assumptions changed.
+4. If a fresh local app is needed, start from the shared prototype scaffold unless there is a clear better fit.
+5. Identify the smallest viable change.
+6. Implement narrowly.
+7. Keep demo behavior deterministic and keep stubs explicit.
+8. Run targeted checks first, then broaden testing when needed.
+9. Update docs if behavior, scope, or assumptions changed.
 
 ## Expected Outputs
 - Code changes
@@ -25,3 +27,5 @@ During all coding phases.
 - Overbuilding
 - Skipping verification
 - quietly drifting from the selected wedge into a larger product
+- polishing or abstracting before the prototype success event is proven
+- hiding fake integrations behind confident wording

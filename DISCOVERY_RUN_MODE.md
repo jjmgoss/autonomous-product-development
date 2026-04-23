@@ -14,6 +14,8 @@ Its job is to:
 - recommend one narrow next move with a concrete continuation path
 - continue into prototype-planning docs when one candidate clearly earns a go-now recommendation
 
+It should only hand off into build-forward mode when the chosen candidate is specific enough to prototype honestly.
+
 It is not allowed to drift into implementation just because coding feels more concrete than research.
 
 ## Run Modes
@@ -133,7 +135,19 @@ By default, keep going until the active run's completion point is satisfied and 
 Pause only at a hard boundary or if `ACTIVE_RUN.md` explicitly makes the completed discovery package the end of the current run.
 
 When the result is `prototype candidate X first`, the package is only half-finished until the next-stage docs are updated.
-At minimum, continuation should name the first buyer, first workflow, first wedge, success criteria, scope boundary, first prototype slice, and immediate backlog shape.
+At minimum, continuation should name the first buyer, first workflow, first wedge, prototype success event, first monetization path, scope boundary, first prototype slice, and immediate backlog shape.
+
+## Prototype-Readiness Gate
+
+Do not treat a candidate as good enough to prototype unless the package can answer all of these concretely:
+
+- Who is the first buyer or user?
+- What exact workflow is being improved first?
+- What is the smallest sellable wedge?
+- What observable event would count as prototype success?
+- What is the first credible monetization path?
+- Why is this not just the first page of a platform fantasy?
+- What is the smallest local slice that could prove or disprove the thesis?
 
 Checkpoint 1 is the default discovery status surface.
 Do not continue into deployment, publishing, or other hard-boundary actions unless the active run or a human explicitly authorizes that step.
@@ -141,6 +155,7 @@ Do not continue into deployment, publishing, or other hard-boundary actions unle
 ## Explicit Prohibitions
 
 - Do not implement product code during this run mode unless `ACTIVE_RUN.md` explicitly changes the completion point.
+- Do not enter build-forward mode with a vague buyer, vague workflow, or vague prototype success event.
 - Do not deploy anything.
 - Do not create noisy external side effects unless a human explicitly allows them.
 - Do not create GitHub issues, PRs, or project boards for product implementation.

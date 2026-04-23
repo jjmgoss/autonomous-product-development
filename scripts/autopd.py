@@ -241,7 +241,7 @@ def candidate_links_stub(run_id: str, mode: str, intent: str) -> str:
         - Add one `## Candidate:` section per serious candidate that survived research.
         - Keep the shortlist bounded to the strongest candidates for this {profile['label']}.
         - Record both supporting and weakening evidence IDs for each serious candidate.
-        - Make the first buyer, first workflow, and first wedge explicit for any serious contender.
+        - Make the first buyer, first workflow, first wedge, prototype success event, and first monetization path explicit for any serious contender.
         - Remove this launch-scaffold note once the candidate map is complete.
 
         ### Candidate Section Template
@@ -249,7 +249,10 @@ def candidate_links_stub(run_id: str, mode: str, intent: str) -> str:
         - short thesis:
         - status in ranking:
         - first buyer/user:
+        - first workflow:
         - first wedge:
+        - prototype success event:
+        - first monetization path:
         - supporting evidence IDs:
         - weakening evidence IDs:
         - key supporting links:
@@ -317,7 +320,10 @@ def run_index_stub(run_id: str, mode: str, intent: str) -> str:
         - recommended outcome: in progress
         - leading candidate: in progress
         - first buyer/user: replace with the first user who gets clear value
+        - first workflow: replace with the exact recurring workflow the prototype will improve first
         - first wedge: replace with the smallest sellable workflow slice
+        - prototype success event: replace with the observable event that proves the first local slice works
+        - first monetization path: replace with the first credible way this could get paid for
         - why this is not a platform fantasy: replace with the narrowness test that keeps the idea bounded
         - runner-up: in progress
         - why the leader won: replace with evidence-backed summary
@@ -401,7 +407,9 @@ def opportunity_scorecard_stub(run_id: str, mode: str, intent: str) -> str:
         - user and workflow:
         - pain severity:
         - first buyer/user:
+        - first workflow:
         - first wedge:
+        - prototype success event:
         - substitute pressure:
         - monetization angle:
         - agent-operability judgment:
@@ -440,9 +448,9 @@ def candidate_review_stub(run_id: str, mode: str, intent: str) -> str:
 
         Explain the ranking with evidence IDs, monetization logic, and substitute pressure.
 
-        ## First Wedge
+        ## First Prototype Contract
 
-        Name the first buyer, first workflow, first wedge, and first monetization path for the leader.
+        Name the first buyer, first workflow, first wedge, prototype success event, and first monetization path for the leader.
 
         ## Why The Runner-Up Lost
 
@@ -496,7 +504,7 @@ def validation_stub(run_id: str, mode: str, intent: str) -> str:
 
         ## Continuation Recommendation
 
-        State the recommended next stage, whether any hard boundary blocks it, and what evidence would justify changing course.
+        State the recommended next stage, whether any hard boundary blocks it, what prototype class should happen next, and what evidence would justify changing course.
         """
     )
 
@@ -528,7 +536,10 @@ def discovery_summary_stub(run_id: str, mode: str, intent: str) -> str:
         - recommended outcome:
         - leading candidate:
         - first buyer/user:
+        - first workflow:
         - first wedge:
+        - prototype success event:
+        - first monetization path:
         - why it leads:
         - why this is not a platform fantasy:
         - what may still kill it:

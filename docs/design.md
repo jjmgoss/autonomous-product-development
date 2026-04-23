@@ -1,69 +1,63 @@
 # Design
 
-Run ID: 20260422-investigate-internal-recruiting-operations-r1
-Product: Hiring Loop Coordinator
+Document the technical design for the prototype or later milestone.
 
 ## Architecture Overview
 
-The simplest credible architecture is a small web application plus background job runner.
+Prefer the simplest architecture that can credibly support the current slice.
 
-- Web app: recruiter-facing queue, candidate loop detail, and decision packet view
-- Background worker: reminder scheduling, escalation checks, and summary generation
-- Integration layer: pull or receive ATS candidate-loop metadata and send email or Slack reminders
-- Database: store candidate loops, evaluation tasks, reminders, and audit events
+Include:
+
+- application entrypoint
+- local persistence choice when needed
+- deterministic seed or demo data pattern
+- health check or sanity hook
+- test strategy for the changed behavior
+- explicit statement of what is real versus stubbed
 
 ## Stack Choices And Rationale
 
-- Python backend with FastAPI: fast to build, easy to script, friendly for agent-led implementation
-- SQLite for the first local prototype, upgradeable to Postgres later
-- Lightweight job scheduler or queue for reminder jobs
-- Minimal HTML server-rendered UI before investing in heavier frontend complexity
+- choose tools that reduce one-off improvisation
+- prefer boring local reliability over cleverness
+- explain why the chosen stack is good enough for the current stage
 
 ## Data Model
 
-- Job: role, department, owner, current status
-- Candidate: candidate identity, role, stage, external ATS reference
-- InterviewLoop: stage window, due dates, overall status
-- EvaluationTask: assigned evaluator, due time, completion state, escalation target
-- DecisionPacket: generated summary, recommendation draft, last updated time
-- AuditEvent: reminder sent, escalation fired, packet viewed, status changed
+- name only the entities the current slice actually needs
+- do not design a platform-wide schema before the wedge proves itself
 
 ## Major Flows
 
-### Post-interview setup
-- Candidate enters an interview-complete state
-- Required evaluators and deadlines are attached
-- Recruiter sees the loop as active
-
-### Reminder and escalation flow
-- If a due time passes without feedback, send a reminder
-- If the loop remains blocked after the reminder window, escalate to the configured owner
-- Update the recruiter queue automatically
-
-### Decision packet flow
-- Once enough inputs exist, generate a summary packet
-- Show completed inputs, missing inputs, and current blocker
-- Allow recruiter review before sharing internally
+- describe the happy path the prototype proves
+- describe one failure path when practical
+- keep later-stage flows separate from the prototype slice
 
 ## Interfaces
 
-- ATS import adapter: candidate, job, stage, interviewer assignments
-- Notification adapter: email first, optional Slack second
-- UI contract: list blocked loops, open loop details, open decision packet
+- list only the interfaces needed now
+- mark which interfaces are real, mocked, fixture-backed, or deferred
 
-## Deployment Assumptions
+## Local Run Contract
 
-- First prototype runs locally or in a small hosted environment for one pilot team
-- No public candidate-facing surface is required in milestone 1
+- explain how a reviewer runs the prototype locally
+- explain how seed data is loaded
+- explain how tests and smoke checks are run
+
+## Known Rough Edges
+
+- name the rough parts that are acceptable at prototype stage
+- say what should move to hardening rather than be hidden in the current design
 
 ## Security And Privacy Considerations
 
-- Candidate data and interview notes must be access-controlled by role
-- Generated summaries should avoid exposing unnecessary sensitive information
-- Audit events should be preserved for accountability
+- document only the concerns that materially affect the current slice
 
 ## Test Strategy
 
-- Unit tests for reminder timing, escalation rules, and packet generation
-- Integration tests for ATS import and reminder dispatch
-- End-to-end test for one stalled loop becoming visible, reminded, escalated, and summarized
+- name the highest-risk behavior
+- name the narrowest useful checks to run first
+- say what is intentionally not covered yet
+
+## Rule
+
+Prefer the simplest architecture that can credibly support the MVP.

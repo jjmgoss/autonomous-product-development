@@ -37,9 +37,12 @@ Work through the lifecycle in this order unless new evidence forces a return to 
 3. Validation
 4. Requirements and design
 5. Planning and issue decomposition
-6. Implementation
-7. Verification and release readiness
-8. Retrospective and next-step recommendation
+6. Prototype
+7. Hardening
+8. Polish
+9. Productionization
+10. Verification and release readiness
+11. Retrospective and next-step recommendation
 
 On a research-heavy discovery run, discovery artifacts are milestone outputs, not automatic pause points. Stop there only if the active completion point ends at discovery or if the honest result is a no-go or continue-validation call.
 
@@ -85,6 +88,12 @@ During discovery-first runs, maintain the canonical final outputs here:
 
 Only create `artifacts/runs/<run-id>/review-package/product-brief.md` during discovery if one candidate clearly earns a go-now recommendation.
 
+When build-forward mode begins, treat these as the key reusable surfaces:
+
+- `BUILD_RUN.md`
+- `docs/prototype-standard.md`
+- `artifacts/shared/prototype-scaffold/`
+
 ## Required behavior
 
 At each stage:
@@ -115,6 +124,7 @@ At the start of a discovery-first run:
 - reach the discovery completion point and then obey `post-discovery default` and `hard boundaries` from `ACTIVE_RUN.md`
 - do not invent launcher scripts or unsupported repo commands
 - if the recommendation is go-now and no hard boundary applies, continue into the prototype-planning docs named in `ACTIVE_RUN.md`
+- do not enter build-forward mode unless the package names the first buyer, first workflow, first wedge, prototype success event, first monetization path, and why the idea is not a platform fantasy
 
 ## Anti-slop requirements
 
@@ -143,6 +153,7 @@ During research, opportunity selection, and validation:
 - judge whether the product is compatible with virtual-only operations
 - judge whether a solo operator with agents could plausibly build and maintain it
 - make the final ranking and recommendation legible from the run index and review package
+- make the go-now handoff specific enough that prototype mode does not depend on vague improvisation
 
 ## Discovery-run restrictions
 
@@ -161,7 +172,13 @@ Hard boundaries still require approval even when the loop would otherwise contin
 When you reach implementation:
 
 - implement by issue or tightly related issue batch
+- use the shared prototype scaffold unless there is a clear reason not to
 - favor vertical slices over wide scaffolding
+- prefer boring reliability over cleverness
+- keep demo behavior deterministic
+- include a health check or equivalent sanity hook when practical
+- include one smoke check and one behavior-oriented test where practical
+- state what is stubbed or fake instead of hiding it behind polished wording
 - run targeted verification before broader verification
 - update docs when architecture or scope changes
 - write clear PR summaries and release notes
@@ -173,7 +190,7 @@ A human reviewer should be able to inspect the repository and see:
 
 1. a coherent product opportunity grounded in evidence
 2. a traceable path from research to requirements to code
-3. a working prototype or justified no-go decision
+3. a working prototype or justified no-go decision with an honest stage label
 4. an honest account of what is incomplete or uncertain
 
 On a discovery run, Checkpoint 1 should be reviewable primarily from the run index and review package inside `artifacts/runs/<run-id>/`.

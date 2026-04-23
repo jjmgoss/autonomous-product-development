@@ -8,7 +8,10 @@ Each serious candidate should have enough detail that a reviewer can see why it 
 - short thesis:
 - status in ranking:
 - first buyer/user:
+- first workflow:
 - first wedge:
+- prototype success event:
+- first monetization path:
 - supporting evidence IDs:
 - weakening evidence IDs:
 - key supporting links:
@@ -21,7 +24,10 @@ Each serious candidate should have enough detail that a reviewer can see why it 
 - short thesis:
 - status in ranking:
 - first buyer/user:
+- first workflow:
 - first wedge:
+- prototype success event:
+- first monetization path:
 - supporting evidence IDs:
 - weakening evidence IDs:
 - key supporting links:
@@ -34,4 +40,5 @@ Each serious candidate should have enough detail that a reviewer can see why it 
 - Do not leave a candidate with only positive evidence.
 - Do not list a serious candidate without weakening evidence or open questions.
 - Do not let this file stay empty while the run index claims a completed shortlist.
-- Do not leave the first buyer or first wedge vague if the candidate is still serious.
+- Do not leave the first buyer, first workflow, or first wedge vague if the candidate is still serious.
+- Do not call a candidate prototype-ready without a prototype success event and first monetization path.

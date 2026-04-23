@@ -23,3 +23,6 @@ Use this file to record meaningful progress during the run.
 - Ran a random self-validation seed draw and selected `internal recruiting workflow operations` for the end-to-end proof pass.
 - Launched `20260422-investigate-internal-recruiting-operations-r1` in `test` mode through `scripts/autopd.py`.
 - Populated a seven-source validation package, selected the Hiring Loop Coordinator wedge, and continued into the prototype-planning docs to exercise the new post-discovery default.
+- Refactored the framework to add an explicit `BUILD_RUN.md`, a reusable prototype standard, and stage-aware continuation docs instead of leaving build-forward behavior implicit.
+- Added a shared prototype scaffold and initializer script so new local products start from one repeatable shape with a health check, deterministic demo data, and focused tests.
+- Tightened the discovery handoff contract by requiring first workflow, prototype success event, and first monetization path across the run index, candidate map, and generator stubs.

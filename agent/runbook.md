@@ -27,6 +27,7 @@ Read the following before doing substantive work:
 - `agent/research-corpus-conventions.md`
 - `agent/artifact-output-conventions.md`
 - `DISCOVERY_RUN_MODE.md` when the run is discovery-first
+- `BUILD_RUN.md` and `docs/prototype-standard.md` when the run is build-forward
 
 Read `agent/definition-of-done.md`, `agent/lifecycle-map.md`, and `agent/orchestration-v3.md` only when the current stage needs them.
 
@@ -53,7 +54,11 @@ Do not pause early just because the run reached a named checkpoint. Follow the `
 Before deeper work, decide both the lifecycle stage and the execution depth:
 
 - Discovery-first stage: used for first runs, idea generation, market mapping, and opportunity ranking
-- Build-forward stage: used only after one opportunity clearly earns a go decision
+- Build-forward stage: used only after one opportunity clearly earns a go decision and is specific enough to prototype honestly
+- Prototype stage: prove one narrow local slice
+- Hardening stage: improve trust and reliability without widening scope
+- Polish stage: improve clarity and usability without pretending the product is already broader
+- Productionization stage: prepare for deployment, exposure, and support burden
 - `test` mode: compact validation pass with bounded evidence and lightweight prototype-planning continuation
 - `real` mode: deeper pass with more evidence, more disconfirmation, and fuller prototype-planning continuation
 
@@ -88,6 +93,7 @@ If no opportunity earns a clear go decision, stop there with an explicit recomme
 If any artifact is still template-shaped, the run is not ready to stop.
 Make the key source URLs visible in the run index and discovery summary so a reviewer does not need to dig through the manifest first.
 If one candidate clearly earns a go-now recommendation and no hard boundary applies, continue into `docs/product-brief.md`, `docs/requirements.md`, `docs/design.md`, `docs/roadmap.md`, and `docs/backlog.md` rather than waiting for review by default.
+Do not treat that handoff as complete unless those docs name the first buyer, first workflow, first wedge, prototype success event, and first monetization path.
 
 ## Step 6: Plan before implementation
 
@@ -97,6 +103,7 @@ Before writing meaningful code:
 - identify the critical path
 - break the work into milestones and issues
 - prefer the smallest vertical slice that can falsify or support the product thesis
+- use the shared scaffold and `docs/prototype-standard.md` unless there is a good reason to do something else
 
 ## Step 7: Implement iteratively
 
@@ -104,6 +111,9 @@ During implementation:
 
 - work from acceptance criteria
 - keep changes small and legible
+- prefer boring reliability over cleverness
+- keep demo behavior deterministic
+- document what is stubbed instead of implying it is real
 - verify behavior continuously
 - update `docs/work-log.md` and `docs/decision-log.md`
 
@@ -113,7 +123,9 @@ Before declaring success:
 
 - compare the product to `docs/requirements.md`
 - run tests and smoke checks
+- run or document a health check or equivalent sanity check
 - document known gaps
+- classify the result honestly as a UI shell, working demo, or real local prototype
 - confirm whether the app is truly runnable
 
 ## Step 9: Close the loop

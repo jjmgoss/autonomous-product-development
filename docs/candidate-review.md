@@ -16,8 +16,10 @@ For each top candidate, include:
 - rank
 - short name
 - target user
+- first workflow
 - pain point
 - narrow wedge or MVP angle
+- prototype success event
 - monetization angle
 - why agent-led build and operation are plausible or not plausible
 - strongest evidence IDs
@@ -47,6 +49,7 @@ State one explicit recommendation:
 - no current candidate is strong enough
 
 Explain why the winner beat the runner-up.
+State the first monetization path and first prototype success event for the winner.
 State what evidence would most likely overturn the recommendation.
 State what should happen next at Gate 1.
 

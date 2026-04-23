@@ -22,6 +22,10 @@ artifacts/runs/*
 !artifacts/shared/
 !artifacts/projects/
 
+# Local generated-project state
+artifacts/projects/*/prototype.db
+artifacts/projects/*/.venv/
+
 # Optional: keep intentionally preserved example runs
 #!research-corpus/runs/examples/
 #!artifacts/runs/examples/

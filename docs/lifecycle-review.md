@@ -8,8 +8,11 @@ Use this file at the end of the run to assess lifecycle completeness.
 - Did research find repeated pain or mostly collect interesting noise?
 - Did the scorecard and candidate review surface the right tradeoffs?
 - Was validation real or performative?
+- Was the discovery-to-prototype handoff specific enough to justify coding?
 - Was monetization plausibility assessed honestly?
 - Was the chosen idea actually compatible with virtual, agent-led operation?
+- Did the prototype prove one narrow slice or quietly drift into a platform story?
+- Did the stage labeling stay honest: prototype, hardening, polish, or productionization?
 - Did requirements trace cleanly into implementation?
 - Was verification good enough to trust the claims made?
 - What lifecycle areas remain weak?

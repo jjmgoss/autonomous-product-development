@@ -24,6 +24,33 @@ A task, issue, milestone, or product stage is not complete just because code was
 - the behavior is compared against `docs/requirements.md`
 - release notes and known gaps are documented
 
+## A prototype is done when
+
+- one narrow vertical slice works locally
+- deterministic demo or seed data exists
+- a README explains setup, run, and test steps
+- a health check or equivalent sanity hook exists
+- at least one smoke check and one behavior-oriented check were run where practical
+- the result says whether it is a UI shell, working demo, or real local prototype
+- stubs and known rough edges are documented
+
+## A hardening milestone is done when
+
+- the same wedge is more trustworthy without becoming broader
+- fragile assumptions are reduced or documented
+- verification is stronger for the highest-risk behavior
+
+## A polish milestone is done when
+
+- usability or reviewer clarity improves without overstating product maturity
+- the work does not hide missing core functionality behind presentation
+
+## Productionization is done when
+
+- the product is ready for the intended exposure level
+- deployment or recovery expectations are explicit
+- operational and support burdens are understood well enough for the current stage
+
 ## A no-go decision is done when
 
 - the opportunity was researched and documented

@@ -25,6 +25,7 @@ artifacts/
   projects/
     <project-slug>/
   shared/
+    prototype-scaffold/
 ```
 
 ## What belongs where
@@ -36,6 +37,21 @@ artifacts/
 - `artifacts/runs/<run-id>/exports/` stores transformed datasets, text bundles, or other run-scoped exports.
 - `artifacts/projects/<project-slug>/` stores generated software projects only after a human-approved go decision.
 - `artifacts/shared/` stores reusable helper outputs that are not tied to a single run.
+- `artifacts/shared/prototype-scaffold/` stores the default local prototype shape for build-forward runs.
+
+## Generated project minimums
+
+Unless there is a good reason to do otherwise, a generated project should include:
+
+- an app entrypoint
+- a dependency file
+- deterministic seed or demo data
+- tests
+- a README with local run and test instructions
+- a health check or equivalent sanity hook
+- explicit notes on what is stubbed or fake
+- explicit known rough edges
+- a short next milestone
 
 ## Naming guidance
 
@@ -83,5 +99,5 @@ Whenever an agent creates a non-trivial artifact, it should:
 
 This keeps later reviewers from having to guess which outputs mattered.
 
-The run index should also tell the reviewer what to read first, whether boundaries were met, what the first wedge is, what stage should happen next, and what evidence could overturn the current recommendation.
+The run index should also tell the reviewer what to read first, whether boundaries were met, what the first workflow and first wedge are, what stage should happen next, and what evidence could overturn the current recommendation.
 It should also surface key source links directly.

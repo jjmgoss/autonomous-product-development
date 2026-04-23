@@ -38,7 +38,8 @@ Use this repository when you want an agent to:
 3. compare those candidates using evidence, monetization, and agent-operability filters
 4. validate whether one opportunity is worth building now
 5. define a narrow MVP and vertical slices
-6. implement, verify, and optionally deploy the product
+6. implement a repeatable local prototype using a thin scaffold and explicit prototype standard
+7. harden, polish, and optionally productionize the product in later stages when the earlier stage is honestly complete
 7. compare the result against requirements and decide whether to iterate or stop
 
 ## Repo layout
@@ -50,12 +51,12 @@ Use this repository when you want an agent to:
 - `DISCOVERY_RUN_PROMPT.md` - detailed discovery-to-planning prompt when a tiny prompt is not enough
 - `agent/` - repo-wide operating instructions, gates, lifecycle map, and conventions
 - `skills/product/` - discovery, scoring, validation, monetization, operability, requirements, design, and planning skills
-- `skills/engineering/` - implementation loop, debugging, testing, review, release, and deployment guidance
+- `skills/engineering/` - prototype, implementation loop, debugging, testing, review, release, and deployment guidance
 - `skills/meta/` - anti-slop, evidence, critic, scope-cutting, and stuck-recovery guidance
 - `skills/operations/` - observability, incident readiness, and feedback-loop guidance for MVP operation
 - `docs/` - reusable framework guides for discovery outputs and later-stage living project docs after a human-approved go decision
 - `research-corpus/` - saved raw sources, normalized text, source notes, and candidate-to-evidence links
-- `artifacts/` - run-scoped review packages, reports, evaluations, exports, and later generated projects
+- `artifacts/` - run-scoped review packages, reports, evaluations, exports, generated projects, and a shared prototype scaffold
 - `.github/` - issue templates, labels, milestone notes, and PR template
 - `templates/` - reusable status and reporting blocks
 
@@ -86,6 +87,13 @@ The agent should:
 4. continue into the next non-risky stage when the active run says to continue
 5. stop only at the active completion point or a true hard boundary
 
+The staged build-forward model is now explicit:
+
+- prototype = prove one narrow local slice
+- hardening = improve reliability and trust without widening scope
+- polish = improve usability and presentation without pretending the product is bigger
+- productionization = prepare for deployment, exposure, and support burden
+
 Discovery packages live under `artifacts/runs/<run-id>/`, with `run-index.md` as the reviewer entry point and `review-package/` as the canonical milestone bundle.
 
 Reviewable artifacts are asynchronous inspection surfaces.
@@ -103,9 +111,10 @@ Hard boundaries remain for destructive actions, deployment or public exposure, e
 6. Do the actual discovery work inside the launched run paths.
 7. Run `python scripts/check_repo_readiness.py --run-id <run-id>` only after the package is complete.
 8. If the result is go-now, continue into `docs/product-brief.md`, `docs/requirements.md`, `docs/design.md`, `docs/roadmap.md`, and `docs/backlog.md` before stopping.
-9. If you need a detailed launch prompt, use `DISCOVERY_RUN_PROMPT.md`.
-10. Use `agent/human-gates.md` only for true hard-boundary decisions.
-11. Review the run through `artifacts/runs/<run-id>/run-index.md`, then inspect the saved evidence in `research-corpus/` and any later-stage planning docs in `docs/`.
+9. If build-forward mode begins, read `BUILD_RUN.md`, `docs/prototype-standard.md`, and initialize `artifacts/projects/<project-slug>/` from `artifacts/shared/prototype-scaffold/` or `python scripts/init_prototype_scaffold.py`.
+10. If you need a detailed launch prompt, use `DISCOVERY_RUN_PROMPT.md`.
+11. Use `agent/human-gates.md` only for true hard-boundary decisions.
+12. Review the run through `artifacts/runs/<run-id>/run-index.md`, then inspect the saved evidence in `research-corpus/` and any later-stage planning docs in `docs/`.
 
 For discovery runs, prefer direct-intent slugs and visible source links in the run index and summary over stale config hints or manifest-only evidence.
 
@@ -126,9 +135,12 @@ A strong run should leave behind:
 - a ranked set of candidate opportunities
 - explicit monetization and agent-operability judgments
 - an explicit first buyer, first workflow, and first wedge for any leading candidate
+- an explicit prototype success event and first monetization path before coding begins
 - a clean run-scoped review package with a clear reviewer entry point
 - a selected product brief or a justified no-go
 - clear requirements, design, and roadmap artifacts if the idea earns a go decision
+- a prototype that says whether it is a UI shell, working demo, or real local prototype
+- deterministic demo data, a clear local run path, and honest notes on what is stubbed
 - honest verification and lifecycle review
 
 ## Practical warning

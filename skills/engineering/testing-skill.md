@@ -9,10 +9,11 @@ After each implementation step and before release.
 
 ## Procedure
 1. Identify the highest-risk behavior changed.
-2. Write targeted tests for new code and changed behavior where feasible.
+2. Write at least one smoke check and one behavior-oriented test where feasible.
 3. Run the narrowest useful checks first.
-4. Broaden testing if the change affects shared paths, data handling, auth, billing-like logic, or release confidence.
-5. Document what was tested, what was not tested, and why in `docs/release.md`.
+4. Include a health check or equivalent sanity hook when practical.
+5. Broaden testing if the change affects shared paths, data handling, auth, billing-like logic, or release confidence.
+6. Document what was tested, what was not tested, and why in `docs/release.md`.
 
 ## Risk-based guidance
 
@@ -28,3 +29,4 @@ After each implementation step and before release.
 - Incomplete test coverage
 - Not documenting test results
 - running broad checks while missing the actual changed behavior
+- claiming a runnable prototype without a real local run or sanity check

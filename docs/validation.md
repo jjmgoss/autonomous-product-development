@@ -45,6 +45,7 @@ Record:
 - willingness-to-pay signals
 - whether the pain connects to time, money, quality, or risk
 - whether recurring value exists
+- the first plausible monetization path for the recommended wedge
 - evidence IDs behind the strongest commercial claims
 
 ### 6. Agent-operability and virtual-operations check
@@ -58,6 +59,7 @@ Record:
 ### 7. Smallest falsification step
 
 Describe the smallest experiment or prototype that could disprove the thesis.
+Name the prototype success event that would count as the first meaningful proof.
 
 ### 8. Decision
 
@@ -70,6 +72,7 @@ State one explicit decision:
 Explain what would change the decision.
 Explain why the selected candidate beat the runner-up.
 State what evidence would overturn the current ranking.
+If the decision is `Go now`, name the first workflow, first monetization path, and first prototype class for the next stage.
 
 ## Rule
 

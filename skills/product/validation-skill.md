@@ -16,6 +16,7 @@ After opportunity selection and before requirements or implementation.
    - Pain: what is costly, risky, or frustrating?
    - Wedge: what narrow product would improve that workflow?
    - Why now: what first monetization path makes this worth trying?
+   - Prototype success event: what observable outcome would count as a meaningful first local proof?
 
 2. Build an evidence ledger.
    - Record the strongest evidence for the idea.
@@ -59,12 +60,14 @@ After opportunity selection and before requirements or implementation.
    - What the first requirements slice must cover
    - What the first design questions are
    - What the first prototype slice should prove
+   - Whether the next artifact should be a UI shell, working demo, or real local prototype
 
 ## Go criteria
 
 Default toward go only when most of these are true:
 
 - the user and workflow are specific
+- the first workflow and prototype success event are specific enough to test
 - the pain is recurring and meaningful
 - the substitutes are meaningfully insufficient for a target niche
 - willingness to pay is plausible rather than hand-waved
@@ -90,6 +93,7 @@ Default toward go only when most of these are true:
 If the run is still at Checkpoint 1, the validation artifact should also explain why the winning candidate beat the runner-up and what evidence would overturn that decision.
 If the recommendation is `Go now`, it should also state the recommended next stage and whether any hard boundary blocks continuation.
 If the recommendation is `Go now`, it should make continuation into the planning docs obvious rather than leaving the next stage underspecified.
+If the recommendation is `Go now`, it should make the prototype success event and first monetization path explicit.
 
 ## Common failure modes
 

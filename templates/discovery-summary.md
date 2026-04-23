@@ -28,7 +28,10 @@ List the highest-signal evidence IDs with direct URLs.
 - recommended outcome
 - leading candidate
 - first buyer/user
+- first workflow
 - first wedge
+- prototype success event
+- first monetization path
 - why it leads
 - why the runner-up lost
 - why this is not a platform fantasy
@@ -42,7 +45,9 @@ For each shortlisted candidate, include:
 - short name
 - problem and user
 - first buyer/user
+- first workflow
 - first wedge
+- prototype success event
 - monetization angle
 - agent-operability judgment
 - strongest evidence IDs

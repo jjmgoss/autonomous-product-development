@@ -29,3 +29,12 @@ For each decision, include:
 - why chosen: Feedback delay and decision-lag pain repeated across the strongest sources and mapped to a narrower, more monetizable workflow than the approval or scheduling alternatives.
 - reversibility: High. The candidate map preserves the runner-up and the evidence that could overturn the call.
 - remaining uncertainty: Whether small teams will buy a standalone layer rather than expecting this inside the ATS.
+
+## 2026-04-23 - Make prototype mode explicit in the framework
+
+- decision statement: Promote prototype mode from an implied continuation step to an explicit framework stage with its own standard, scaffold, and stage labels.
+- options considered: Keep prototype behavior implicit in discovery docs; add a separate build-forward contract and reusable scaffold.
+- chosen option: Add the separate build-forward contract and reusable scaffold.
+- why chosen: The repo had already proved it could reach a runnable local prototype, but the path depended too much on improvised structure and unstated expectations. Making prototype mode explicit raises repeatability and keeps future runs honest about what stage they are actually in.
+- reversibility: High. The stage docs, scaffold, and validator rules can be tightened or simplified in later passes without changing the core discovery launcher.
+- remaining uncertainty: Whether future runs should eventually generate stronger project-type-specific scaffolds in addition to the default thin local scaffold.

@@ -48,7 +48,10 @@ This file should read like a reviewer control document, not a launch note.
 - recommended outcome:
 - leading candidate:
 - first buyer/user:
+- first workflow:
 - first wedge:
+- prototype success event:
+- first monetization path:
 - why this is not a platform fantasy:
 - runner-up:
 - why the leader won:

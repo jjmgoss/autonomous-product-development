@@ -9,7 +9,10 @@ Use this block at the end of every major iteration.
 - [ ] Validation
 - [ ] Requirements/design
 - [ ] Planning
-- [ ] Implementation
+- [ ] Prototype
+- [ ] Hardening
+- [ ] Polish
+- [ ] Productionization
 - [ ] Verification/release
 - [ ] Retrospective
 

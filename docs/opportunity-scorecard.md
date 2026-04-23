@@ -39,7 +39,9 @@ For each opportunity, record:
 
 - short name
 - target user
+- first workflow
 - one-sentence problem statement
+- prototype success event
 - supporting evidence IDs
 - weakening evidence IDs
 - score table with the same dimensions used for every scored candidate

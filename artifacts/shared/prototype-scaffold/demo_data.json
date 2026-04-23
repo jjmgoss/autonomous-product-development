@@ -1,0 +1,18 @@
+{
+  "project_slug": "__PROJECT_SLUG__",
+  "project_title": "__PROJECT_TITLE__",
+  "items": [
+    {
+      "id": "demo-1",
+      "label": "Primary seeded record",
+      "status": "ready",
+      "summary": "Replace this item with product-specific demo state."
+    },
+    {
+      "id": "demo-2",
+      "label": "Secondary seeded record",
+      "status": "blocked",
+      "summary": "Use this to exercise one failure or fallback path."
+    }
+  ]
+}

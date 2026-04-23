@@ -26,6 +26,7 @@ Use the docs for clearly different purposes:
 - `docs/candidate-review.md` defines the reusable reviewer-facing comparison structure.
 - `docs/validation.md` defines the reusable validation argument structure.
 - `docs/product-brief.md` defines the reusable selected-product structure for post-Gate-1 work.
+- `docs/prototype-standard.md` defines the minimum bar for a thin but real local prototype.
 
 During a discovery run, the canonical final outputs live here instead:
 
@@ -41,6 +42,7 @@ Use the non-doc output directories for clearly different purposes:
 - `research-corpus/` stores saved evidence, normalized text, and source notes.
 - `artifacts/runs/` stores run-scoped generated reports, the review package, evaluations, exports, and a reviewer-facing run index.
 - `artifacts/projects/` stores generated product code only after a go decision and when the active run permits continued execution.
+- `artifacts/shared/prototype-scaffold/` stores the reusable local project shape for build-forward runs.
 
 ## Run naming
 
@@ -95,11 +97,15 @@ Research and validation tasks may stay in the backlog if they are the critical p
 - Avoid speculative abstractions.
 - Keep architecture simple until pain is proven.
 - Do not create broad infra before the MVP needs it.
+- Prefer deterministic demo behavior over fragile cleverness.
+- Document stubs honestly instead of implying they are real.
+- Start fresh local products from the shared scaffold unless there is a clear better fit.
 
 ## Verification style
 
 - Tests are evidence, not decoration.
 - Smoke checks count, but only if actually run.
+- Health checks or equivalent sanity hooks should be easy to find.
 - Known gaps must be written down.
 - Never say "done" when "partially working" is more accurate.
 
@@ -115,6 +121,7 @@ Research and validation tasks may stay in the backlog if they are the critical p
 - If a product looks buildable but weakly monetizable, say so.
 - If a product is commercially interesting but operationally unrealistic for an agent-led build, say so.
 - If the idea still sounds like a platform, force the first buyer and first wedge into the artifact before calling it viable.
+- Do not call a candidate prototype-ready until the first workflow, first wedge, prototype success event, and first monetization path are all explicit.
 
 ## Discovery review-package rule
 
