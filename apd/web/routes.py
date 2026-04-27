@@ -49,8 +49,8 @@ def _iso_now() -> str:
 
 
 def _save_last_execution(db: Session, brief, execution_data: dict) -> None:
-    meta = brief.metadata_json or {}
-    meta["last_execution"] = execution_data
+    meta = dict(brief.metadata_json or {})
+    meta["last_execution"] = dict(execution_data)
     brief.metadata_json = meta
     db.add(brief)
     db.commit()
