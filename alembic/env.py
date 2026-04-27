@@ -7,6 +7,7 @@ from sqlalchemy import engine_from_config, pool
 
 from apd.app.db import Base
 from apd.app.settings import get_settings
+import apd.domain.models  # noqa: F401
 
 
 config = context.config

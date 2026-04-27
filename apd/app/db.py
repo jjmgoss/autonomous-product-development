@@ -30,3 +30,6 @@ _ensure_sqlite_directory(settings.database_url)
 
 engine = create_engine(settings.database_url, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+
+# Import model modules so SQLAlchemy metadata is fully registered.
+import apd.domain.models  # noqa: F401,E402
