@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}New Research Brief — APD{% endblock %}
+{% block content %}
+<div class="breadcrumb">
+  <a href="/briefs">Research Briefs</a> &rsaquo; New Brief
+</div>
+
+<section class="page-header">
+  <h1>New Research Brief</h1>
+  <p class="muted">
+    Fill in a product investigation direction. APD will generate a prompt you can copy
+    and run in an external research agent.
+  </p>
+</section>
+
+<div class="card">
+  <form method="post" action="/briefs">
+
+    <div class="form-field" style="margin-bottom: 1rem;">
+      <label for="title" style="display: block; font-weight: 600; margin-bottom: 0.25rem;">
+        Brief title <span class="required-mark" style="color: #ef4444;">*</span>
+      </label>
+      <input
+        type="text"
+        id="title"
+        name="title"
+        class="form-input"
+        style="width: 100%; max-width: 600px;"
+        placeholder="e.g. Self-hosted ops tools for solo builders"
+        required
+      >
+    </div>
+
+    <div class="form-field" style="margin-bottom: 1rem;">
+      <label for="research_question" style="display: block; font-weight: 600; margin-bottom: 0.25rem;">
+        Research question / direction <span class="required-mark" style="color: #ef4444;">*</span>
+      </label>
+      <textarea
+        id="research_question"
+        name="research_question"
+        class="form-input"
+        style="width: 100%; max-width: 700px; height: 120px;"
+        placeholder="Describe what you want to investigate. What product space, pain, or opportunity are you curious about?"
+        required
+      ></textarea>
+    </div>
+
+    <div class="form-field" style="margin-bottom: 1rem;">
+      <label for="constraints" style="display: block; font-weight: 600; margin-bottom: 0.25rem;">
+        Constraints <span class="muted">(optional)</span>
+      </label>
+      <textarea
+        id="constraints"
+        name="constraints"
+        class="form-input"
+        style="width: 100%; max-width: 700px; height: 80px;"
+        placeholder="e.g. Focus on solo developers or small teams. Exclude enterprise tooling."
+      ></textarea>
+    </div>
+
+    <div class="form-field" style="margin-bottom: 1rem;">
+      <label for="desired_depth" style="display: block; font-weight: 600; margin-bottom: 0.25rem;">
+        Desired depth <span class="muted">(optional)</span>
+      </label>
+      <input
+        type="text"
+        id="desired_depth"
+        name="desired_depth"
+        class="form-input"
+        style="width: 100%; max-width: 400px;"
+        placeholder="e.g. surface-level overview, thorough with evidence links, focus on pain patterns"
+      >
+    </div>
+
+    <div class="form-field" style="margin-bottom: 1rem;">
+      <label for="expected_outputs" style="display: block; font-weight: 600; margin-bottom: 0.25rem;">
+        Expected outputs <span class="muted">(optional)</span>
+      </label>
+      <textarea
+        id="expected_outputs"
+        name="expected_outputs"
+        class="form-input"
+        style="width: 100%; max-width: 700px; height: 80px;"
+        placeholder="e.g. At least 3 product candidates with ranked scores, validation gates for each candidate, 5+ evidence-backed claims."
+      ></textarea>
+    </div>
+
+    <div class="form-field" style="margin-bottom: 1.5rem;">
+      <label for="notes" style="display: block; font-weight: 600; margin-bottom: 0.25rem;">
+        Notes <span class="muted">(optional)</span>
+      </label>
+      <textarea
+        id="notes"
+        name="notes"
+        class="form-input"
+        style="width: 100%; max-width: 700px; height: 80px;"
+        placeholder="Any additional context, known competitors, prior research, or background information."
+      ></textarea>
+    </div>
+
+    <div class="form-row">
+      <button type="submit" class="btn btn-primary">Save brief and generate prompt</button>
+      <a href="/briefs" class="btn" style="background: #e2e8f0; color: #1a1a1a; margin-left: 0.5rem;">Cancel</a>
+    </div>
+
+  </form>
+</div>
+{% endblock %}
