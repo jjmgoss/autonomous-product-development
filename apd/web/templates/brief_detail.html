@@ -131,14 +131,20 @@
     font-size: 0.8rem;
     color: #0369a1;
   ">
-    <strong>Future:</strong>
-    A <em>Start Research</em> action that runs the agent automatically without copy-paste is
-    planned for a future release (tracked in issue #44). Until then, the workflow above is the
-    intended path.
-    <button type="button" class="btn btn-sm" disabled style="margin-left: 0.5rem; opacity: 0.4; cursor: not-allowed;">
-      Start Research (not yet available)
-    </button>
+    <strong>Website-first prototype:</strong>
+    This page can run a deterministic stub research runner that produces a clearly labeled synthetic APD draft.
+    It does not call any model or external service. Use the <em>Start Research (stub)</em> button below to run it.
+    <form method="post" action="/briefs/{{ brief.id }}/start-research" style="display:inline; margin-left:0.5rem;">
+      <button type="submit" class="btn btn-sm btn-primary">Start Research (stub)</button>
+    </form>
   </div>
+  
+  {% if brief.metadata_json and brief.metadata_json.get('last_execution') %}
+  <div class="card" style="margin-top:1rem;">
+    <h3>Last execution</h3>
+    <pre style="background:#fff; padding:0.75rem; border-radius:6px;">{{ brief.metadata_json.get('last_execution') | tojson }}</pre>
+  </div>
+  {% endif %}
 </div>
 
 <script>
