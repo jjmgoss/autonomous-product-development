@@ -233,3 +233,31 @@ uv run uvicorn apd.app.main:app --reload
 ```
 
 Open `http://127.0.0.1:8000/runs` — the fixture run should appear. Click its title to open the run detail page.
+
+### Review and decision workflow (issue #8)
+
+The run detail page (`/runs/{run_id}`) includes inline review controls for human review.
+
+**Claim and candidate review**
+
+Each claim and candidate shows a collapsible "Review this claim / candidate" section with:
+- A status dropdown (`unreviewed`, `accepted`, `weak`, `disputed`, `needs_followup`)
+- An optional free-text note field
+- A Save button — submits a POST and redirects back to the same page (PRG pattern)
+
+Submitting with a note also creates a `ReviewNote` record linked to that claim or candidate.
+
+**Standalone notes**
+
+POST to `/runs/{run_id}/claims/{claim_id}/notes` or `.../candidates/{candidate_id}/notes` with a `note` field to add a review note without changing the review status.
+
+**Run decision update**
+
+At the top of the run detail page is an "Update Run Decision" card. Select a decision value and an optional rationale, then click "Save Decision". This:
+- Updates `run.current_decision`
+- Creates a `Decision` history record with the rationale and timestamp
+- Redirects back to the run detail page
+
+Decision history is shown in a collapsible panel below the form.
+
+> **build_approved** requires an explicit human selection. The form labels it clearly — it is never set automatically.
