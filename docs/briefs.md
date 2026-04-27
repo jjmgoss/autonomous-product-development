@@ -61,6 +61,8 @@ Behavior:
 - If local output includes source URLs without provided source context, APD records a quality warning (`quality_warning_unprovided_source_urls`).
 - Brief metadata stores concise execution diagnostics under `metadata_json.last_execution`.
 - APD sends Ollama requests with `keep_alive: 0` by default so local model resources are released after execution.
+ - APD keeps the model warm during a single execution (generation/repair/component phases), then unloads at the end by default.
+ - If `APD_OLLAMA_KEEP_ALIVE` is explicitly set to a non-zero value, APD respects that and does not force an unload.
 
 Limitations:
 

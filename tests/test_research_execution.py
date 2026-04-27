@@ -199,7 +199,12 @@ def test_execute_ollama_success_path_imports_run(db, monkeypatch):
     brief = create_brief(db, title="Ollama brief", research_question="Q")
     brief = get_brief(db, brief.id)
 
+    captured_payloads = []
+
     def _fake_generate(config, payload):
+        captured_payloads.append(payload)
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
         return (
             {
                 "response": (
@@ -217,6 +222,8 @@ def test_execute_ollama_success_path_imports_run(db, monkeypatch):
     assert result["success"] is True
     assert result["status"] == "imported"
     assert isinstance(result["run_id"], int)
+    assert captured_payloads[0].get("keep_alive") == "5m"
+    assert captured_payloads[-1].get("keep_alive") == 0
 
 
 def test_execute_ollama_components_success_path_imports_run(db, monkeypatch):
@@ -264,6 +271,8 @@ def test_execute_ollama_components_success_path_imports_run(db, monkeypatch):
 
     def _fake_generate(config, payload):
         captured_payloads.append(payload)
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
         return responses.pop(0)
 
     monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
@@ -276,8 +285,9 @@ def test_execute_ollama_components_success_path_imports_run(db, monkeypatch):
     assert result["attempts_by_phase"]["validation_gate_batch"] == 1
     assert isinstance(result["run_id"], int)
     assert captured_payloads
-    assert captured_payloads[0].get("keep_alive") == 0
-    assert len(captured_payloads) == 3
+    assert captured_payloads[0].get("keep_alive") == "5m"
+    assert captured_payloads[-1].get("keep_alive") == 0
+    assert len(captured_payloads) == 4
 
 
 def test_execute_ollama_components_zero_candidate_fails_before_import(db, monkeypatch):
@@ -291,6 +301,8 @@ def test_execute_ollama_components_zero_candidate_fails_before_import(db, monkey
     call_count = {"count": 0}
 
     def _fake_generate(config, payload):
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
         call_count["count"] += 1
         return (
             {
@@ -324,6 +336,8 @@ def test_execute_ollama_components_malformed_batch_does_not_import(db, monkeypat
     call_count = {"count": 0}
 
     def _fake_generate(config, payload):
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
         call_count["count"] += 1
         return (
             {
@@ -363,6 +377,8 @@ def test_execute_ollama_components_candidate_repair_then_imports(db, monkeypatch
 
     def _fake_generate(config, payload):
         prompts.append(payload.get("prompt", ""))
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
         return responses.pop(0)
 
     monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
@@ -384,6 +400,8 @@ def test_execute_ollama_components_candidate_repair_exhausted_fails(db, monkeypa
     call_count = {"count": 0}
 
     def _fake_generate(config, payload):
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
         call_count["count"] += 1
         return (
             {
@@ -415,6 +433,8 @@ def test_execute_ollama_unparseable_output_fails_without_import(db, monkeypatch)
     brief = get_brief(db, brief.id)
 
     def _fake_generate(config, payload):
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
         return ({"response": "not json"}, None)
 
     monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
@@ -437,6 +457,8 @@ def test_execute_ollama_validation_failure_repair_succeeds(db, monkeypatch):
     calls = {"count": 0}
 
     def _fake_generate(config, payload):
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
         calls["count"] += 1
         if calls["count"] == 1:
             # Missing required claims.statement (no alias field) to force repair.
@@ -479,6 +501,8 @@ def test_execute_ollama_zero_candidate_fails_quality_gate(db, monkeypatch):
     brief = get_brief(db, brief.id)
 
     def _fake_generate(config, payload):
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
         return (
             {
                 "response": (
@@ -507,6 +531,8 @@ def test_execute_ollama_source_url_adds_quality_warning(db, monkeypatch):
     brief = get_brief(db, brief.id)
 
     def _fake_generate(config, payload):
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
         return (
             {
                 "response": (
@@ -525,7 +551,7 @@ def test_execute_ollama_source_url_adds_quality_warning(db, monkeypatch):
     assert "quality_warning_unprovided_source_urls" in result["warnings"]
 
 
-def test_execute_ollama_payload_defaults_keep_alive_zero_and_uses_strict_prompt(db, monkeypatch):
+def test_execute_ollama_payload_keeps_model_warm_then_unloads_and_uses_strict_prompt(db, monkeypatch):
     monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
     monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
     monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
@@ -538,6 +564,8 @@ def test_execute_ollama_payload_defaults_keep_alive_zero_and_uses_strict_prompt(
 
     def _fake_generate(config, payload):
         captured_payloads.append(payload)
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
         return (
             {
                 "response": (
@@ -553,9 +581,69 @@ def test_execute_ollama_payload_defaults_keep_alive_zero_and_uses_strict_prompt(
     assert result["success"] is True
     assert captured_payloads
     first_payload = captured_payloads[0]
-    assert first_payload.get("keep_alive") == 0
+    assert first_payload.get("keep_alive") == "5m"
     assert "product investigation system" in first_payload.get("prompt", "").lower()
     assert "do not invent sources" in first_payload.get("prompt", "").lower()
+    assert captured_payloads[-1].get("keep_alive") == 0
+    assert not str(captured_payloads[-1].get("prompt", "")).strip()
+
+
+def test_execute_ollama_explicit_keep_alive_respected_without_forced_unload(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("APD_OLLAMA_KEEP_ALIVE", "10m")
+    monkeypatch.setenv("APD_OLLAMA_REPAIR_ATTEMPTS", "0")
+
+    brief = create_brief(db, title="Keep-alive explicit", research_question="Q")
+    brief = get_brief(db, brief.id)
+    captured_payloads = []
+
+    def _fake_generate(config, payload):
+        captured_payloads.append(payload)
+        return (
+            {
+                "response": (
+                    '{"schema_version":"1.0","external_draft_id":"qc-4","agent_name":"ollama-test",'
+                    '"run":{"title":"R","intent":"Q"},"candidates":[{"id":"cand-1","title":"Candidate 1"}]}'
+                )
+            },
+            None,
+        )
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+    result = execute_research_brief_ollama(db, brief)
+    assert result["success"] is True
+    assert len(captured_payloads) == 1
+    assert captured_payloads[0].get("keep_alive") == "10m"
+
+
+def test_execute_ollama_components_attempts_unload_after_run(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("APD_COMPONENT_REPAIR_ATTEMPTS", "0")
+
+    brief = create_brief(db, title="Components unload", research_question="Q")
+    brief = get_brief(db, brief.id)
+    captured_payloads = []
+    responses = [
+        ({"response": '{"schema_version":"1.0","batch_id":"b1","events":[{"schema_version":"1.0","event_type":"candidate.proposed","external_id":"cand-1","payload":{"title":"Candidate 1"}}]}'}, None),
+        ({"response": '{"schema_version":"1.0","batch_id":"b2","events":[{"schema_version":"1.0","event_type":"claim.proposed","external_id":"claim-1","payload":{"statement":"Claim 1"}}]}'}, None),
+        ({"response": '{"schema_version":"1.0","batch_id":"b3","events":[{"schema_version":"1.0","event_type":"validation_gate.proposed","external_id":"gate-1","payload":{"name":"Gate 1","phase":"supported_opportunity","candidate_id":"cand-1"}}]}'}, None),
+    ]
+
+    def _fake_generate(config, payload):
+        captured_payloads.append(payload)
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
+        return responses.pop(0)
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+    result = execute_research_brief_ollama_components(db, brief)
+    assert result["success"] is True
+    assert captured_payloads[-1].get("keep_alive") == 0
+    assert not str(captured_payloads[-1].get("prompt", "")).strip()
 
 
 def test_start_research_ollama_route_uses_mocked_service(client, monkeypatch):
