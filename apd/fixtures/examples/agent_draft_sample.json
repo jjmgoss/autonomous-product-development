@@ -1,0 +1,140 @@
+{
+  "schema_version": "1.0",
+  "external_draft_id": "draft-20260426-recruiting-ops-r1",
+  "agent_name": "local-research-agent",
+  "generated_at": "2026-04-26T18:20:00Z",
+  "run": {
+    "title": "Agent Draft: Recruiting Ops Friction",
+    "intent": "Assess repeated friction in internal recruiting operations and shortlist wedge candidates.",
+    "summary": "Draft synthesis from structured source notes. Requires human review before acceptance.",
+    "mode": "agent_draft",
+    "phase": "evidence_collected",
+    "recommendation": "Watch and validate buyer urgency with recruiter operations leads."
+  },
+  "warnings": [
+    "Sample package uses synthetic IDs and should not be treated as accepted research."
+  ],
+  "limitations": [
+    "No direct willingness-to-pay interviews included in this draft package."
+  ],
+  "sources": [
+    {
+      "id": "src-1",
+      "title": "Hiring team forum thread on handoff delays",
+      "source_type": "forum_thread",
+      "url": "https://example.com/recruiting/handoff-delays",
+      "origin": "agent_draft",
+      "author_or_org": "Recruiting Ops Forum",
+      "captured_at": "2026-04-24T14:00:00Z",
+      "summary": "Recruiters report repeated delays when interview feedback is spread across tools."
+    },
+    {
+      "id": "src-2",
+      "title": "Recruiter interview notes",
+      "source_type": "interview_notes",
+      "origin": "agent_draft",
+      "author_or_org": "Synthetic User Interviews",
+      "captured_at": "2026-04-25T11:30:00Z",
+      "summary": "Small teams lose hours weekly reconciling conflicting candidate-status updates."
+    }
+  ],
+  "evidence_excerpts": [
+    {
+      "id": "ex-1",
+      "source_id": "src-1",
+      "excerpt_text": "Status updates are split across ATS comments and chat threads, so nobody trusts the latest state.",
+      "location_reference": "post-18",
+      "excerpt_type": "complaint"
+    },
+    {
+      "id": "ex-2",
+      "source_id": "src-2",
+      "excerpt_text": "I spend Friday afternoons just aligning interview notes and next-step ownership.",
+      "location_reference": "interview-2",
+      "excerpt_type": "workflow"
+    }
+  ],
+  "claims": [
+    {
+      "id": "claim-1",
+      "statement": "Recruiting teams face repeated coordination friction due to fragmented candidate-state updates.",
+      "claim_type": "pain",
+      "confidence": 0.67
+    }
+  ],
+  "themes": [
+    {
+      "id": "theme-1",
+      "name": "State-tracking fragmentation",
+      "summary": "Teams lack one trusted workflow for candidate progression and ownership.",
+      "theme_type": "pain_theme",
+      "severity": "high",
+      "frequency": "recurring",
+      "user_segment": "internal recruiters",
+      "workflow": "interview follow-up"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "cand-1",
+      "title": "Recruiting Handoff Ledger",
+      "summary": "A narrow workflow layer that reconciles candidate-state updates and ownership transitions.",
+      "target_user": "Recruiting coordinators at small to mid-size companies",
+      "first_workflow": "Post-interview decision handoff",
+      "first_wedge": "Single state timeline with explicit owner transitions",
+      "why_it_might_fail": "Teams may resist another dashboard unless it directly saves weekly reconciliation time.",
+      "rank": 1,
+      "score": 0.72
+    }
+  ],
+  "validation_gates": [
+    {
+      "id": "gate-1",
+      "candidate_id": "cand-1",
+      "phase": "supported_opportunity",
+      "name": "Confirm buyer urgency",
+      "description": "Interview at least three recruiting operations leads who own process tooling decisions.",
+      "status": "not_started",
+      "blocking": true,
+      "missing_evidence": "No direct buyer interviews in this draft package yet."
+    }
+  ],
+  "evidence_links": [
+    {
+      "id": "link-1",
+      "source_id": "src-1",
+      "excerpt_id": "ex-1",
+      "target_type": "claim",
+      "target_id": "claim-1",
+      "relationship": "supports",
+      "strength": "medium"
+    },
+    {
+      "id": "link-2",
+      "source_id": "src-2",
+      "excerpt_id": "ex-2",
+      "target_type": "theme",
+      "target_id": "theme-1",
+      "relationship": "example_of",
+      "strength": "strong"
+    },
+    {
+      "id": "link-3",
+      "source_id": "src-2",
+      "excerpt_id": "ex-2",
+      "target_type": "candidate",
+      "target_id": "cand-1",
+      "relationship": "supports",
+      "strength": "medium"
+    },
+    {
+      "id": "link-4",
+      "source_id": "src-1",
+      "excerpt_id": "ex-1",
+      "target_type": "validation_gate",
+      "target_id": "gate-1",
+      "relationship": "context_for",
+      "strength": "weak"
+    }
+  ]
+}

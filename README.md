@@ -299,3 +299,30 @@ Current limitations:
 - The importer focuses on linking artifacts and importing sources first.
 - It does not attempt full structured import of claims, themes, candidates, validation gates, or review notes from legacy Markdown.
 - Legacy runs may appear in the UI with useful title, intent, summary, source, and artifact data even when richer structured fields are unavailable.
+
+### Agent draft import schema and command (issue #27)
+
+Import a structured agent draft package into APD:
+
+```text
+uv run python scripts/import_agent_draft.py --path apd/fixtures/examples/agent_draft_sample.json
+```
+
+Behavior:
+- Validates package shape and required minimum content before writing to the database.
+- Imports run metadata, sources, excerpts, claims, themes, candidates, validation gates, and evidence links.
+- Treats imported material as draft/unreviewed, not accepted truth.
+- Forces imported claims, themes, and candidates to `unreviewed`.
+- Marks imported claims and candidates as agent-generated.
+- Preserves traceability by mapping external IDs in the package to imported rows and evidence links.
+- Rejects duplicate `external_draft_id` by default; use `--allow-duplicate-external-id` to intentionally import another run version.
+
+Validation and safety:
+- Malformed JSON and invalid package shape fail safely with clear `ERROR:` lines.
+- Unknown references (for example, evidence links to missing IDs) are skipped with `WARNING:` lines.
+- Imported warnings are recorded in run metadata.
+- The importer does not fetch URLs, call model APIs, or mutate legacy run directories.
+
+Package contract documentation:
+- `docs/agent-draft-import.md`
+- sample package: `apd/fixtures/examples/agent_draft_sample.json`

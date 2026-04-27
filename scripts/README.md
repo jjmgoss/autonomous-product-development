@@ -91,6 +91,20 @@ python scripts/import_legacy_run.py --run-id 20260422-kickoff-smoke-r1
 
 The legacy import script is read-only against `research-corpus/runs/<run-id>/` and `artifacts/runs/<run-id>/`. It creates database records and warnings only; it does not rewrite manifests or Markdown files.
 
+To import a structured agent draft package as draft/unreviewed run data:
+
+```text
+python scripts/import_agent_draft.py --path apd/fixtures/examples/agent_draft_sample.json
+```
+
+By default, duplicate `external_draft_id` values are rejected. To intentionally import another run version for the same external draft ID:
+
+```text
+python scripts/import_agent_draft.py --path apd/fixtures/examples/agent_draft_sample.json --allow-duplicate-external-id
+```
+
+See `docs/agent-draft-import.md` for the package JSON shape and semantics.
+
 The cleanup utility is intentionally conservative:
 
 - it removes only truly empty nested run directories

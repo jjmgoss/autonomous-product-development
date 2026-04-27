@@ -158,6 +158,7 @@ def render_run_report_markdown(detail: dict) -> str:
                 lines.append(f"  - description: {g.description}")
             if g.missing_evidence:
                 lines.append(f"  - missing_evidence: {g.missing_evidence}")
+            _append_evidence_refs(lines, evidence_index, "validation_gate", g.id)
     lines.append("")
 
     lines.append("## Review Notes")

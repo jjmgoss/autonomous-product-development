@@ -174,10 +174,11 @@
   {% if detail.themes %}
   <table class="detail-table">
     <thead>
-      <tr><th>#</th><th>Name</th><th>Summary</th><th>Status</th><th>Segment</th><th>Workflow</th></tr>
+      <tr><th>#</th><th>Name</th><th>Summary</th><th>Status</th><th>Segment</th><th>Workflow</th><th>Evidence</th></tr>
     </thead>
     <tbody>
       {% for t in detail.themes %}
+      {% set tlinks = detail.evidence_index.get("theme", {}).get(t.id, []) %}
       <tr class="status-{{ t.review_status }}">
         <td class="count">{{ loop.index }}</td>
         <td>{{ t.name }}</td>
@@ -185,6 +186,18 @@
         <td><span class="status-badge status-{{ t.review_status }}">{{ t.review_status.replace("_", " ") }}</span></td>
         <td>{{ t.user_segment or "—" }}</td>
         <td>{{ t.workflow or "—" }}</td>
+        <td>
+          {% if tlinks %}
+            {% for el in tlinks %}
+            <div>
+              {% if el.source_title %}{{ el.source_title | truncate(36) }}{% elif el.source_id %}src#{{ el.source_id }}{% else %}—{% endif %}
+              <span class="rel-type">{{ el.relationship_type }}</span>
+            </div>
+            {% endfor %}
+          {% else %}
+          <span class="muted">none</span>
+          {% endif %}
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -206,6 +219,7 @@
       <strong>{{ c.title }}</strong>
       <span class="status-badge status-{{ c.review_status }}">{{ c.review_status.replace("_", " ") }}</span>
       {% if c.decision %}<span class="decision decision-{{ c.decision }}">{{ c.decision.replace("_", " ") }}</span>{% endif %}
+      {% if c.is_agent_generated %}<span class="badge badge-agent">agent</span>{% endif %}
       {% if c.rank %}<span class="rank-badge">rank {{ c.rank }}</span>{% endif %}
     </div>
     {% if c.summary %}<p>{{ c.summary }}</p>{% endif %}
@@ -269,10 +283,11 @@
   {% if detail.validation_gates %}
   <table class="detail-table">
     <thead>
-      <tr><th>#</th><th>Name</th><th>Phase</th><th>Status</th><th>Blocking</th><th>Description</th><th>Missing Evidence</th></tr>
+      <tr><th>#</th><th>Name</th><th>Phase</th><th>Status</th><th>Blocking</th><th>Description</th><th>Missing Evidence</th><th>Evidence</th></tr>
     </thead>
     <tbody>
       {% for g in detail.validation_gates %}
+      {% set glinks = detail.evidence_index.get("validation_gate", {}).get(g.id, []) %}
       <tr class="gate-{{ g.status }}">
         <td class="count">{{ loop.index }}</td>
         <td>{{ g.name }}</td>
@@ -281,6 +296,18 @@
         <td>{{ "yes" if g.blocking else "no" }}</td>
         <td class="summary-cell">{{ g.description or "—" }}</td>
         <td class="summary-cell">{{ g.missing_evidence or "—" }}</td>
+        <td>
+          {% if glinks %}
+            {% for el in glinks %}
+            <div>
+              {% if el.source_title %}{{ el.source_title | truncate(36) }}{% elif el.source_id %}src#{{ el.source_id }}{% else %}—{% endif %}
+              <span class="rel-type">{{ el.relationship_type }}</span>
+            </div>
+            {% endfor %}
+          {% else %}
+          <span class="muted">none</span>
+          {% endif %}
+        </td>
       </tr>
       {% endfor %}
     </tbody>
