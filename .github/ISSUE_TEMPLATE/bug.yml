@@ -1,0 +1,75 @@
+name: Bug
+description: Structured bug report with explicit verification and safety context.
+title: "[bug] "
+labels:
+  - needs-triage
+body:
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0
+        - P1
+        - P2
+        - P3
+    validations:
+      required: true
+  - type: input
+    id: area
+    attributes:
+      label: Workstream / Axis
+      placeholder: Backend, Frontend, Ingestion, Deployment, Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Bug summary
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Relevant context
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety constraints
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification expectations
+    validations:
+      required: true
+  - type: dropdown
+    id: human-review
+    attributes:
+      label: Human review required?
+      options:
+        - Yes
+        - No
+    validations:
+      required: true

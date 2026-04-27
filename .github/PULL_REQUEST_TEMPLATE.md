@@ -1,25 +1,19 @@
-# Pull Request
-
 ## Summary
-- What does this PR do?
-- Why is it needed?
-- Which requirement, milestone, or research conclusion does it support?
 
-## Linked Issues/Docs
-- [ ] Issue(s):
-- [ ] Docs:
-- [ ] Decision log updated if architecture, scope, or tradeoffs changed
+## Linked Issue Or Reference
 
-## Acceptance Criteria
-- [ ] Criteria 1
-- [ ] Criteria 2
-- [ ] Criteria 3
+Refs #
 
-## Test Evidence
-- [ ] Tests added/updated
-- [ ] Manual test results
-- [ ] Gaps or untested areas documented
+## What Changed
 
-## Risks & Open Questions
-- [ ] Risks:
-- [ ] Open questions:
+## Verification
+
+```text
+
+```
+
+## Risk And Deployment Impact
+
+## Reviewer Focus
+
+## Follow-Ups

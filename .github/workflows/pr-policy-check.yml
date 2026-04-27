@@ -1,0 +1,64 @@
+name: PR Policy Check
+
+on:
+  pull_request:
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Validate PR body
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+            const issues = [];
+
+            if (!body.trim()) {
+              issues.push('PR body is empty.');
+            }
+
+            // Accept common issue reference keywords including Refs
+            if (!/Closes\s+#\d+/i.test(body) && !/Fixes\s+#\d+/i.test(body) && !/Resolves\s+#\d+/i.test(body) && !/Refs\s+#\d+/i.test(body)) {
+              issues.push('PR body must include a linked issue reference such as "Closes #123" or "Refs #123".');
+            }
+
+            // Accept either a Verification or Suggested Verification heading
+            if (!/##\s+(Suggested\s+Verification|Verification)/i.test(body)) {
+              issues.push('PR body must include a Verification section ("## Verification" or "## Suggested Verification").');
+            }
+
+            if (issues.length > 0) {
+              core.setFailed(issues.join('\n'));
+            }
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan changed non-doc files for destructive commands
+        shell: bash
+        run: |
+          set -euo pipefail
+          patterns='docker compose down -v|docker volume rm|docker volume prune|rm -rf'
+          files=$(git diff --name-only --diff-filter=ACMRT "${{ github.event.pull_request.base.sha }}...${{ github.sha }}" | grep -Ev '^(docs/|.*\.md$)' || true)
+          if [ -z "$files" ]; then
+            exit 0
+          fi
+
+          while IFS= read -r file; do
+            # Skip policy workflow sources so the destructive-pattern guard does
+            # not fail on its own regex literal.
+            if [ -z "$file" ] || [ "${file##*/}" = "pr-policy-check.yml" ]; then
+              continue
+            fi
+
+            if grep -nE "$patterns" "$file"; then
+              echo "::error file=$file::Potentially destructive command detected. Review manually."
+              exit 1
+            fi
+          done <<< "$files"

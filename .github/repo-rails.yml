@@ -1,0 +1,15 @@
+schema_version: 1
+profile: python-agent-tooling
+rails_version: 0.1.0
+managed_paths:
+- .github/ISSUE_TEMPLATE/agent-task.yml
+- .github/ISSUE_TEMPLATE/bug.yml
+- .github/ISSUE_TEMPLATE/config.yml
+- .github/ISSUE_TEMPLATE/feature.yml
+- .github/PULL_REQUEST_TEMPLATE.md
+- .github/copilot-instructions.md
+- .github/repo-rails.yml
+- .github/workflows/ci.yml
+- .github/workflows/pr-policy-check.yml
+- docs/github-workflow.md
+local_overrides: []
