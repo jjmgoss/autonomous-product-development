@@ -1,0 +1,106 @@
+name: Agent Task
+description: Structured issue for agent-assisted implementation work.
+title: "[agent-task] "
+labels:
+  - agent-task
+body:
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0
+        - P1
+        - P2
+        - P3
+    validations:
+      required: true
+  - type: dropdown
+    id: workstream
+    attributes:
+      label: Workstream / Axis
+      options:
+        - Product
+        - Backend
+        - Frontend
+        - Ingestion
+        - Data
+        - Operations
+        - Deployment
+        - Agent Workflow
+        - Documentation
+    validations:
+      required: true
+  - type: dropdown
+    id: agent-size
+    attributes:
+      label: Expected agent size
+      options:
+        - Small
+        - Medium
+        - Large
+        - Human Required
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Relevant context
+      description: Include repo paths, prior decisions, linked issues, and runtime constraints.
+    validations:
+      required: true
+  - type: textarea
+    id: explicit-ask
+    attributes:
+      label: Explicit ask
+      description: State the exact change the agent should make.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: One per line.
+      placeholder: |
+        -
+        -
+    validations:
+      required: true
+  - type: textarea
+    id: safety-constraints
+    attributes:
+      label: Safety constraints
+      description: State any data, environment, or command restrictions.
+      placeholder: |
+        - No destructive commands against persistent environments
+        -
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification expectations
+      description: List the commands, tests, or runtime checks the agent must run.
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment-impact
+    attributes:
+      label: Deployment impact
+      options:
+        - None
+        - Local only
+        - Database
+        - Synology
+        - Public-facing
+    validations:
+      required: true
+  - type: dropdown
+    id: human-review
+    attributes:
+      label: Human review required?
+      options:
+        - Yes
+        - No
+    validations:
+      required: true

@@ -1,0 +1,92 @@
+name: Feature
+description: Structured feature request for scoped implementation work.
+title: "[feature] "
+labels:
+  - needs-triage
+body:
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0
+        - P1
+        - P2
+        - P3
+    validations:
+      required: true
+  - type: dropdown
+    id: workstream
+    attributes:
+      label: Workstream / Axis
+      options:
+        - Product
+        - Backend
+        - Frontend
+        - Ingestion
+        - Data
+        - Operations
+        - Deployment
+        - Agent Workflow
+        - Documentation
+    validations:
+      required: true
+  - type: dropdown
+    id: agent-size
+    attributes:
+      label: Expected agent size
+      options:
+        - Small
+        - Medium
+        - Large
+        - Human Required
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+    validations:
+      required: true
+  - type: textarea
+    id: ask
+    attributes:
+      label: Explicit ask
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Relevant context
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety constraints
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification expectations
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment-impact
+    attributes:
+      label: Deployment impact
+      options:
+        - None
+        - Local only
+        - Database
+        - Synology
+        - Public-facing
+    validations:
+      required: true
