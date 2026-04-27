@@ -26,6 +26,11 @@ artifacts/runs/*
 artifacts/projects/*/prototype.db
 artifacts/projects/*/.venv/
 
+# Local APD app state
+.local/
+.pytest_cache/
+
+
 # Optional: keep intentionally preserved example runs
 #!research-corpus/runs/examples/
 #!artifacts/runs/examples/
