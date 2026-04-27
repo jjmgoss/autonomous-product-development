@@ -208,3 +208,28 @@ To remove fixture-owned records only, without reseeding:
 ```text
 uv run python scripts/seed_fixture.py --reset-only
 ```
+
+### View the local web UI (issue #7)
+
+After seeding fixture data, start the app and open the browser UI:
+
+```text
+uv run uvicorn apd.app.main:app --reload
+```
+
+Then open `http://127.0.0.1:8000/runs` in a browser.
+
+- `/runs` — recent-runs list. Shows each run's title, phase, decision, recommendation, source/claim/theme/candidate counts, and a link to its detail page. Fixture runs are labeled.
+- `/runs/{run_id}` — run detail page. Shows run intent, summary, recommendation, phase, decision, sources, claims (with review status), themes, candidates, validation gates, artifacts, and evidence traceability.
+- `/` — redirects to `/runs`.
+
+To seed and view the fixture run against a throwaway database:
+
+```text
+$env:APD_DATABASE_URL = "sqlite+pysqlite:///./.local/apd_demo.db"
+uv run alembic upgrade head
+uv run python scripts/seed_fixture.py
+uv run uvicorn apd.app.main:app --reload
+```
+
+Open `http://127.0.0.1:8000/runs` — the fixture run should appear. Click its title to open the run detail page.
