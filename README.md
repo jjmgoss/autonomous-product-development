@@ -150,3 +150,39 @@ Autonomous product development usually fails before implementation.
 The failure mode is not that the agent cannot write code. It is that the agent picks weak ideas, overstates validation, ignores substitutes, or chooses products that are not viable for a solo operator with software and agent workflows.
 
 This repository is built to make those mistakes harder.
+
+## Local app skeleton (issue #4)
+
+The repository now includes a minimal local app foundation for the APD cockpit backend.
+
+### Install dependencies
+
+```text
+uv sync --extra dev
+```
+
+### Run tests
+
+```text
+./scripts/test.ps1
+python scripts/check_repo_readiness.py
+```
+
+### Database migrations (SQLite via Alembic)
+
+```text
+uv run alembic upgrade head
+uv run alembic revision --autogenerate -m "describe change"
+```
+
+### Start the local app
+
+```text
+uv run uvicorn apd.app.main:app --reload
+```
+
+Then open `http://127.0.0.1:8000/health` and expect:
+
+```json
+{"status":"ok"}
+```
