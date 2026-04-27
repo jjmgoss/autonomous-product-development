@@ -13,7 +13,11 @@ from sqlalchemy.orm import Session
 
 from apd.services.agent_draft_import import AgentDraftPackage, import_agent_draft_package
 from apd.services.agent_draft_validation import validate_agent_draft_data
-from apd.services.research_brief_service import generate_ollama_execution_prompt
+from apd.services.research_brief_service import (
+    generate_ollama_component_prompt,
+    generate_ollama_execution_prompt,
+)
+from apd.services.research_components import ComponentDraftAssembler, parse_component_batch_from_data
 
 
 def _iso_now() -> str:
@@ -187,6 +191,136 @@ def execute_research_brief_ollama(db: Session, brief) -> dict[str, Any]:
     return _build_result(config, status, started_at, finished_at, run_id, errors_list, warnings_list)
 
 
+def execute_research_brief_ollama_components(db: Session, brief) -> dict[str, Any]:
+    """Experimental component-based execution path using provider-agnostic event schema."""
+    config, missing_env = get_ollama_execution_config()
+    now = _iso_now()
+    if config is None:
+        return {
+            "success": False,
+            "provider": "ollama-components",
+            "status": "config_missing",
+            "started_at": now,
+            "finished_at": now,
+            "errors": [f"Missing required env: {value}" for value in missing_env],
+            "warnings": [],
+            "run_id": None,
+        }
+
+    started_at = now
+    prompt = generate_ollama_component_prompt(brief)
+    raw_batch_data, parse_error = _call_ollama_for_component_batch(config, prompt)
+    if parse_error:
+        finished_at = _iso_now()
+        return _build_result(
+            config,
+            "component_parse_failed",
+            started_at,
+            finished_at,
+            None,
+            [parse_error],
+            [],
+            provider_override="ollama-components",
+        )
+
+    batch, batch_errors = parse_component_batch_from_data(raw_batch_data)
+    if batch is None:
+        finished_at = _iso_now()
+        return _build_result(
+            config,
+            "component_validation_failed",
+            started_at,
+            finished_at,
+            None,
+            _first_errors(batch_errors, limit=5),
+            [],
+            provider_override="ollama-components",
+        )
+
+    run_title = brief.title or (brief.research_question[:120] if brief.research_question else "Component Research")
+    assembler = ComponentDraftAssembler(
+        run_title=run_title,
+        run_intent=brief.research_question,
+        agent_name="ollama-component-prototype",
+        external_draft_id=f"brief-{brief.id}-components-{started_at}",
+    )
+    assembly_result = assembler.apply_batch(batch)
+    if not assembly_result.success or assembly_result.package is None:
+        finished_at = _iso_now()
+        return _build_result(
+            config,
+            "component_assembly_failed",
+            started_at,
+            finished_at,
+            None,
+            _first_errors(assembly_result.errors, limit=5),
+            _first_errors(assembly_result.warnings, limit=5),
+            provider_override="ollama-components",
+        )
+
+    report = validate_agent_draft_data(Path("<ollama-components-output>"), assembly_result.package)
+    if not report.is_valid or report.package is None:
+        finished_at = _iso_now()
+        return _build_result(
+            config,
+            "validation_failed",
+            started_at,
+            finished_at,
+            None,
+            _first_errors(report.errors, limit=5),
+            _first_errors(assembly_result.warnings, limit=5),
+            provider_override="ollama-components",
+        )
+
+    quality_result = _evaluate_product_quality_gate(report.package)
+    warnings_list = list(assembly_result.warnings) + quality_result.warnings
+    if quality_result.error:
+        finished_at = _iso_now()
+        return _build_result(
+            config,
+            quality_result.status,
+            started_at,
+            finished_at,
+            None,
+            [quality_result.error],
+            _first_errors(warnings_list, limit=5),
+            provider_override="ollama-components",
+        )
+
+    try:
+        import_result = import_agent_draft_package(
+            db,
+            report.package,
+            package_path=None,
+            allow_duplicate_external_id=False,
+        )
+    except Exception as exc:
+        finished_at = _iso_now()
+        return _build_result(
+            config,
+            "import_failed",
+            started_at,
+            finished_at,
+            None,
+            [f"import_failed: {exc}"],
+            _first_errors(warnings_list, limit=5),
+            provider_override="ollama-components",
+        )
+
+    finished_at = _iso_now()
+    warnings_list.extend(import_result.warnings)
+    return _build_result(
+        config,
+        "imported",
+        started_at,
+        finished_at,
+        import_result.run_db_id,
+        [],
+        _first_errors(warnings_list, limit=5),
+        provider_override="ollama-components",
+    )
+
+
 def _build_result(
     config: OllamaExecutionConfig,
     status: str,
@@ -195,10 +329,11 @@ def _build_result(
     run_id: int | None,
     errors_list: list[str],
     warnings_list: list[str],
+    provider_override: str | None = None,
 ) -> dict[str, Any]:
     return {
         "success": status == "imported" and run_id is not None,
-        "provider": config.provider,
+        "provider": provider_override or config.provider,
         "model": config.model,
         "status": status,
         "started_at": started_at,
@@ -223,6 +358,23 @@ def _call_ollama_for_draft(
         return None, "provider_error: empty_ollama_response"
 
     return extract_json_object_from_model_output(output_text)
+
+
+def _call_ollama_for_component_batch(
+    config: OllamaExecutionConfig,
+    prompt: str,
+) -> tuple[dict[str, Any] | None, str | None]:
+    payload = _build_generate_payload(config, prompt)
+    response_data, call_error = _ollama_generate(config, payload)
+    if call_error:
+        return None, call_error
+    output_text = str(response_data.get("response") or "")
+    if not output_text.strip():
+        return None, "provider_error: empty_ollama_response"
+    parsed, parse_error = extract_json_object_from_model_output(output_text)
+    if parse_error:
+        return None, parse_error
+    return parsed, None
 
 
 def _call_ollama_for_repair(

@@ -68,3 +68,32 @@ Limitations:
 - No streaming, background jobs, source fetching, or external publishing.
 - Local/Ollama runs should not invent sources, URLs, citations, or claims of fetched web evidence.
 - Tests mock Ollama calls; live Ollama verification is manual.
+
+## Component-based execution prototype (Issue #51)
+
+APD now includes an experimental component-based execution path that uses a provider-agnostic event contract.
+
+Why this exists:
+
+- Monolithic draft JSON generation is brittle across models.
+- Component batches let APD validate smaller typed events before final import.
+- APD still assembles a standard APD draft package and uses strict draft validation/import as the final gate.
+
+What this is:
+
+- A synchronous website-first prototype path (`Start Research with Components (experimental)`).
+- Provider-agnostic schema names (`ResearchComponentEvent`, `ResearchComponentBatch`, `ComponentDraftAssembler`).
+- Ollama is the first adapter implementation.
+
+What this is not:
+
+- Not browser streaming.
+- Not WebSockets or SSE.
+- Not background jobs.
+- Not a provider registry.
+
+Current component minimum:
+
+- Supports candidate, claim, and theme events (plus optional source/excerpt/gate/link events).
+- Rejects zero-candidate assembled output before import.
+- Uses the same keep-alive behavior (`keep_alive: 0` default) to free local model resources after execution.

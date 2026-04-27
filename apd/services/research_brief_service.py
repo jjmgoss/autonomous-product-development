@@ -95,6 +95,33 @@ _OLLAMA_EXECUTION_CONSTRAINTS = """\
 - All output remains draft/unreviewed.
 """
 
+_COMPONENT_EXECUTION_CONSTRAINTS = """\
+## APD ResearchComponentBatch contract (mandatory)
+
+Return only one JSON object matching this shape:
+
+{
+  "schema_version": "1.0",
+  "batch_id": "<optional-id>",
+  "events": [
+    {
+      "schema_version": "1.0",
+      "event_type": "candidate.proposed|claim.proposed|theme.proposed|source.added|evidence_excerpt.added|validation_gate.proposed|evidence_link.added",
+      "external_id": "<required-event-id>",
+      "payload": { ... }
+    }
+  ]
+}
+
+Rules:
+- Return a ResearchComponentBatch only. Do not return a full APD draft package.
+- Use event_type values exactly as listed.
+- Every event needs schema_version, event_type, external_id, and payload.
+- For product investigations, include at least one candidate.proposed event.
+- Do not invent source URLs or citations.
+- If ungrounded, mark metadata as synthetic/model-prior.
+"""
+
 # ── CRUD ─────────────────────────────────────────────────────────────────────
 
 
@@ -223,3 +250,9 @@ def generate_ollama_execution_prompt(brief: ResearchBrief) -> str:
     """Return a stricter prompt for local Ollama execution."""
     base = generate_agent_prompt(brief)
     return "\n".join([base, "", "---", "", _OLLAMA_EXECUTION_CONSTRAINTS, "", "Return only the JSON package."])
+
+
+def generate_ollama_component_prompt(brief: ResearchBrief) -> str:
+    """Return a provider-agnostic component contract prompt for Ollama prototype execution."""
+    base = generate_ollama_execution_prompt(brief)
+    return "\n".join([base, "", "---", "", _COMPONENT_EXECUTION_CONSTRAINTS, "", "Return only the ResearchComponentBatch JSON object."])
