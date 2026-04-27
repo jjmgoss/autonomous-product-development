@@ -277,3 +277,25 @@ Behavior:
 - Each export creates an `Artifact` record with `artifact_type=markdown_report`.
 
 The run detail page also has an **Export Markdown Report** action that triggers the same export flow and records the output in Artifacts.
+
+### Legacy run import and linking (issue #10)
+
+Import or link an existing legacy APD run into the local cockpit by run ID:
+
+```text
+uv run python scripts/import_legacy_run.py --run-id 20260422-kickoff-smoke-r1
+```
+
+Behavior:
+- Reads legacy inputs from `research-corpus/runs/<run-id>/` and `artifacts/runs/<run-id>/`.
+- Treats existing legacy files as read-only input. It does not rewrite, normalize, move, or delete them.
+- Creates a structured `Run` row when one does not already exist for that legacy run ID.
+- Links legacy Markdown files as `Artifact` records when those files exist.
+- Imports source entries from `research-corpus/runs/<run-id>/manifest.json` when they can be parsed safely.
+- Emits warnings for missing, incomplete, or malformed legacy files, but continues where possible.
+- Re-running the command is idempotent enough to avoid duplicating the imported run, linked artifacts, or imported sources.
+
+Current limitations:
+- The importer focuses on linking artifacts and importing sources first.
+- It does not attempt full structured import of claims, themes, candidates, validation gates, or review notes from legacy Markdown.
+- Legacy runs may appear in the UI with useful title, intent, summary, source, and artifact data even when richer structured fields are unavailable.
