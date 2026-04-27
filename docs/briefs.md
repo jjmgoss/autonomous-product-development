@@ -27,6 +27,10 @@ uv run python scripts/import_agent_draft.py --path <normalized.json>
 Notes
 
 - APD will import the package as draft/unreviewed research for human inspection and review.
+
+Note: The run review UI is candidate-first — the run detail page surfaces product
+candidates before sources and reasoning so reviewers can prioritize candidate
+inspection and then trace claims/themes/gates back to supporting evidence.
 - The current workflow is manual: APD does not run models itself yet. Automation is tracked in issue #44.
  - A website-first prototype (Issue #44) is available that demonstrates an in-process, deterministic "stub" runner. The stub does not call external models or services; it builds a synthetic agent draft package, validates it with APD's validators, and imports it locally so you can exercise the end-to-end import and run creation flow without external network calls.
 - The generated prompt includes reminders about APD's expected field names and schema. Use them to avoid common near-miss errors (e.g. `sources.source_type`, `evidence_excerpts.excerpt_text`, `claims.statement`).
