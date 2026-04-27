@@ -14,10 +14,16 @@ from sqlalchemy.orm import Session
 from apd.services.agent_draft_import import AgentDraftPackage, import_agent_draft_package
 from apd.services.agent_draft_validation import validate_agent_draft_data
 from apd.services.research_brief_service import (
-    generate_ollama_component_prompt,
+    generate_ollama_component_phase_prompt,
+    generate_ollama_component_repair_prompt,
     generate_ollama_execution_prompt,
 )
-from apd.services.research_components import ComponentDraftAssembler, parse_component_batch_from_data
+from apd.services.research_components import (
+    ComponentDraftAssembler,
+    ResearchComponentBatch,
+    ResearchComponentEventType,
+    parse_component_batch_from_data,
+)
 
 
 def _iso_now() -> str:
@@ -124,76 +130,79 @@ def execute_research_brief_ollama(db: Session, brief) -> dict[str, Any]:
     run_id: int | None = None
     started_at = now
     finished_at = now
-
-    draft_data, parse_error = _call_ollama_for_draft(config, prompt)
-    if parse_error:
-        status = "parse_failed" if parse_error.startswith("parse_failed") else "provider_error"
-        errors_list.append(parse_error)
-        finished_at = _iso_now()
-        return _build_result(config, status, started_at, finished_at, run_id, errors_list, warnings_list)
-
-    report = validate_agent_draft_data(Path("<ollama-output>"), draft_data)
-    package = report.package
-    if not report.is_valid or package is None:
-        normalized_data, normalize_fixes = _safe_normalize_near_miss(draft_data)
-        if normalize_fixes:
-            warnings_list.append(f"applied_normalization_fixes={len(normalize_fixes)}")
-            normalized_report = validate_agent_draft_data(Path("<ollama-output-normalized>"), normalized_data)
-            if normalized_report.is_valid and normalized_report.package is not None:
-                report = normalized_report
-                package = normalized_report.package
-
-    if (package is None or not report.is_valid) and config.repair_attempts > 0:
-        warnings_list.append("repair_attempted=1")
-        repaired_data, repair_error = _call_ollama_for_repair(config, draft_data, report.grouped_errors or report.errors)
-        if repair_error:
-            errors_list.append(repair_error)
-        elif repaired_data is not None:
-            repaired_report = validate_agent_draft_data(Path("<ollama-output-repair>"), repaired_data)
-            if repaired_report.is_valid and repaired_report.package is not None:
-                package = repaired_report.package
-                report = repaired_report
-                warnings_list.append("repair_succeeded=true")
-            else:
-                errors_list.extend(_first_errors(repaired_report.errors, limit=5))
-
-    if package is None or not report.is_valid:
-        status = "validation_failed"
-        if not errors_list:
-            errors_list.extend(_first_errors(report.errors, limit=5))
-        finished_at = _iso_now()
-        return _build_result(config, status, started_at, finished_at, run_id, errors_list, warnings_list)
-
-    quality_result = _evaluate_product_quality_gate(package)
-    warnings_list.extend(quality_result.warnings)
-    if quality_result.error:
-        finished_at = _iso_now()
-        errors_list.append(quality_result.error)
-        return _build_result(config, quality_result.status, started_at, finished_at, run_id, errors_list, warnings_list)
-
     try:
-        import_result = import_agent_draft_package(
-            db,
-            package,
-            package_path=None,
-            allow_duplicate_external_id=False,
-        )
-    except Exception as exc:
-        status = "import_failed"
-        errors_list.append(f"import_failed: {exc}")
+        draft_data, parse_error = _call_ollama_for_draft(config, prompt)
+        if parse_error:
+            status = "parse_failed" if parse_error.startswith("parse_failed") else "provider_error"
+            errors_list.append(parse_error)
+            finished_at = _iso_now()
+            return _build_result(config, status, started_at, finished_at, run_id, errors_list, warnings_list)
+
+        report = validate_agent_draft_data(Path("<ollama-output>"), draft_data)
+        package = report.package
+        if not report.is_valid or package is None:
+            normalized_data, normalize_fixes = _safe_normalize_near_miss(draft_data)
+            if normalize_fixes:
+                warnings_list.append(f"applied_normalization_fixes={len(normalize_fixes)}")
+                normalized_report = validate_agent_draft_data(Path("<ollama-output-normalized>"), normalized_data)
+                if normalized_report.is_valid and normalized_report.package is not None:
+                    report = normalized_report
+                    package = normalized_report.package
+
+        if (package is None or not report.is_valid) and config.repair_attempts > 0:
+            warnings_list.append("repair_attempted=1")
+            repaired_data, repair_error = _call_ollama_for_repair(config, draft_data, report.grouped_errors or report.errors)
+            if repair_error:
+                errors_list.append(repair_error)
+            elif repaired_data is not None:
+                repaired_report = validate_agent_draft_data(Path("<ollama-output-repair>"), repaired_data)
+                if repaired_report.is_valid and repaired_report.package is not None:
+                    package = repaired_report.package
+                    report = repaired_report
+                    warnings_list.append("repair_succeeded=true")
+                else:
+                    errors_list.extend(_first_errors(repaired_report.errors, limit=5))
+
+        if package is None or not report.is_valid:
+            status = "validation_failed"
+            if not errors_list:
+                errors_list.extend(_first_errors(report.errors, limit=5))
+            finished_at = _iso_now()
+            return _build_result(config, status, started_at, finished_at, run_id, errors_list, warnings_list)
+
+        quality_result = _evaluate_product_quality_gate(package)
+        warnings_list.extend(quality_result.warnings)
+        if quality_result.error:
+            finished_at = _iso_now()
+            errors_list.append(quality_result.error)
+            return _build_result(config, quality_result.status, started_at, finished_at, run_id, errors_list, warnings_list)
+
+        try:
+            import_result = import_agent_draft_package(
+                db,
+                package,
+                package_path=None,
+                allow_duplicate_external_id=False,
+            )
+        except Exception as exc:
+            status = "import_failed"
+            errors_list.append(f"import_failed: {exc}")
+            finished_at = _iso_now()
+            return _build_result(config, status, started_at, finished_at, run_id, errors_list, warnings_list)
+
+        run_id = import_result.run_db_id
+        warnings_list.extend(_first_errors(import_result.warnings, limit=5))
+        status = "imported"
         finished_at = _iso_now()
         return _build_result(config, status, started_at, finished_at, run_id, errors_list, warnings_list)
-
-    run_id = import_result.run_db_id
-    warnings_list.extend(_first_errors(import_result.warnings, limit=5))
-    status = "imported"
-    finished_at = _iso_now()
-    return _build_result(config, status, started_at, finished_at, run_id, errors_list, warnings_list)
+    finally:
+        _unload_ollama_model(config)
 
 
 def execute_research_brief_ollama_components(db: Session, brief) -> dict[str, Any]:
     """Experimental component-based execution path using provider-agnostic event schema."""
     config, missing_env = get_ollama_execution_config()
+    component_repair_attempts = _parse_component_repair_attempts_env("APD_COMPONENT_REPAIR_ATTEMPTS", default=2)
     now = _iso_now()
     if config is None:
         return {
@@ -208,117 +217,167 @@ def execute_research_brief_ollama_components(db: Session, brief) -> dict[str, An
         }
 
     started_at = now
-    prompt = generate_ollama_component_prompt(brief)
-    raw_batch_data, parse_error = _call_ollama_for_component_batch(config, prompt)
-    if parse_error:
-        finished_at = _iso_now()
-        return _build_result(
-            config,
-            "component_parse_failed",
-            started_at,
-            finished_at,
-            None,
-            [parse_error],
-            [],
-            provider_override="ollama-components",
-        )
-
-    batch, batch_errors = parse_component_batch_from_data(raw_batch_data)
-    if batch is None:
-        finished_at = _iso_now()
-        return _build_result(
-            config,
-            "component_validation_failed",
-            started_at,
-            finished_at,
-            None,
-            _first_errors(batch_errors, limit=5),
-            [],
-            provider_override="ollama-components",
-        )
-
-    run_title = brief.title or (brief.research_question[:120] if brief.research_question else "Component Research")
-    assembler = ComponentDraftAssembler(
-        run_title=run_title,
-        run_intent=brief.research_question,
-        agent_name="ollama-component-prototype",
-        external_draft_id=f"brief-{brief.id}-components-{started_at}",
-    )
-    assembly_result = assembler.apply_batch(batch)
-    if not assembly_result.success or assembly_result.package is None:
-        finished_at = _iso_now()
-        return _build_result(
-            config,
-            "component_assembly_failed",
-            started_at,
-            finished_at,
-            None,
-            _first_errors(assembly_result.errors, limit=5),
-            _first_errors(assembly_result.warnings, limit=5),
-            provider_override="ollama-components",
-        )
-
-    report = validate_agent_draft_data(Path("<ollama-components-output>"), assembly_result.package)
-    if not report.is_valid or report.package is None:
-        finished_at = _iso_now()
-        return _build_result(
-            config,
-            "validation_failed",
-            started_at,
-            finished_at,
-            None,
-            _first_errors(report.errors, limit=5),
-            _first_errors(assembly_result.warnings, limit=5),
-            provider_override="ollama-components",
-        )
-
-    quality_result = _evaluate_product_quality_gate(report.package)
-    warnings_list = list(assembly_result.warnings) + quality_result.warnings
-    if quality_result.error:
-        finished_at = _iso_now()
-        return _build_result(
-            config,
-            quality_result.status,
-            started_at,
-            finished_at,
-            None,
-            [quality_result.error],
-            _first_errors(warnings_list, limit=5),
-            provider_override="ollama-components",
-        )
-
     try:
-        import_result = import_agent_draft_package(
-            db,
-            report.package,
-            package_path=None,
-            allow_duplicate_external_id=False,
+        run_title = brief.title or (brief.research_question[:120] if brief.research_question else "Component Research")
+        assembler = ComponentDraftAssembler(
+            run_title=run_title,
+            run_intent=brief.research_question,
+            agent_name="ollama-component-prototype",
+            external_draft_id=f"brief-{brief.id}-components-{started_at}",
         )
-    except Exception as exc:
+        attempts_by_phase: dict[str, int] = {}
+        warnings_list: list[str] = []
+        candidate_ids: list[str] = []
+        phases = ["candidate_batch", "claim_theme_batch", "validation_gate_batch"]
+
+        for phase_name in phases:
+            errors_for_phase: list[str] = []
+            prior_raw_batch: dict[str, Any] | None = None
+            max_attempts = component_repair_attempts + 1
+            attempts_by_phase[phase_name] = 0
+
+            for attempt_index in range(max_attempts):
+                attempts_by_phase[phase_name] = attempt_index + 1
+                if attempt_index == 0:
+                    prompt = generate_ollama_component_phase_prompt(brief, phase_name, candidate_ids=candidate_ids)
+                else:
+                    prompt = generate_ollama_component_repair_prompt(
+                        brief,
+                        phase_name=phase_name,
+                        validation_errors=errors_for_phase,
+                        invalid_batch_data=prior_raw_batch,
+                    )
+
+                raw_batch_data, parse_error = _call_ollama_for_component_batch(config, prompt)
+                if parse_error:
+                    errors_for_phase = [f"{phase_name}: {parse_error}"]
+                    prior_raw_batch = None
+                    continue
+
+                prior_raw_batch = raw_batch_data
+                batch, batch_errors = parse_component_batch_from_data(raw_batch_data)
+                if batch is None:
+                    errors_for_phase = [f"{phase_name}: {line}" for line in _first_errors(batch_errors, limit=5)]
+                    continue
+
+                phase_errors = _validate_component_phase_batch(phase_name, batch)
+                if phase_errors:
+                    errors_for_phase = phase_errors
+                    continue
+
+                assembly_result = assembler.apply_batch(batch)
+                if not assembly_result.success:
+                    errors_for_phase = [f"{phase_name}: {line}" for line in _first_errors(assembly_result.errors, limit=5)]
+                    continue
+
+                if phase_name == "candidate_batch":
+                    candidate_ids = [
+                        event.external_id
+                        for event in batch.events
+                        if event.event_type == ResearchComponentEventType.CANDIDATE_PROPOSED
+                    ]
+                warnings_list.extend(_first_errors(assembly_result.warnings, limit=5))
+                break
+            else:
+                finished_at = _iso_now()
+                failure_status = "quality_failed_no_candidates" if phase_name == "candidate_batch" else "component_validation_failed"
+                if phase_name == "candidate_batch":
+                    errors_for_phase = [
+                        (
+                            "The model returned no product candidates. Refine the brief toward a product/problem/opportunity, "
+                            "or try a stronger model."
+                        )
+                    ]
+                return _build_result(
+                    config,
+                    failure_status,
+                    started_at,
+                    finished_at,
+                    None,
+                    _first_errors(errors_for_phase or [f"{phase_name}: failed"], limit=5),
+                    _first_errors(warnings_list, limit=5),
+                    provider_override="ollama-components",
+                    mode="component_execution",
+                    last_phase=phase_name,
+                    attempts_by_phase=attempts_by_phase,
+                )
+
+        assembled_package = assembler.package_dict()
+        report = validate_agent_draft_data(Path("<ollama-components-output>"), assembled_package)
+        if not report.is_valid or report.package is None:
+            finished_at = _iso_now()
+            return _build_result(
+                config,
+                "validation_failed",
+                started_at,
+                finished_at,
+                None,
+                _first_errors(report.errors, limit=5),
+                _first_errors(warnings_list, limit=5),
+                provider_override="ollama-components",
+                mode="component_execution",
+                last_phase="final_validation",
+                attempts_by_phase=attempts_by_phase,
+            )
+
+        quality_result = _evaluate_product_quality_gate(report.package)
+        warnings_list.extend(quality_result.warnings)
+        if quality_result.error:
+            finished_at = _iso_now()
+            return _build_result(
+                config,
+                quality_result.status,
+                started_at,
+                finished_at,
+                None,
+                [quality_result.error],
+                _first_errors(warnings_list, limit=5),
+                provider_override="ollama-components",
+                mode="component_execution",
+                last_phase="quality_gate",
+                attempts_by_phase=attempts_by_phase,
+            )
+
+        try:
+            import_result = import_agent_draft_package(
+                db,
+                report.package,
+                package_path=None,
+                allow_duplicate_external_id=False,
+            )
+        except Exception as exc:
+            finished_at = _iso_now()
+            return _build_result(
+                config,
+                "import_failed",
+                started_at,
+                finished_at,
+                None,
+                [f"import_failed: {exc}"],
+                _first_errors(warnings_list, limit=5),
+                provider_override="ollama-components",
+                mode="component_execution",
+                last_phase="import",
+                attempts_by_phase=attempts_by_phase,
+            )
+
         finished_at = _iso_now()
+        warnings_list.extend(import_result.warnings)
         return _build_result(
             config,
-            "import_failed",
+            "imported",
             started_at,
             finished_at,
-            None,
-            [f"import_failed: {exc}"],
+            import_result.run_db_id,
+            [],
             _first_errors(warnings_list, limit=5),
             provider_override="ollama-components",
+            mode="component_execution",
+            last_phase="import",
+            attempts_by_phase=attempts_by_phase,
         )
-
-    finished_at = _iso_now()
-    warnings_list.extend(import_result.warnings)
-    return _build_result(
-        config,
-        "imported",
-        started_at,
-        finished_at,
-        import_result.run_db_id,
-        [],
-        _first_errors(warnings_list, limit=5),
-        provider_override="ollama-components",
-    )
+    finally:
+        _unload_ollama_model(config)
 
 
 def _build_result(
@@ -330,8 +389,11 @@ def _build_result(
     errors_list: list[str],
     warnings_list: list[str],
     provider_override: str | None = None,
+    mode: str | None = None,
+    last_phase: str | None = None,
+    attempts_by_phase: dict[str, int] | None = None,
 ) -> dict[str, Any]:
-    return {
+    result = {
         "success": status == "imported" and run_id is not None,
         "provider": provider_override or config.provider,
         "model": config.model,
@@ -342,13 +404,20 @@ def _build_result(
         "warnings": warnings_list[:5],
         "run_id": run_id,
     }
+    if mode is not None:
+        result["mode"] = mode
+    if last_phase is not None:
+        result["last_phase"] = last_phase
+    if attempts_by_phase is not None:
+        result["attempts_by_phase"] = dict(attempts_by_phase)
+    return result
 
 
 def _call_ollama_for_draft(
     config: OllamaExecutionConfig,
     prompt: str,
 ) -> tuple[dict[str, Any] | None, str | None]:
-    payload = _build_generate_payload(config, prompt)
+    payload = _build_generate_payload(config, prompt, during_execution=True)
     response_data, call_error = _ollama_generate(config, payload)
     if call_error:
         return None, call_error
@@ -364,7 +433,7 @@ def _call_ollama_for_component_batch(
     config: OllamaExecutionConfig,
     prompt: str,
 ) -> tuple[dict[str, Any] | None, str | None]:
-    payload = _build_generate_payload(config, prompt)
+    payload = _build_generate_payload(config, prompt, during_execution=True)
     response_data, call_error = _ollama_generate(config, payload)
     if call_error:
         return None, call_error
@@ -393,7 +462,7 @@ def _call_ollama_for_repair(
         "Draft JSON:\n"
         f"{prior_json}"
     )
-    payload = _build_generate_payload(config, prompt)
+    payload = _build_generate_payload(config, prompt, during_execution=True)
     response_data, call_error = _ollama_generate(config, payload)
     if call_error:
         return None, call_error
@@ -444,13 +513,44 @@ def _ollama_generate(
     return parsed, None
 
 
-def _build_generate_payload(config: OllamaExecutionConfig, prompt: str) -> dict[str, Any]:
+def _build_generate_payload(
+    config: OllamaExecutionConfig,
+    prompt: str,
+    *,
+    during_execution: bool = False,
+) -> dict[str, Any]:
+    keep_alive_value = _execution_keep_alive(config) if during_execution else config.keep_alive
     return {
         "model": config.model,
         "prompt": prompt,
         "stream": False,
-        "keep_alive": config.keep_alive,
+        "keep_alive": keep_alive_value,
     }
+
+
+def _execution_keep_alive(config: OllamaExecutionConfig) -> int | str:
+    if _should_unload_after_execution(config):
+        return "5m"
+    return config.keep_alive
+
+
+def _should_unload_after_execution(config: OllamaExecutionConfig) -> bool:
+    keep_alive = config.keep_alive
+    if isinstance(keep_alive, int):
+        return keep_alive == 0
+    return str(keep_alive).strip() == "0"
+
+
+def _unload_ollama_model(config: OllamaExecutionConfig) -> None:
+    if not _should_unload_after_execution(config):
+        return
+    payload = {
+        "model": config.model,
+        "prompt": "",
+        "stream": False,
+        "keep_alive": 0,
+    }
+    _ollama_generate(config, payload)
 
 
 def _evaluate_product_quality_gate(package: AgentDraftPackage) -> ProductQualityGateResult:
@@ -524,6 +624,36 @@ def _parse_keep_alive_env(name: str, *, default: int) -> int | str:
         return int(raw)
     except ValueError:
         return raw
+
+
+def _parse_component_repair_attempts_env(name: str, *, default: int) -> int:
+    value = _parse_nonnegative_int_env(name, default=default)
+    return min(value, 3)
+
+
+def _validate_component_phase_batch(phase_name: str, batch: ResearchComponentBatch) -> list[str]:
+    event_types = {event.event_type for event in batch.events}
+    if phase_name == "candidate_batch":
+        if ResearchComponentEventType.CANDIDATE_PROPOSED not in event_types:
+            return [
+                (
+                    "The model returned no product candidates. Refine the brief toward a product/problem/opportunity, "
+                    "or try a stronger model."
+                )
+            ]
+        return []
+    if phase_name == "claim_theme_batch":
+        if (
+            ResearchComponentEventType.CLAIM_PROPOSED not in event_types
+            and ResearchComponentEventType.THEME_PROPOSED not in event_types
+        ):
+            return [f"{phase_name}: batch must include claim.proposed and/or theme.proposed"]
+        return []
+    if phase_name == "validation_gate_batch":
+        if ResearchComponentEventType.VALIDATION_GATE_PROPOSED not in event_types:
+            return [f"{phase_name}: batch must include validation_gate.proposed"]
+        return []
+    return []
 
 
 def _safe_normalize_near_miss(raw_data: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
