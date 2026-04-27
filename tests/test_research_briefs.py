@@ -314,7 +314,8 @@ def test_brief_detail_shows_future_start_research_disabled(client):
     assert resp.status_code == 200
     body = resp.text
     assert "Start Research" in body
-    assert "disabled" in body
+    # Website-first prototype now exposes Start Research (stub) — it should not be disabled
+    assert "not yet available" not in body
 
 
 def test_brief_list_shows_created_brief(client):

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from apd.app.db import SessionLocal
 from apd.domain.models import DecisionValue, ReviewStatus, ReviewTargetType
@@ -22,6 +23,7 @@ from apd.services.research_brief_service import (
     get_brief,
     list_briefs,
 )
+from apd.services.research_execution_stub import execute_research_brief_stub
 from apd.web.queries import get_recent_runs, get_run_detail
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -226,4 +228,34 @@ def brief_detail(brief_id: int, request: Request, db: Session = Depends(_get_db)
         "brief_detail.html",
         {"brief": brief, "agent_prompt": prompt},
     )
+
+
+@router.post("/briefs/{brief_id}/start-research", response_class=RedirectResponse)
+def start_research(brief_id: int, db: Session = Depends(_get_db)):
+    brief = get_brief(db, brief_id)
+    if brief is None:
+        raise HTTPException(status_code=404, detail="Research brief not found")
+
+    # record running status in brief metadata
+    meta = brief.metadata_json or {}
+    meta["last_execution"] = {"status": "running", "started_at": datetime.utcnow().isoformat()}
+    brief.metadata_json = meta
+    db.add(brief)
+    db.commit()
+    db.refresh(brief)
+
+    result = execute_research_brief_stub(db, brief)
+
+    meta = brief.metadata_json or {}
+    meta["last_execution"] = {**meta.get("last_execution", {}), "finished_at": datetime.utcnow().isoformat(), "result": result}
+    brief.metadata_json = meta
+    db.add(brief)
+    db.commit()
+    db.refresh(brief)
+
+    if result.get("success") and result.get("run_id"):
+        return RedirectResponse(url=f"/runs/{result.get('run_id')}", status_code=303)
+
+    # On failure, return to brief detail so the UI can show last_execution with errors
+    return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
 
