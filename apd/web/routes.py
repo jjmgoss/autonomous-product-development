@@ -15,6 +15,7 @@ from apd.web.mutations import (
     update_claim_review_status,
     update_run_decision,
 )
+from apd.services.report_export import export_run_markdown_report
 from apd.web.queries import get_recent_runs, get_run_detail
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -150,4 +151,14 @@ def update_decision(
     if result is None:
         raise HTTPException(status_code=404, detail="Run not found")
     return RedirectResponse(url=f"/runs/{run_id}", status_code=303)
+
+
+# --- Run markdown export ---
+
+@router.post("/runs/{run_id}/export-report", response_class=RedirectResponse)
+def export_report(run_id: int, db: Session = Depends(_get_db)):
+    result = export_run_markdown_report(db, run_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return RedirectResponse(url=f"/runs/{run_id}#artifacts", status_code=303)
 

@@ -11,6 +11,7 @@ from apd.domain.models import (
     Candidate,
     Claim,
     Decision,
+    EvidenceExcerpt,
     EvidenceLink,
     ReviewNote,
     Run,
@@ -83,6 +84,13 @@ def get_run_detail(db: Session, run_id: int) -> Optional[dict]:
         select(EvidenceLink).where(EvidenceLink.run_id == run_id)
     ).scalars().all()
 
+    excerpts = {
+        ex.id: ex
+        for ex in db.execute(
+            select(EvidenceExcerpt).where(EvidenceExcerpt.run_id == run_id)
+        ).scalars().all()
+    }
+
     review_notes = db.execute(
         select(ReviewNote).where(ReviewNote.run_id == run_id).order_by(ReviewNote.id)
     ).scalars().all()
@@ -100,9 +108,12 @@ def get_run_detail(db: Session, run_id: int) -> Optional[dict]:
         key = str(link.target_type)
         evidence_index.setdefault(key, {}).setdefault(link.target_id, [])
         src = source_by_id.get(link.source_id) if link.source_id else None
+        excerpt = excerpts.get(link.excerpt_id) if link.excerpt_id else None
         evidence_index[key][link.target_id].append({
             "source_title": src.title if src else None,
             "source_id": link.source_id,
+            "excerpt_id": link.excerpt_id,
+            "excerpt_location": excerpt.location_reference if excerpt else None,
             "relationship_type": str(link.relationship_type),
             "strength": str(link.strength) if link.strength else None,
         })

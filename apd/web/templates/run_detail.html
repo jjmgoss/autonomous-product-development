@@ -57,6 +57,13 @@
     </ul>
   </details>
   {% endif %}
+
+  <form method="post" action="/runs/{{ run.id }}/export-report" class="inline-form">
+    <div class="form-row">
+      <button type="submit" class="btn">Export Markdown Report</button>
+      <span class="muted">Creates a timestamped local report and records it as an artifact.</span>
+    </div>
+  </form>
 </section>
 
 {% if run.summary %}
