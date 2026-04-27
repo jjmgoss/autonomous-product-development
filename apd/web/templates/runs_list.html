@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Recent Runs — APD{% endblock %}
+{% block content %}
+<section class="page-header">
+  <h1>Recent Runs</h1>
+</section>
+
+{% if runs %}
+<table class="runs-table">
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Phase</th>
+      <th>Decision</th>
+      <th>Recommendation</th>
+      <th>Sources</th>
+      <th>Claims</th>
+      <th>Themes</th>
+      <th>Candidates</th>
+      <th>Updated</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in runs %}
+    {% set run = item.run %}
+    <tr>
+      <td>
+        <a href="/runs/{{ run.id }}">{{ run.title }}</a>
+        {% if run.intent and run.intent != run.title %}
+        <p class="run-intent">{{ run.intent }}</p>
+        {% endif %}
+        {% if run.metadata_json and run.metadata_json.get("is_fixture") %}
+        <span class="badge badge-fixture">fixture</span>
+        {% endif %}
+      </td>
+      <td><span class="phase phase-{{ run.phase }}">{{ run.phase.replace("_", " ") }}</span></td>
+      <td>
+        {% if run.current_decision %}
+        <span class="decision decision-{{ run.current_decision }}">{{ run.current_decision.replace("_", " ") }}</span>
+        {% else %}
+        <span class="muted">—</span>
+        {% endif %}
+      </td>
+      <td class="recommendation">
+        {% if run.recommendation %}
+        {{ run.recommendation | truncate(120) }}
+        {% else %}
+        <span class="muted">—</span>
+        {% endif %}
+      </td>
+      <td class="count">{{ item.source_count }}</td>
+      <td class="count">{{ item.claim_count }}</td>
+      <td class="count">{{ item.theme_count }}</td>
+      <td class="count">{{ item.candidate_count }}</td>
+      <td class="timestamp">{{ run.updated_at.strftime("%Y-%m-%d") if run.updated_at else "—" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+  <p>No runs found.</p>
+  <p class="muted">Run <code>uv run python scripts/seed_fixture.py</code> to load fixture data.</p>
+</div>
+{% endif %}
+{% endblock %}
