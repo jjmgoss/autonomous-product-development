@@ -83,6 +83,14 @@ To explicitly reset fixture-owned data and reseed:
 python scripts/seed_fixture.py --reset-fixture
 ```
 
+To import or link an existing legacy APD run by run ID without mutating legacy files:
+
+```text
+python scripts/import_legacy_run.py --run-id 20260422-kickoff-smoke-r1
+```
+
+The legacy import script is read-only against `research-corpus/runs/<run-id>/` and `artifacts/runs/<run-id>/`. It creates database records and warnings only; it does not rewrite manifests or Markdown files.
+
 The cleanup utility is intentionally conservative:
 
 - it removes only truly empty nested run directories
