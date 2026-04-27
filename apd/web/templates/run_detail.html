@@ -80,32 +80,116 @@
 </section>
 {% endif %}
 
-{# Sources #}
-<section class="card" id="sources">
-  <h2>Sources <span class="count-badge">{{ detail.sources | length }}</span></h2>
-  {% if detail.sources %}
-  <table class="detail-table">
-    <thead>
-      <tr><th>#</th><th>Title</th><th>Type</th><th>URL / Reference</th><th>Summary</th></tr>
-    </thead>
-    <tbody>
-      {% for s in detail.sources %}
-      <tr>
-        <td class="count">{{ loop.index }}</td>
-        <td>{{ s.title or "Untitled" }}</td>
-        <td><span class="badge">{{ s.source_type }}</span></td>
-        <td>
-          {% if s.url %}<a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.url | truncate(60) }}</a>
-          {% elif s.raw_path %}{{ s.raw_path }}
-          {% else %}<span class="muted">—</span>{% endif %}
-        </td>
-        <td class="summary-cell">{{ s.summary or "" }}</td>
-      </tr>
+{# Candidates (candidate-first review surface) #}
+<section class="card" id="candidates">
+  <h2>Candidates <span class="count-badge">{{ detail.candidates | length }}</span></h2>
+  {% if detail.candidates %}
+  {% for c in detail.candidates %}
+  {% set rel = detail.candidate_relations.get(c.id, {}) %}
+  {% set elinks = rel.get('evidence') or [] %}
+  {% set cand_notes = detail.notes_by_target.get("candidate", {}).get(c.id, []) %}
+  <div class="candidate-card review-item status-{{ c.review_status }}" id="candidate-{{ c.id }}">
+    <div class="candidate-header">
+      <strong>{{ c.title }}</strong>
+      <span class="status-badge status-{{ c.review_status }}">{{ c.review_status.replace("_", " ") }}</span>
+      {% if c.decision %}<span class="decision decision-{{ c.decision }}">{{ c.decision.replace("_", " ") }}</span>{% endif %}
+      {% if c.is_agent_generated %}<span class="badge badge-agent">agent</span>{% endif %}
+      {% if c.rank %}<span class="rank-badge">rank {{ c.rank }}</span>{% endif %}
+    </div>
+    {% if c.summary %}<p>{{ c.summary }}</p>{% endif %}
+    <dl class="candidate-details">
+      {% if c.target_user %}<div><dt>Target user</dt><dd>{{ c.target_user }}</dd></div>{% endif %}
+      {% if c.first_workflow %}<div><dt>First workflow</dt><dd>{{ c.first_workflow }}</dd></div>{% endif %}
+      {% if c.first_wedge %}<div><dt>First wedge</dt><dd>{{ c.first_wedge }}</dd></div>{% endif %}
+      {% if c.monetization_path %}<div><dt>Monetization</dt><dd>{{ c.monetization_path }}</dd></div>{% endif %}
+      {% if c.substitutes %}<div><dt>Substitutes</dt><dd>{{ c.substitutes }}</dd></div>{% endif %}
+      {% if c.risks %}<div><dt>Risks</dt><dd>{{ c.risks }}</dd></div>{% endif %}
+      {% if c.why_now %}<div><dt>Why now</dt><dd>{{ c.why_now }}</dd></div>{% endif %}
+      {% if c.why_it_might_fail %}<div><dt>Why it might fail</dt><dd>{{ c.why_it_might_fail }}</dd></div>{% endif %}
+    </dl>
+
+    {% if rel.get('gates') %}
+    <div class="candidate-gates">
+      <strong>Validation Gates</strong>
+      <ul>
+        {% for g in rel.get('gates') %}
+        <li class="gate-{{ g.status }}">{{ g.name }} — <span class="muted">{{ g.status.replace("_", " ") }}</span>
+          {% if g.missing_evidence %}<div class="muted">Missing: {{ g.missing_evidence }}</div>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if rel.get('related_themes') %}
+    <div class="candidate-themes">
+      <strong>Related Themes</strong>
+      <ul>
+        {% for t in rel.get('related_themes') %}
+        <li>{{ t.name }} — <span class="muted">{{ t.summary or "" }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% else %}
+    <div class="muted">No linked themes yet.</div>
+    {% endif %}
+
+    {% if rel.get('related_claims') %}
+    <div class="candidate-claims">
+      <strong>Related Claims</strong>
+      <ul>
+        {% for cl in rel.get('related_claims') %}
+        <li>{{ cl.statement }} <span class="muted">(status: {{ cl.review_status }})</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% else %}
+    <div class="muted">No linked claims yet.</div>
+    {% endif %}
+
+    {% if elinks %}
+    <div class="evidence-links-row">
+      <span class="label">Evidence:</span>
+      {% for el in elinks %}
+      <span class="evidence-link" title="{{ el.relationship_type }}{% if el.strength %} ({{ el.strength }}){% endif %}">
+        {% if el.source_title %}{{ el.source_title | truncate(40) }}{% elif el.source_id %}src#{{ el.source_id }}{% else %}—{% endif %}
+        <span class="rel-type">{{ el.relationship_type }}</span>
+      </span>
       {% endfor %}
-    </tbody>
-  </table>
+    </div>
+    {% endif %}
+
+    {% if cand_notes %}
+    <ul class="inline-notes">
+      {% for n in cand_notes %}
+      <li>
+        {% if n.author %}<strong>{{ n.author }}</strong>: {% endif %}{{ n.note }}
+        <span class="muted note-date">{{ n.created_at.strftime("%Y-%m-%d") if n.created_at else "" }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <details class="review-form-details">
+      <summary>Review this candidate</summary>
+      <form method="post" action="/runs/{{ run.id }}/candidates/{{ c.id }}/review" class="review-form">
+        <div class="form-row">
+          <label>Status</label>
+          <select name="review_status" class="form-select">
+            {% for rs in review_statuses %}
+            <option value="{{ rs }}" {% if c.review_status == rs %}selected{% endif %}>{{ rs.replace("_", " ") }}</option>
+            {% endfor %}
+          </select>
+          <label>Note (optional)</label>
+          <input type="text" name="note" class="form-input" placeholder="Add a review note…" maxlength="1000">
+          <button type="submit" class="btn btn-sm">Save</button>
+        </div>
+      </form>
+    </details>
+  </div>
+  {% endfor %}
   {% else %}
-  <p class="muted">No sources.</p>
+  <p class="muted">No candidates.</p>
   {% endif %}
 </section>
 
@@ -207,73 +291,32 @@
   {% endif %}
 </section>
 
-{# Candidates #}
-<section class="card" id="candidates">
-  <h2>Candidates <span class="count-badge">{{ detail.candidates | length }}</span></h2>
-  {% if detail.candidates %}
-  {% for c in detail.candidates %}
-  {% set elinks = detail.evidence_index.get("candidate", {}).get(c.id, []) %}
-  {% set cand_notes = detail.notes_by_target.get("candidate", {}).get(c.id, []) %}
-  <div class="candidate-card review-item status-{{ c.review_status }}" id="candidate-{{ c.id }}">
-    <div class="candidate-header">
-      <strong>{{ c.title }}</strong>
-      <span class="status-badge status-{{ c.review_status }}">{{ c.review_status.replace("_", " ") }}</span>
-      {% if c.decision %}<span class="decision decision-{{ c.decision }}">{{ c.decision.replace("_", " ") }}</span>{% endif %}
-      {% if c.is_agent_generated %}<span class="badge badge-agent">agent</span>{% endif %}
-      {% if c.rank %}<span class="rank-badge">rank {{ c.rank }}</span>{% endif %}
-    </div>
-    {% if c.summary %}<p>{{ c.summary }}</p>{% endif %}
-    <dl class="candidate-details">
-      {% if c.target_user %}<div><dt>Target user</dt><dd>{{ c.target_user }}</dd></div>{% endif %}
-      {% if c.first_workflow %}<div><dt>First workflow</dt><dd>{{ c.first_workflow }}</dd></div>{% endif %}
-      {% if c.first_wedge %}<div><dt>First wedge</dt><dd>{{ c.first_wedge }}</dd></div>{% endif %}
-      {% if c.monetization_path %}<div><dt>Monetization</dt><dd>{{ c.monetization_path }}</dd></div>{% endif %}
-      {% if c.substitutes %}<div><dt>Substitutes</dt><dd>{{ c.substitutes }}</dd></div>{% endif %}
-      {% if c.risks %}<div><dt>Risks</dt><dd>{{ c.risks }}</dd></div>{% endif %}
-      {% if c.why_now %}<div><dt>Why now</dt><dd>{{ c.why_now }}</dd></div>{% endif %}
-      {% if c.why_it_might_fail %}<div><dt>Why it might fail</dt><dd>{{ c.why_it_might_fail }}</dd></div>{% endif %}
-    </dl>
-    {% if elinks %}
-    <div class="evidence-links-row">
-      <span class="label">Evidence:</span>
-      {% for el in elinks %}
-      <span class="evidence-link" title="{{ el.relationship_type }}{% if el.strength %} ({{ el.strength }}){% endif %}">
-        {% if el.source_title %}{{ el.source_title | truncate(40) }}{% elif el.source_id %}src#{{ el.source_id }}{% else %}—{% endif %}
-        <span class="rel-type">{{ el.relationship_type }}</span>
-      </span>
+{# Sources #}
+<section class="card" id="sources">
+  <h2>Sources <span class="count-badge">{{ detail.sources | length }}</span></h2>
+  {% if detail.sources %}
+  <table class="detail-table">
+    <thead>
+      <tr><th>#</th><th>Title</th><th>Type</th><th>URL / Reference</th><th>Summary</th></tr>
+    </thead>
+    <tbody>
+      {% for s in detail.sources %}
+      <tr>
+        <td class="count">{{ loop.index }}</td>
+        <td>{{ s.title or "Untitled" }}</td>
+        <td><span class="badge">{{ s.source_type }}</span></td>
+        <td>
+          {% if s.url %}<a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.url | truncate(60) }}</a>
+          {% elif s.raw_path %}{{ s.raw_path }}
+          {% else %}<span class="muted">—</span>{% endif %}
+        </td>
+        <td class="summary-cell">{{ s.summary or "" }}</td>
+      </tr>
       {% endfor %}
-    </div>
-    {% endif %}
-    {% if cand_notes %}
-    <ul class="inline-notes">
-      {% for n in cand_notes %}
-      <li>
-        {% if n.author %}<strong>{{ n.author }}</strong>: {% endif %}{{ n.note }}
-        <span class="muted note-date">{{ n.created_at.strftime("%Y-%m-%d") if n.created_at else "" }}</span>
-      </li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-    <details class="review-form-details">
-      <summary>Review this candidate</summary>
-      <form method="post" action="/runs/{{ run.id }}/candidates/{{ c.id }}/review" class="review-form">
-        <div class="form-row">
-          <label>Status</label>
-          <select name="review_status" class="form-select">
-            {% for rs in review_statuses %}
-            <option value="{{ rs }}" {% if c.review_status == rs %}selected{% endif %}>{{ rs.replace("_", " ") }}</option>
-            {% endfor %}
-          </select>
-          <label>Note (optional)</label>
-          <input type="text" name="note" class="form-input" placeholder="Add a review note…" maxlength="1000">
-          <button type="submit" class="btn btn-sm">Save</button>
-        </div>
-      </form>
-    </details>
-  </div>
-  {% endfor %}
+    </tbody>
+  </table>
   {% else %}
-  <p class="muted">No candidates.</p>
+  <p class="muted">No sources.</p>
   {% endif %}
 </section>
 
@@ -314,6 +357,45 @@
   </table>
   {% else %}
   <p class="muted">No validation gates.</p>
+  {% endif %}
+</section>
+
+{# Unlinked / needs organization #}
+<section class="card" id="unlinked">
+  <h2>Unlinked / Needs organization</h2>
+  {% if detail.unlinked_claims or detail.unlinked_themes or detail.unlinked_validation_gates %}
+  {% if detail.unlinked_claims %}
+  <div>
+    <strong>Unlinked Claims</strong>
+    <ul>
+      {% for uc in detail.unlinked_claims %}
+      <li>{{ uc.statement }} <span class="muted">(status: {{ uc.review_status }})</span></li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if detail.unlinked_themes %}
+  <div>
+    <strong>Unlinked Themes</strong>
+    <ul>
+      {% for ut in detail.unlinked_themes %}
+      <li>{{ ut.name }} — <span class="muted">{{ ut.summary or "" }}</span></li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if detail.unlinked_validation_gates %}
+  <div>
+    <strong>Unlinked Validation Gates</strong>
+    <ul>
+      {% for ug in detail.unlinked_validation_gates %}
+      <li>{{ ug.name }} — <span class="muted">{{ ug.missing_evidence or "" }}</span></li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% else %}
+  <p class="muted">No unlinked material; all items are associated with candidates.</p>
   {% endif %}
 </section>
 

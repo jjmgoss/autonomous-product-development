@@ -122,6 +122,70 @@ def get_run_detail(db: Session, run_id: int) -> Optional[dict]:
         run.metadata_json and run.metadata_json.get("is_fixture")
     )
 
+    # Build lookups for inference
+    claims_by_id = {c.id: c for c in claims}
+    themes_by_id = {t.id: t for t in themes}
+
+    # Map validation gates by candidate for quick access
+    gates_by_candidate: dict[int, list[ValidationGate]] = {}
+    for g in validation_gates:
+        if g.candidate_id:
+            gates_by_candidate.setdefault(g.candidate_id, []).append(g)
+
+    # Build candidate-centered relations by inferring shared evidence (source/excerpt)
+    candidate_relations: dict[int, dict] = {}
+    # Precompute evidence references per target for faster checks
+    def _refs_for_links(links: list[dict]) -> tuple[set[int], set[int]]:
+        sids = set()
+        eids = set()
+        for L in links:
+            if L.get("source_id"):
+                sids.add(L.get("source_id"))
+            if L.get("excerpt_id"):
+                eids.add(L.get("excerpt_id"))
+        return sids, eids
+
+    candidate_links_index = evidence_index.get("candidate", {})
+    claim_links_index = evidence_index.get("claim", {})
+    theme_links_index = evidence_index.get("theme", {})
+
+    for c in candidates:
+        clinks = candidate_links_index.get(c.id, [])
+        c_sids, c_eids = _refs_for_links(clinks)
+
+        # Find claims/themes that share source or excerpt references with the candidate
+        related_claims: list[Claim] = []
+        for cid, clinks in claim_links_index.items():
+            sids, eids = _refs_for_links(clinks)
+            if (sids & c_sids) or (eids & c_eids):
+                claim_obj = claims_by_id.get(cid)
+                if claim_obj:
+                    related_claims.append(claim_obj)
+
+        related_themes: list[Theme] = []
+        for tid, tlinks in theme_links_index.items():
+            sids, eids = _refs_for_links(tlinks)
+            if (sids & c_sids) or (eids & c_eids):
+                theme_obj = themes_by_id.get(tid)
+                if theme_obj:
+                    related_themes.append(theme_obj)
+
+        candidate_relations[c.id] = {
+            "evidence": clinks,
+            "gates": gates_by_candidate.get(c.id, []),
+            "related_claims": related_claims,
+            "related_themes": related_themes,
+        }
+
+    # Unlinked material (not inferred to belong to any candidate)
+    linked_claim_ids = {cl.id for rel in candidate_relations.values() for cl in rel["related_claims"]}
+    linked_theme_ids = {t.id for rel in candidate_relations.values() for t in rel["related_themes"]}
+    linked_gate_ids = {g.id for rel in candidate_relations.values() for g in rel["gates"]}
+
+    unlinked_claims = [c for c in claims if c.id not in linked_claim_ids]
+    unlinked_themes = [t for t in themes if t.id not in linked_theme_ids]
+    unlinked_validation_gates = [g for g in validation_gates if g.id not in linked_gate_ids]
+
     return {
         "run": run,
         "sources": sources,
@@ -135,6 +199,10 @@ def get_run_detail(db: Session, run_id: int) -> Optional[dict]:
         "is_fixture": is_fixture,
         "decision_history": decision_history,
         "notes_by_target": _build_notes_by_target(review_notes),
+        "candidate_relations": candidate_relations,
+        "unlinked_claims": unlinked_claims,
+        "unlinked_themes": unlinked_themes,
+        "unlinked_validation_gates": unlinked_validation_gates,
     }
 
 
