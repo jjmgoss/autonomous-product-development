@@ -16,6 +16,12 @@ from apd.web.mutations import (
     update_run_decision,
 )
 from apd.services.report_export import export_run_markdown_report
+from apd.services.research_brief_service import (
+    create_brief,
+    generate_agent_prompt,
+    get_brief,
+    list_briefs,
+)
 from apd.web.queries import get_recent_runs, get_run_detail
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -161,4 +167,63 @@ def export_report(run_id: int, db: Session = Depends(_get_db)):
     if result is None:
         raise HTTPException(status_code=404, detail="Run not found")
     return RedirectResponse(url=f"/runs/{run_id}#artifacts", status_code=303)
+
+
+# ── Research briefs ────────────────────────────────────────────────────────────
+
+
+@router.get("/briefs", response_class=HTMLResponse)
+def briefs_list(request: Request, db: Session = Depends(_get_db)):
+    briefs = list_briefs(db)
+    return templates.TemplateResponse(
+        request,
+        "briefs_list.html",
+        {"briefs": briefs},
+    )
+
+
+@router.get("/briefs/new", response_class=HTMLResponse)
+def briefs_new(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "brief_new.html",
+        {},
+    )
+
+
+@router.post("/briefs", response_class=RedirectResponse)
+def briefs_create(
+    title: str = Form(...),
+    research_question: str = Form(...),
+    constraints: str = Form(""),
+    desired_depth: str = Form(""),
+    expected_outputs: str = Form(""),
+    notes: str = Form(""),
+    db: Session = Depends(_get_db),
+):
+    if not title.strip() or not research_question.strip():
+        raise HTTPException(status_code=422, detail="Title and research question are required")
+    brief = create_brief(
+        db,
+        title=title,
+        research_question=research_question,
+        constraints=constraints or None,
+        desired_depth=desired_depth or None,
+        expected_outputs=expected_outputs or None,
+        notes=notes or None,
+    )
+    return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
+
+
+@router.get("/briefs/{brief_id}", response_class=HTMLResponse)
+def brief_detail(brief_id: int, request: Request, db: Session = Depends(_get_db)):
+    brief = get_brief(db, brief_id)
+    if brief is None:
+        raise HTTPException(status_code=404, detail="Research brief not found")
+    prompt = generate_agent_prompt(brief)
+    return templates.TemplateResponse(
+        request,
+        "brief_detail.html",
+        {"brief": brief, "agent_prompt": prompt},
+    )
 

@@ -96,6 +96,14 @@ class EvidenceStrength(StrEnum):
     STRONG = "strong"
 
 
+class ResearchBriefStatus(StrEnum):
+    DRAFT = "draft"
+    READY = "ready"
+    EXTERNAL_AGENT_PROMPTED = "external_agent_prompted"
+    IMPORTED = "imported"
+    ARCHIVED = "archived"
+
+
 class Run(Base):
     __tablename__ = "runs"
 
@@ -383,3 +391,23 @@ class Artifact(Base):
 
     run: Mapped[Run] = relationship(back_populates="artifacts")
     candidate: Mapped[Optional[Candidate]] = relationship(back_populates="artifacts")
+
+
+class ResearchBrief(Base):
+    __tablename__ = "research_briefs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    research_question: Mapped[str] = mapped_column(Text, nullable=False)
+    constraints: Mapped[Optional[str]] = mapped_column(Text)
+    desired_depth: Mapped[Optional[str]] = mapped_column(String(64))
+    expected_outputs: Mapped[Optional[str]] = mapped_column(Text)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    status: Mapped[ResearchBriefStatus] = mapped_column(
+        SqlEnum(ResearchBriefStatus, native_enum=False, validate_strings=True),
+        nullable=False,
+        default=ResearchBriefStatus.DRAFT,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, onupdate=_utc_now, nullable=False)
+    metadata_json: Mapped[Optional[dict]] = mapped_column(JSON)

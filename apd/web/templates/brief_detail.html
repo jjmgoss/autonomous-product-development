@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}{{ brief.title }} — Research Brief — APD{% endblock %}
+{% block content %}
+<div class="breadcrumb">
+  <a href="/briefs">Research Briefs</a> &rsaquo; {{ brief.title | truncate(60) }}
+</div>
+
+<section class="run-header">
+  <h1>
+    {{ brief.title }}
+    <span class="badge brief-status-{{ brief.status }}">{{ brief.status.replace("_", " ") }}</span>
+  </h1>
+  <div class="run-meta">
+    <span class="muted">Created {{ brief.created_at.strftime("%Y-%m-%d %H:%M UTC") if brief.created_at else "—" }}</span>
+  </div>
+</section>
+
+<!-- Brief content -->
+<div class="card">
+  <h2>Brief content</h2>
+
+  <table class="detail-table" style="max-width: 800px;">
+    <tr>
+      <th style="width: 180px;">Research question</th>
+      <td style="white-space: pre-wrap;">{{ brief.research_question }}</td>
+    </tr>
+    {% if brief.constraints %}
+    <tr>
+      <th>Constraints</th>
+      <td style="white-space: pre-wrap;">{{ brief.constraints }}</td>
+    </tr>
+    {% endif %}
+    {% if brief.desired_depth %}
+    <tr>
+      <th>Desired depth</th>
+      <td>{{ brief.desired_depth }}</td>
+    </tr>
+    {% endif %}
+    {% if brief.expected_outputs %}
+    <tr>
+      <th>Expected outputs</th>
+      <td style="white-space: pre-wrap;">{{ brief.expected_outputs }}</td>
+    </tr>
+    {% endif %}
+    {% if brief.notes %}
+    <tr>
+      <th>Notes</th>
+      <td style="white-space: pre-wrap;">{{ brief.notes }}</td>
+    </tr>
+    {% endif %}
+  </table>
+</div>
+
+<!-- Generated agent prompt -->
+<div class="card" id="agent-prompt">
+  <h2>Generated agent prompt</h2>
+
+  <div class="notice-box" style="
+    background: #fef9c3;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+  ">
+    <strong>Manual mode — APD is not yet running the model.</strong>
+    Copy the prompt below and paste it into an external research agent (e.g. Claude, GPT-4).
+    The agent will return an APD draft JSON package that you can validate and import.
+    This manual copy-paste step is temporary; automated execution is planned for a future release.
+  </div>
+
+  <div style="margin-bottom: 0.75rem;">
+    <button
+      type="button"
+      class="btn btn-primary btn-sm"
+      onclick="copyPrompt()"
+      id="copy-btn"
+    >Copy prompt</button>
+    <span id="copy-confirm" style="display:none; margin-left: 0.5rem; color: #065f46; font-size: 0.8rem;">Copied!</span>
+  </div>
+
+  <pre id="prompt-text" style="
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 1rem;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 600px;
+    overflow-y: auto;
+  ">{{ agent_prompt }}</pre>
+</div>
+
+<!-- Next steps -->
+<div class="card" id="next-steps">
+  <h2>Next steps</h2>
+  <ol style="font-size: 0.875rem; line-height: 1.8; padding-left: 1.25rem;">
+    <li>Copy the prompt above and run it in your external research agent.</li>
+    <li>
+      Save the returned JSON to a local file, then validate it:
+      <br>
+      <code style="background:#f1f5f9; padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.8rem;">
+        uv run python scripts/validate_agent_draft.py --path &lt;draft.json&gt; --repair-hints
+      </code>
+    </li>
+    <li>
+      If validation fails, normalize common near-miss fields:
+      <br>
+      <code style="background:#f1f5f9; padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.8rem;">
+        uv run python scripts/normalize_agent_draft.py --path &lt;draft.json&gt; --out &lt;normalized.json&gt;
+      </code>
+    </li>
+    <li>
+      Import the validated draft:
+      <br>
+      <code style="background:#f1f5f9; padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.8rem;">
+        uv run python scripts/import_agent_draft.py --path &lt;normalized.json&gt;
+      </code>
+    </li>
+    <li>Open the imported run in <a href="/runs">Runs</a> and review the evidence chain.</li>
+  </ol>
+
+  <div class="notice-box" style="
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: #0369a1;
+  ">
+    <strong>Future:</strong>
+    A <em>Start Research</em> action that runs the agent automatically without copy-paste is
+    planned for a future release (tracked in issue #44). Until then, the workflow above is the
+    intended path.
+    <button type="button" class="btn btn-sm" disabled style="margin-left: 0.5rem; opacity: 0.4; cursor: not-allowed;">
+      Start Research (not yet available)
+    </button>
+  </div>
+</div>
+
+<script>
+function copyPrompt() {
+  var text = document.getElementById("prompt-text").textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById("copy-btn");
+    var confirm = document.getElementById("copy-confirm");
+    btn.textContent = "Copied!";
+    confirm.style.display = "inline";
+    setTimeout(function() {
+      btn.textContent = "Copy prompt";
+      confirm.style.display = "none";
+    }, 2000);
+  });
+}
+</script>
+{% endblock %}

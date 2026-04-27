@@ -379,3 +379,15 @@ tr.gate-weak td { background: #fffbeb; }
 
 /* badge-agent */
 .badge-agent { background: #ede9fe; color: #4c1d95; }
+
+/* research brief status badges */
+.brief-status-draft { background: #f1f5f9; color: #475569; }
+.brief-status-ready { background: #dbeafe; color: #1e40af; }
+.brief-status-external_agent_prompted { background: #fef3c7; color: #92400e; }
+.brief-status-imported { background: #d1fae5; color: #065f46; }
+.brief-status-archived { background: #f3f4f6; color: #6b7280; }
+
+/* nav links */
+.nav-sep { color: #475569; margin: 0 0.5rem; }
+.nav-link { color: #94a3b8; text-decoration: none; font-size: 0.85rem; margin-left: 0.5rem; }
+.nav-link:hover { color: #e2e8f0; }
