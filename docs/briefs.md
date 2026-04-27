@@ -45,6 +45,7 @@ Optional:
 
 - `APD_OLLAMA_TIMEOUT_SECONDS` (default: `120`)
 - `APD_OLLAMA_REPAIR_ATTEMPTS` (default: `1`, capped at one repair call)
+- `APD_OLLAMA_KEEP_ALIVE` (default: `0`, unload model after each APD run to free GPU/VRAM)
 
 Behavior:
 
@@ -55,11 +56,15 @@ Behavior:
   3) substring from first `{` to last `}`,
   4) otherwise parse failure.
 - APD validates strictly, applies safe normalization for common near-miss fields, and attempts at most one repair call.
-- APD imports only when strict validation passes.
+- APD imports only when strict validation and a minimal product-quality gate pass.
+- Schema-valid output is not automatically product-useful. APD rejects zero-candidate local runs with `quality_failed_no_candidates`.
+- If local output includes source URLs without provided source context, APD records a quality warning (`quality_warning_unprovided_source_urls`).
 - Brief metadata stores concise execution diagnostics under `metadata_json.last_execution`.
+- APD sends Ollama requests with `keep_alive: 0` by default so local model resources are released after execution.
 
 Limitations:
 
 - Ollama only. No other provider integrations are included in this path.
 - No streaming, background jobs, source fetching, or external publishing.
+- Local/Ollama runs should not invent sources, URLs, citations, or claims of fetched web evidence.
 - Tests mock Ollama calls; live Ollama verification is manual.
