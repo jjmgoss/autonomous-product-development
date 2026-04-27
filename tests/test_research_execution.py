@@ -139,7 +139,8 @@ def test_execute_ollama_success_path_imports_run(db, monkeypatch):
             {
                 "response": (
                     '{"schema_version":"1.0","external_draft_id":"ollama-1","agent_name":"ollama-test",'
-                    '"run":{"title":"Ollama run","intent":"Q"},"claims":[{"id":"c1","statement":"S"}]}'
+                    '"run":{"title":"Ollama run","intent":"Q"},"claims":[{"id":"c1","statement":"S"}],'
+                    '"candidates":[{"id":"cand-1","title":"Candidate 1","summary":"S"}]}'
                 )
             },
             None,
@@ -201,7 +202,8 @@ def test_execute_ollama_validation_failure_repair_succeeds(db, monkeypatch):
             {
                 "response": (
                     '{"schema_version":"1.0","external_draft_id":"repair-1b","agent_name":"ollama-test",'
-                    '"run":{"title":"R2","intent":"Q"},"claims":[{"id":"c1","statement":"fixed"}]}'
+                    '"run":{"title":"R2","intent":"Q"},"claims":[{"id":"c1","statement":"fixed"}],'
+                    '"candidates":[{"id":"cand-1","title":"Candidate 1"}]}'
                 )
             },
             None,
@@ -214,6 +216,95 @@ def test_execute_ollama_validation_failure_repair_succeeds(db, monkeypatch):
     assert result["success"] is True
     assert result["status"] == "imported"
     assert isinstance(result["run_id"], int)
+
+
+def test_execute_ollama_zero_candidate_fails_quality_gate(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("APD_OLLAMA_REPAIR_ATTEMPTS", "0")
+
+    brief = create_brief(db, title="No candidates", research_question="Q")
+    brief = get_brief(db, brief.id)
+
+    def _fake_generate(config, payload):
+        return (
+            {
+                "response": (
+                    '{"schema_version":"1.0","external_draft_id":"qc-1","agent_name":"ollama-test",'
+                    '"run":{"title":"R","intent":"Q"},"claims":[{"id":"c1","statement":"S"}]}'
+                )
+            },
+            None,
+        )
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+    result = execute_research_brief_ollama(db, brief)
+    assert result["success"] is False
+    assert result["status"] == "quality_failed_no_candidates"
+    assert result["run_id"] is None
+    assert any("no product candidates" in err.lower() for err in result["errors"])
+
+
+def test_execute_ollama_source_url_adds_quality_warning(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("APD_OLLAMA_REPAIR_ATTEMPTS", "0")
+
+    brief = create_brief(db, title="URL warning", research_question="Q")
+    brief = get_brief(db, brief.id)
+
+    def _fake_generate(config, payload):
+        return (
+            {
+                "response": (
+                    '{"schema_version":"1.0","external_draft_id":"qc-2","agent_name":"ollama-test",'
+                    '"run":{"title":"R","intent":"Q"},"sources":[{"id":"src-1","source_type":"forum","url":"https://example.com"}],'
+                    '"candidates":[{"id":"cand-1","title":"Candidate 1"}]}'
+                )
+            },
+            None,
+        )
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+    result = execute_research_brief_ollama(db, brief)
+    assert result["success"] is True
+    assert result["status"] == "imported"
+    assert "quality_warning_unprovided_source_urls" in result["warnings"]
+
+
+def test_execute_ollama_payload_defaults_keep_alive_zero_and_uses_strict_prompt(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.delenv("APD_OLLAMA_KEEP_ALIVE", raising=False)
+    monkeypatch.setenv("APD_OLLAMA_REPAIR_ATTEMPTS", "0")
+
+    brief = create_brief(db, title="Prompt+payload", research_question="Q")
+    brief = get_brief(db, brief.id)
+    captured_payloads = []
+
+    def _fake_generate(config, payload):
+        captured_payloads.append(payload)
+        return (
+            {
+                "response": (
+                    '{"schema_version":"1.0","external_draft_id":"qc-3","agent_name":"ollama-test",'
+                    '"run":{"title":"R","intent":"Q"},"candidates":[{"id":"cand-1","title":"Candidate 1"}]}'
+                )
+            },
+            None,
+        )
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+    result = execute_research_brief_ollama(db, brief)
+    assert result["success"] is True
+    assert captured_payloads
+    first_payload = captured_payloads[0]
+    assert first_payload.get("keep_alive") == 0
+    assert "product investigation system" in first_payload.get("prompt", "").lower()
+    assert "do not invent sources" in first_payload.get("prompt", "").lower()
 
 
 def test_start_research_ollama_route_uses_mocked_service(client, monkeypatch):

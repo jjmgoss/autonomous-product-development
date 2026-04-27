@@ -82,6 +82,19 @@ uv run python scripts/normalize_agent_draft.py --path <draft.json> --out <normal
 Producing valid JSON on the first attempt avoids requiring a repair loop.
 """
 
+_OLLAMA_EXECUTION_CONSTRAINTS = """\
+## Local Ollama execution constraints (mandatory)
+
+- APD is a product investigation system, not a general Q&A system.
+- If this brief is not product/problem/opportunity oriented, return a structured needs-clarification draft instead of inventing a product run.
+- Do not invent sources, URLs, citations, Reddit threads, forum posts, or evidence.
+- No source text/source pack is provided in this local run. If evidence is ungrounded, label it as synthetic/model-prior in source metadata and avoid fake URLs.
+- For a normal product investigation run, include at least one candidate.
+- Claims must be specific enough to influence product judgment.
+- Candidates should include target user, first workflow, first wedge, substitutes, risks, and validation gates when possible.
+- All output remains draft/unreviewed.
+"""
+
 # ── CRUD ─────────────────────────────────────────────────────────────────────
 
 
@@ -204,3 +217,9 @@ def generate_agent_prompt(brief: ResearchBrief) -> str:
     )
 
     return "\n".join(lines)
+
+
+def generate_ollama_execution_prompt(brief: ResearchBrief) -> str:
+    """Return a stricter prompt for local Ollama execution."""
+    base = generate_agent_prompt(brief)
+    return "\n".join([base, "", "---", "", _OLLAMA_EXECUTION_CONSTRAINTS, "", "Return only the JSON package."])

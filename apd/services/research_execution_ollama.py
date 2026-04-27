@@ -11,9 +11,9 @@ from urllib import error, request
 
 from sqlalchemy.orm import Session
 
-from apd.services.agent_draft_import import import_agent_draft_package
+from apd.services.agent_draft_import import AgentDraftPackage, import_agent_draft_package
 from apd.services.agent_draft_validation import validate_agent_draft_data
-from apd.services.research_brief_service import generate_agent_prompt
+from apd.services.research_brief_service import generate_ollama_execution_prompt
 
 
 def _iso_now() -> str:
@@ -27,6 +27,14 @@ class OllamaExecutionConfig:
     model: str
     timeout_seconds: int
     repair_attempts: int
+    keep_alive: int | str
+
+
+@dataclass(frozen=True)
+class ProductQualityGateResult:
+    status: str
+    error: str | None
+    warnings: list[str]
 
 
 def get_ollama_execution_config() -> tuple[OllamaExecutionConfig | None, list[str]]:
@@ -49,6 +57,7 @@ def get_ollama_execution_config() -> tuple[OllamaExecutionConfig | None, list[st
     repair_attempts = _parse_nonnegative_int_env("APD_OLLAMA_REPAIR_ATTEMPTS", default=1)
     # Scope guardrail: permit at most one repair call.
     repair_attempts = min(repair_attempts, 1)
+    keep_alive = _parse_keep_alive_env("APD_OLLAMA_KEEP_ALIVE", default=0)
 
     return (
         OllamaExecutionConfig(
@@ -57,6 +66,7 @@ def get_ollama_execution_config() -> tuple[OllamaExecutionConfig | None, list[st
             model=model,
             timeout_seconds=timeout_seconds,
             repair_attempts=repair_attempts,
+            keep_alive=keep_alive,
         ),
         [],
     )
@@ -103,7 +113,7 @@ def execute_research_brief_ollama(db: Session, brief) -> dict[str, Any]:
             "run_id": None,
         }
 
-    prompt = generate_agent_prompt(brief)
+    prompt = generate_ollama_execution_prompt(brief)
     status = "failed"
     errors_list: list[str] = []
     warnings_list: list[str] = []
@@ -149,6 +159,13 @@ def execute_research_brief_ollama(db: Session, brief) -> dict[str, Any]:
             errors_list.extend(_first_errors(report.errors, limit=5))
         finished_at = _iso_now()
         return _build_result(config, status, started_at, finished_at, run_id, errors_list, warnings_list)
+
+    quality_result = _evaluate_product_quality_gate(package)
+    warnings_list.extend(quality_result.warnings)
+    if quality_result.error:
+        finished_at = _iso_now()
+        errors_list.append(quality_result.error)
+        return _build_result(config, quality_result.status, started_at, finished_at, run_id, errors_list, warnings_list)
 
     try:
         import_result = import_agent_draft_package(
@@ -196,11 +213,7 @@ def _call_ollama_for_draft(
     config: OllamaExecutionConfig,
     prompt: str,
 ) -> tuple[dict[str, Any] | None, str | None]:
-    payload = {
-        "model": config.model,
-        "prompt": prompt,
-        "stream": False,
-    }
+    payload = _build_generate_payload(config, prompt)
     response_data, call_error = _ollama_generate(config, payload)
     if call_error:
         return None, call_error
@@ -228,11 +241,7 @@ def _call_ollama_for_repair(
         "Draft JSON:\n"
         f"{prior_json}"
     )
-    payload = {
-        "model": config.model,
-        "prompt": prompt,
-        "stream": False,
-    }
+    payload = _build_generate_payload(config, prompt)
     response_data, call_error = _ollama_generate(config, payload)
     if call_error:
         return None, call_error
@@ -283,6 +292,42 @@ def _ollama_generate(
     return parsed, None
 
 
+def _build_generate_payload(config: OllamaExecutionConfig, prompt: str) -> dict[str, Any]:
+    return {
+        "model": config.model,
+        "prompt": prompt,
+        "stream": False,
+        "keep_alive": config.keep_alive,
+    }
+
+
+def _evaluate_product_quality_gate(package: AgentDraftPackage) -> ProductQualityGateResult:
+    if len(package.candidates) == 0:
+        return ProductQualityGateResult(
+            status="quality_failed_no_candidates",
+            error=(
+                "The model returned no product candidates. Refine the brief toward a product/problem/opportunity, "
+                "or try a stronger model."
+            ),
+            warnings=[],
+        )
+
+    recommendation = (package.run.recommendation or "").strip().lower()
+    if recommendation in {"needs_clarification", "needs-clarification"}:
+        return ProductQualityGateResult(
+            status="needs_clarification",
+            error="The model requested clarification. Refine the brief with a concrete product/problem/opportunity focus.",
+            warnings=[],
+        )
+
+    has_source_urls = any(bool(source.url and str(source.url).strip()) for source in package.sources)
+    warnings: list[str] = []
+    if has_source_urls:
+        warnings.append("quality_warning_unprovided_source_urls")
+
+    return ProductQualityGateResult(status="ok", error=None, warnings=warnings)
+
+
 def _parse_json_object(candidate: str) -> dict[str, Any] | None:
     try:
         parsed = json.loads(candidate)
@@ -317,6 +362,16 @@ def _parse_nonnegative_int_env(name: str, *, default: int) -> int:
     except ValueError:
         return default
     return value if value >= 0 else default
+
+
+def _parse_keep_alive_env(name: str, *, default: int) -> int | str:
+    raw = (os.getenv(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return raw
 
 
 def _safe_normalize_near_miss(raw_data: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
