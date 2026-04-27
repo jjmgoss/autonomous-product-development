@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block title %}{{ run.title }} — APD{% endblock %}
 {% block content %}
 
@@ -14,7 +14,6 @@
   {% if run.intent and run.intent != run.title %}
   <p class="run-intent">{{ run.intent }}</p>
   {% endif %}
-
   <div class="run-meta">
     <span class="phase phase-{{ run.phase }}">Phase: {{ run.phase.replace("_", " ") }}</span>
     {% if run.current_decision %}
@@ -24,6 +23,40 @@
     {% endif %}
     <span class="muted">Updated: {{ run.updated_at.strftime("%Y-%m-%d %H:%M UTC") if run.updated_at else "—" }}</span>
   </div>
+</section>
+
+{# Run Decision Update #}
+<section class="card" id="run-decision">
+  <h2>Update Run Decision</h2>
+  <form method="post" action="/runs/{{ run.id }}/decision" class="inline-form">
+    <div class="form-row">
+      <label for="decision-select">Decision</label>
+      <select name="decision" id="decision-select" class="form-select">
+        {% for dv in decision_values %}
+        <option value="{{ dv }}" {% if run.current_decision and run.current_decision == dv %}selected{% endif %}>
+          {{ dv.replace("_", " ") }}{% if dv == "build_approved" %} — explicit human action required{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <label for="decision-rationale">Rationale (optional)</label>
+      <input type="text" name="rationale" id="decision-rationale" class="form-input" placeholder="Brief reason…" maxlength="500">
+      <button type="submit" class="btn btn-primary">Save Decision</button>
+    </div>
+  </form>
+  {% if detail.decision_history %}
+  <details class="history-details">
+    <summary>Decision history ({{ detail.decision_history | length }})</summary>
+    <ul class="history-list">
+      {% for d in detail.decision_history %}
+      <li>
+        <span class="decision decision-{{ d.decision }}">{{ d.decision.replace("_", " ") }}</span>
+        <span class="muted">{{ d.decided_at.strftime("%Y-%m-%d %H:%M UTC") if d.decided_at else "" }}</span>
+        {% if d.rationale %}<span>— {{ d.rationale }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
 </section>
 
 {% if run.summary %}
@@ -73,33 +106,56 @@
 <section class="card" id="claims">
   <h2>Claims <span class="count-badge">{{ detail.claims | length }}</span></h2>
   {% if detail.claims %}
-  <table class="detail-table">
-    <thead>
-      <tr><th>#</th><th>Statement</th><th>Type</th><th>Status</th><th>Agent?</th><th>Evidence</th></tr>
-    </thead>
-    <tbody>
-      {% for c in detail.claims %}
-      {% set elinks = detail.evidence_index.get("claim", {}).get(c.id, []) %}
-      <tr class="status-{{ c.review_status }}">
-        <td class="count">{{ loop.index }}</td>
-        <td>{{ c.statement }}</td>
-        <td>{{ c.claim_type or "—" }}</td>
-        <td><span class="status-badge status-{{ c.review_status }}">{{ c.review_status.replace("_", " ") }}</span></td>
-        <td>{{ "yes" if c.is_agent_generated else "no" }}</td>
-        <td class="evidence-cell">
-          {% if elinks %}
-          {% for el in elinks %}
-          <span class="evidence-link" title="{{ el.relationship_type }}{% if el.strength %} ({{ el.strength }}){% endif %}">
-            {% if el.source_title %}{{ el.source_title | truncate(40) }}{% elif el.source_id %}src#{{ el.source_id }}{% else %}—{% endif %}
-            <span class="rel-type">{{ el.relationship_type }}</span>
-          </span>
-          {% endfor %}
-          {% else %}<span class="muted">none</span>{% endif %}
-        </td>
-      </tr>
+  {% for c in detail.claims %}
+  {% set elinks = detail.evidence_index.get("claim", {}).get(c.id, []) %}
+  {% set claim_notes = detail.notes_by_target.get("claim", {}).get(c.id, []) %}
+  <div class="review-item status-{{ c.review_status }}" id="claim-{{ c.id }}">
+    <div class="review-item-header">
+      <span class="item-index">{{ loop.index }}</span>
+      <span class="item-body">{{ c.statement }}</span>
+      <span class="status-badge status-{{ c.review_status }}">{{ c.review_status.replace("_", " ") }}</span>
+      {% if c.claim_type %}<span class="badge">{{ c.claim_type }}</span>{% endif %}
+      {% if c.is_agent_generated %}<span class="badge badge-agent">agent</span>{% endif %}
+    </div>
+    {% if elinks %}
+    <div class="evidence-links-row">
+      <span class="label">Evidence:</span>
+      {% for el in elinks %}
+      <span class="evidence-link" title="{{ el.relationship_type }}{% if el.strength %} ({{ el.strength }}){% endif %}">
+        {% if el.source_title %}{{ el.source_title | truncate(40) }}{% elif el.source_id %}src#{{ el.source_id }}{% else %}—{% endif %}
+        <span class="rel-type">{{ el.relationship_type }}</span>
+      </span>
       {% endfor %}
-    </tbody>
-  </table>
+    </div>
+    {% endif %}
+    {% if claim_notes %}
+    <ul class="inline-notes">
+      {% for n in claim_notes %}
+      <li>
+        {% if n.author %}<strong>{{ n.author }}</strong>: {% endif %}{{ n.note }}
+        <span class="muted note-date">{{ n.created_at.strftime("%Y-%m-%d") if n.created_at else "" }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <details class="review-form-details">
+      <summary>Review this claim</summary>
+      <form method="post" action="/runs/{{ run.id }}/claims/{{ c.id }}/review" class="review-form">
+        <div class="form-row">
+          <label>Status</label>
+          <select name="review_status" class="form-select">
+            {% for rs in review_statuses %}
+            <option value="{{ rs }}" {% if c.review_status == rs %}selected{% endif %}>{{ rs.replace("_", " ") }}</option>
+            {% endfor %}
+          </select>
+          <label>Note (optional)</label>
+          <input type="text" name="note" class="form-input" placeholder="Add a review note…" maxlength="1000">
+          <button type="submit" class="btn btn-sm">Save</button>
+        </div>
+      </form>
+    </details>
+  </div>
+  {% endfor %}
   {% else %}
   <p class="muted">No claims.</p>
   {% endif %}
@@ -137,7 +193,8 @@
   {% if detail.candidates %}
   {% for c in detail.candidates %}
   {% set elinks = detail.evidence_index.get("candidate", {}).get(c.id, []) %}
-  <div class="candidate-card status-{{ c.review_status }}">
+  {% set cand_notes = detail.notes_by_target.get("candidate", {}).get(c.id, []) %}
+  <div class="candidate-card review-item status-{{ c.review_status }}" id="candidate-{{ c.id }}">
     <div class="candidate-header">
       <strong>{{ c.title }}</strong>
       <span class="status-badge status-{{ c.review_status }}">{{ c.review_status.replace("_", " ") }}</span>
@@ -166,6 +223,32 @@
       {% endfor %}
     </div>
     {% endif %}
+    {% if cand_notes %}
+    <ul class="inline-notes">
+      {% for n in cand_notes %}
+      <li>
+        {% if n.author %}<strong>{{ n.author }}</strong>: {% endif %}{{ n.note }}
+        <span class="muted note-date">{{ n.created_at.strftime("%Y-%m-%d") if n.created_at else "" }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <details class="review-form-details">
+      <summary>Review this candidate</summary>
+      <form method="post" action="/runs/{{ run.id }}/candidates/{{ c.id }}/review" class="review-form">
+        <div class="form-row">
+          <label>Status</label>
+          <select name="review_status" class="form-select">
+            {% for rs in review_statuses %}
+            <option value="{{ rs }}" {% if c.review_status == rs %}selected{% endif %}>{{ rs.replace("_", " ") }}</option>
+            {% endfor %}
+          </select>
+          <label>Note (optional)</label>
+          <input type="text" name="note" class="form-input" placeholder="Add a review note…" maxlength="1000">
+          <button type="submit" class="btn btn-sm">Save</button>
+        </div>
+      </form>
+    </details>
   </div>
   {% endfor %}
   {% else %}
@@ -200,7 +283,6 @@
   {% endif %}
 </section>
 
-{# Artifacts #}
 {% if detail.artifacts %}
 <section class="card" id="artifacts">
   <h2>Artifacts <span class="count-badge">{{ detail.artifacts | length }}</span></h2>
@@ -227,21 +309,24 @@
 </section>
 {% endif %}
 
-{# Review Notes #}
-{% if detail.review_notes %}
+{# Review Notes (all) #}
 <section class="card" id="review-notes">
   <h2>Review Notes <span class="count-badge">{{ detail.review_notes | length }}</span></h2>
+  {% if detail.review_notes %}
   <ul class="review-notes-list">
     {% for n in detail.review_notes %}
     <li class="note-{{ n.status }}">
       <span class="note-target">{{ n.target_type.replace("_", " ") }} #{{ n.target_id }}</span>
       {% if n.author %}<span class="muted">by {{ n.author }}</span>{% endif %}
       <span class="note-status note-{{ n.status }}">{{ n.status }}</span>
+      <span class="muted note-date">{{ n.created_at.strftime("%Y-%m-%d") if n.created_at else "" }}</span>
       <p>{{ n.note }}</p>
     </li>
     {% endfor %}
   </ul>
+  {% else %}
+  <p class="muted">No review notes yet.</p>
+  {% endif %}
 </section>
-{% endif %}
 
 {% endblock %}

@@ -87,6 +87,10 @@ def get_run_detail(db: Session, run_id: int) -> Optional[dict]:
         select(ReviewNote).where(ReviewNote.run_id == run_id).order_by(ReviewNote.id)
     ).scalars().all()
 
+    decision_history = db.execute(
+        select(Decision).where(Decision.run_id == run_id).order_by(Decision.decided_at.desc())
+    ).scalars().all()
+
     # Build a source lookup by id for display
     source_by_id = {s.id: s for s in sources}
 
@@ -118,4 +122,15 @@ def get_run_detail(db: Session, run_id: int) -> Optional[dict]:
         "review_notes": review_notes,
         "evidence_index": evidence_index,
         "is_fixture": is_fixture,
+        "decision_history": decision_history,
+        "notes_by_target": _build_notes_by_target(review_notes),
     }
+
+
+def _build_notes_by_target(review_notes) -> dict:
+    """Build a nested dict: target_type_str -> target_id -> list of notes."""
+    result: dict[str, dict[int, list]] = {}
+    for n in review_notes:
+        key = str(n.target_type)
+        result.setdefault(key, {}).setdefault(n.target_id, []).append(n)
+    return result
