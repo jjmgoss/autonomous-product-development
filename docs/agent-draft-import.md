@@ -24,6 +24,20 @@ Optional duplicate override:
 uv run python scripts/import_agent_draft.py --path apd/fixtures/examples/agent_draft_sample.json --allow-duplicate-external-id
 ```
 
+Validate before import:
+
+```text
+uv run python scripts/validate_agent_draft.py --path apd/fixtures/examples/agent_draft_sample.json
+uv run python scripts/validate_agent_draft.py --path .local/drafts/dogfood-product-research.json --repair-hints
+uv run python scripts/validate_agent_draft.py --path .local/drafts/dogfood-product-research.json --repair-prompt
+```
+
+Optional best-effort normalization to an explicit output path:
+
+```text
+uv run python scripts/normalize_agent_draft.py --path .local/drafts/input.json --out .local/drafts/input.normalized.json
+```
+
 ## Re-import behavior
 
 - Default behavior: reject duplicate `external_draft_id` imports.
@@ -172,6 +186,77 @@ A package must include:
 - Malformed JSON or schema violations fail with clear validation errors.
 - Unknown references in excerpts, gates, or evidence links are skipped with warning lines.
 - Import warnings are recorded in run metadata under `metadata_json.agent_draft.import_warnings`.
+
+## Validation and repair loop
+
+Use this loop during dogfooding or external-agent handoff:
+
+1. Generate an APD draft package JSON file.
+2. Run `scripts/validate_agent_draft.py` before import.
+3. If validation fails, use `--repair-hints` or `--repair-prompt` to repair the JSON.
+4. Optionally run `scripts/normalize_agent_draft.py` to rewrite common near-miss fields to a new explicit output path.
+5. Re-run validation on the repaired or normalized file.
+6. Import only after strict validation passes.
+
+Validation is read-only and does not create a `Run` or any other database rows.
+
+Normalization is optional. It only writes to the output path you provide and does not import anything.
+
+Import remains the strict final gate. Validation and normalization should help repair packages, not weaken import rules.
+
+## Common near-miss fields
+
+The validator and normalizer recognize these common schema drifts:
+
+- `sources.type` -> `source_type`
+- `sources.accessed_at` -> `captured_at`
+- `evidence_excerpts.text` -> `excerpt_text`
+- `evidence_excerpts.locator` -> `location_reference`
+- `claims.claim` -> `statement`
+- `claims.confidence` string values should be numeric
+- `themes.theme` -> `name`
+- `candidates.name` -> `title`
+- `candidates.description` -> `summary`
+- `validation_gates.phase=problem_validation` -> `supported_opportunity`
+- `validation_gates.phase=solution_validation` -> `vetted_opportunity`
+- `validation_gates.phase=commercial_validation` -> `vetted_opportunity`
+- `evidence_links.claim_id|theme_id|candidate_id|gate_id` -> `target_type` + `target_id`
+- missing `evidence_links.relationship`
+- unexpected extra object fields that belong in `metadata_json`
+
+## Repair prompt template
+
+If you want a copyable prompt without running `--repair-prompt`, use this template:
+
+```text
+Repair this APD agent draft package so it passes strict APD draft validation.
+Return only JSON.
+Preserve the research meaning and IDs unless a schema repair requires a field rename.
+Use exact APD field names and enums.
+Move unexpected extra object fields into metadata_json when they still matter.
+
+Fix these common APD schema near-misses when present:
+- sources.type -> source_type
+- sources.accessed_at -> captured_at
+- evidence_excerpts.text -> excerpt_text
+- evidence_excerpts.locator -> location_reference
+- claims.claim -> statement
+- claims.confidence must be numeric, not a string
+- themes.theme -> name
+- candidates.name -> title
+- candidates.description -> summary
+- validation_gates.phase must be one of vague_notion, evidence_collected, supported_opportunity, vetted_opportunity, prototype_ready, build_approved
+- validation_gates.problem_validation -> supported_opportunity
+- validation_gates.solution_validation -> vetted_opportunity
+- validation_gates.commercial_validation -> vetted_opportunity
+- evidence_links.claim_id -> target_type claim + target_id
+- evidence_links.theme_id -> target_type theme + target_id
+- evidence_links.candidate_id -> target_type candidate + target_id
+- evidence_links.gate_id -> target_type validation_gate + target_id
+- evidence_links must include relationship: supports, weakens, contradicts, context_for, or example_of
+
+Return corrected JSON only.
+```
 
 ## Sample package
 
