@@ -8,8 +8,13 @@ from sqlalchemy.orm import sessionmaker
 import pytest
 
 from apd.app.db import Base
+from apd.services.research_components import (
+    ComponentDraftAssembler,
+    parse_component_batch_from_data,
+)
 from apd.services.research_brief_service import create_brief, get_brief
 from apd.services.research_execution_ollama import (
+    execute_research_brief_ollama_components,
     execute_research_brief_ollama,
     extract_json_object_from_model_output,
     get_ollama_execution_config,
@@ -125,6 +130,66 @@ def test_extract_json_object_from_fenced_block():
     assert parsed["run"]["intent"] == "I"
 
 
+def test_component_batch_valid_events_assemble_to_draft_package():
+    raw_batch = {
+        "schema_version": "1.0",
+        "batch_id": "batch-1",
+        "events": [
+            {
+                "schema_version": "1.0",
+                "event_type": "candidate.proposed",
+                "external_id": "cand-1",
+                "payload": {"title": "Candidate A", "summary": "S"},
+            },
+            {
+                "schema_version": "1.0",
+                "event_type": "claim.proposed",
+                "external_id": "claim-1",
+                "payload": {"statement": "Claim text"},
+            },
+            {
+                "schema_version": "1.0",
+                "event_type": "theme.proposed",
+                "external_id": "theme-1",
+                "payload": {"name": "Theme A"},
+            },
+        ],
+    }
+    batch, errors = parse_component_batch_from_data(raw_batch)
+    assert batch is not None
+    assert not errors
+
+    assembler = ComponentDraftAssembler(
+        run_title="Component run",
+        run_intent="Q",
+        agent_name="component-test",
+        external_draft_id="ext-1",
+    )
+    result = assembler.apply_batch(batch)
+    assert result.success is True
+    assert result.package is not None
+    assert len(result.package["candidates"]) == 1
+    assert len(result.package["claims"]) == 1
+    assert len(result.package["themes"]) == 1
+
+
+def test_component_batch_malformed_event_fails_validation():
+    raw_batch = {
+        "schema_version": "1.0",
+        "events": [
+            {
+                "schema_version": "1.0",
+                "event_type": "claim.proposed",
+                # missing external_id
+                "payload": {"statement": "Claim text"},
+            }
+        ],
+    }
+    batch, errors = parse_component_batch_from_data(raw_batch)
+    assert batch is None
+    assert errors
+
+
 def test_execute_ollama_success_path_imports_run(db, monkeypatch):
     monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
     monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
@@ -152,6 +217,93 @@ def test_execute_ollama_success_path_imports_run(db, monkeypatch):
     assert result["success"] is True
     assert result["status"] == "imported"
     assert isinstance(result["run_id"], int)
+
+
+def test_execute_ollama_components_success_path_imports_run(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+
+    brief = create_brief(db, title="Components brief", research_question="Q")
+    brief = get_brief(db, brief.id)
+    captured_payloads = []
+
+    def _fake_generate(config, payload):
+        captured_payloads.append(payload)
+        return (
+            {
+                "response": (
+                    '{"schema_version":"1.0","batch_id":"b1","events":['
+                    '{"schema_version":"1.0","event_type":"candidate.proposed","external_id":"cand-1","payload":{"title":"Candidate A","summary":"S"}},'
+                    '{"schema_version":"1.0","event_type":"claim.proposed","external_id":"claim-1","payload":{"statement":"Claim A"}},'
+                    '{"schema_version":"1.0","event_type":"theme.proposed","external_id":"theme-1","payload":{"name":"Theme A"}}'
+                    ']}'
+                )
+            },
+            None,
+        )
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+    result = execute_research_brief_ollama_components(db, brief)
+    assert result["success"] is True
+    assert result["status"] == "imported"
+    assert isinstance(result["run_id"], int)
+    assert captured_payloads
+    assert captured_payloads[0].get("keep_alive") == 0
+
+
+def test_execute_ollama_components_zero_candidate_fails_before_import(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+
+    brief = create_brief(db, title="Components no candidate", research_question="Q")
+    brief = get_brief(db, brief.id)
+
+    def _fake_generate(config, payload):
+        return (
+            {
+                "response": (
+                    '{"schema_version":"1.0","batch_id":"b1","events":['
+                    '{"schema_version":"1.0","event_type":"claim.proposed","external_id":"claim-1","payload":{"statement":"Claim A"}}'
+                    ']}'
+                )
+            },
+            None,
+        )
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+    result = execute_research_brief_ollama_components(db, brief)
+    assert result["success"] is False
+    assert result["status"] == "quality_failed_no_candidates"
+    assert result["run_id"] is None
+
+
+def test_execute_ollama_components_malformed_batch_does_not_import(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+
+    brief = create_brief(db, title="Components malformed", research_question="Q")
+    brief = get_brief(db, brief.id)
+
+    def _fake_generate(config, payload):
+        return (
+            {
+                "response": (
+                    '{"schema_version":"1.0","batch_id":"b1","events":['
+                    '{"schema_version":"1.0","event_type":"candidate.proposed","payload":{"title":"Candidate A"}}'
+                    ']}'
+                )
+            },
+            None,
+        )
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+    result = execute_research_brief_ollama_components(db, brief)
+    assert result["success"] is False
+    assert result["status"] == "component_validation_failed"
+    assert result["run_id"] is None
 
 
 def test_execute_ollama_unparseable_output_fails_without_import(db, monkeypatch):
@@ -337,6 +489,38 @@ def test_start_research_ollama_route_uses_mocked_service(client, monkeypatch):
     resp2 = client.post(f"/briefs/{brief_id}/start-research-ollama", follow_redirects=True)
     assert resp2.status_code == 200
     assert "mocked failure" in resp2.text
+
+
+def test_start_research_ollama_components_route_uses_mocked_service(client, monkeypatch):
+    resp = client.post("/briefs", data={"title": "Web components", "research_question": "What is X?"}, follow_redirects=False)
+    assert resp.status_code == 303
+    brief_id = int(resp.headers["location"].split("/")[-1])
+
+    monkeypatch.setattr(
+        "apd.web.routes.get_ollama_execution_config",
+        lambda: (
+            type("Cfg", (), {"model": "llama3"})(),
+            [],
+        ),
+    )
+    monkeypatch.setattr(
+        "apd.web.routes.execute_research_brief_ollama_components",
+        lambda db, brief: {
+            "success": False,
+            "provider": "ollama-components",
+            "model": "llama3",
+            "status": "component_validation_failed",
+            "started_at": "2026-01-01T00:00:00+00:00",
+            "finished_at": "2026-01-01T00:00:01+00:00",
+            "errors": ["mocked components failure"],
+            "warnings": [],
+            "run_id": None,
+        },
+    )
+
+    resp2 = client.post(f"/briefs/{brief_id}/start-research-ollama-components", follow_redirects=True)
+    assert resp2.status_code == 200
+    assert "mocked components failure" in resp2.text
 
 
 def test_start_research_ollama_route_handles_missing_config(client, monkeypatch):

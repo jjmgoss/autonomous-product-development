@@ -154,6 +154,9 @@
       <form method="post" action="/briefs/{{ brief.id }}/start-research-ollama" style="display:inline; margin-left:0.5rem;">
         <button type="submit" class="btn btn-sm btn-primary">Start Research with Ollama</button>
       </form>
+      <form method="post" action="/briefs/{{ brief.id }}/start-research-ollama-components" style="display:inline; margin-left:0.5rem;">
+        <button type="submit" class="btn btn-sm btn-primary">Start Research with Components (experimental)</button>
+      </form>
     {% else %}
       Configure all required env vars to enable this path:
       <code>APD_MODEL_PROVIDER=ollama</code>,

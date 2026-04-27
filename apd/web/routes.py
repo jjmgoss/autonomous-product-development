@@ -24,6 +24,7 @@ from apd.services.research_brief_service import (
     list_briefs,
 )
 from apd.services.research_execution_ollama import (
+    execute_research_brief_ollama_components,
     execute_research_brief_ollama,
     get_ollama_execution_config,
 )
@@ -338,5 +339,50 @@ def start_research_ollama(brief_id: int, db: Session = Depends(_get_db)):
     if result.get("success") and result.get("run_id"):
         return RedirectResponse(url=f"/runs/{result.get('run_id')}", status_code=303)
 
+    return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
+
+
+@router.post("/briefs/{brief_id}/start-research-ollama-components", response_class=RedirectResponse)
+def start_research_ollama_components(brief_id: int, db: Session = Depends(_get_db)):
+    brief = get_brief(db, brief_id)
+    if brief is None:
+        raise HTTPException(status_code=404, detail="Research brief not found")
+
+    config, missing_env = get_ollama_execution_config()
+    if config is None:
+        _save_last_execution(
+            db,
+            brief,
+            {
+                "provider": "ollama-components",
+                "status": "config_missing",
+                "started_at": _iso_now(),
+                "finished_at": _iso_now(),
+                "errors": [f"Missing required env: {value}" for value in missing_env],
+                "warnings": [],
+                "run_id": None,
+            },
+        )
+        return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
+
+    _save_last_execution(
+        db,
+        brief,
+        {
+            "provider": "ollama-components",
+            "model": config.model,
+            "status": "running",
+            "started_at": _iso_now(),
+            "errors": [],
+            "warnings": [],
+            "run_id": None,
+        },
+    )
+
+    result = execute_research_brief_ollama_components(db, brief)
+    _save_last_execution(db, brief, result)
+
+    if result.get("success") and result.get("run_id"):
+        return RedirectResponse(url=f"/runs/{result.get('run_id')}", status_code=303)
     return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
 
