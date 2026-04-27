@@ -305,7 +305,16 @@ Current limitations:
 Import a structured agent draft package into APD:
 
 ```text
+uv run python scripts/validate_agent_draft.py --path apd/fixtures/examples/agent_draft_sample.json
 uv run python scripts/import_agent_draft.py --path apd/fixtures/examples/agent_draft_sample.json
+```
+
+Optional repair-oriented commands:
+
+```text
+uv run python scripts/validate_agent_draft.py --path .local/drafts/dogfood-product-research.json --repair-hints
+uv run python scripts/validate_agent_draft.py --path .local/drafts/dogfood-product-research.json --repair-prompt
+uv run python scripts/normalize_agent_draft.py --path .local/drafts/input.json --out .local/drafts/input.normalized.json
 ```
 
 Behavior:
@@ -318,6 +327,8 @@ Behavior:
 - Rejects duplicate `external_draft_id` by default; use `--allow-duplicate-external-id` to intentionally import another run version.
 
 Validation and safety:
+- `validate_agent_draft.py` is read-only and does not write to the database.
+- `normalize_agent_draft.py` only writes to the explicit output path you provide and still requires strict validation before import.
 - Malformed JSON and invalid package shape fail safely with clear `ERROR:` lines.
 - Unknown references (for example, evidence links to missing IDs) are skipped with `WARNING:` lines.
 - Imported warnings are recorded in run metadata.
