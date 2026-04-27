@@ -71,6 +71,18 @@ To inspect and optionally clean empty leftover run folders:
 python scripts/clean_empty_run_dirs.py --dry-run
 ```
 
+To seed deterministic APD fixture/demo data into the configured local database:
+
+```text
+python scripts/seed_fixture.py
+```
+
+To explicitly reset fixture-owned data and reseed:
+
+```text
+python scripts/seed_fixture.py --reset-fixture
+```
+
 The cleanup utility is intentionally conservative:
 
 - it removes only truly empty nested run directories

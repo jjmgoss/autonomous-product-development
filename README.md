@@ -186,3 +186,25 @@ Then open `http://127.0.0.1:8000/health` and expect:
 ```json
 {"status":"ok"}
 ```
+
+### Seed deterministic fixture data (issue #6)
+
+Seed one synthetic fixture run for local demos/tests:
+
+```text
+uv run python scripts/seed_fixture.py
+```
+
+The command is idempotent by default and will not duplicate fixture records.
+
+To explicitly reset fixture-owned records and reseed:
+
+```text
+uv run python scripts/seed_fixture.py --reset-fixture
+```
+
+To remove fixture-owned records only, without reseeding:
+
+```text
+uv run python scripts/seed_fixture.py --reset-only
+```

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from datetime import timezone
 from enum import StrEnum
 from typing import Optional
 
@@ -13,7 +14,7 @@ from apd.app.db import Base
 
 
 def _utc_now() -> datetime:
-    return datetime.utcnow()
+    return datetime.now(timezone.utc)
 
 
 class RunPhase(StrEnum):
