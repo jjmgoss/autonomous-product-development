@@ -97,3 +97,38 @@ Current component minimum:
 - Supports candidate, claim, and theme events (plus optional source/excerpt/gate/link events).
 - Rejects zero-candidate assembled output before import.
 - Uses the same keep-alive behavior (`keep_alive: 0` default) to free local model resources after execution.
+
+## Component repair and retry loop (Issue #53)
+
+Component execution now runs as small APD-orchestrated phases instead of trusting a single batch:
+
+- `candidate_batch` (required, must include at least one `candidate.proposed`)
+- `claim_theme_batch` (must include `claim.proposed` and/or `theme.proposed`)
+- `validation_gate_batch` (must include `validation_gate.proposed`)
+
+For each phase APD:
+
+- sends a phase-specific component prompt,
+- parses and validates the `ResearchComponentBatch`,
+- checks phase-specific required content,
+- retries with a repair prompt when invalid, including concise validation errors,
+- applies only valid batches to the assembler.
+
+Retry cap:
+
+- `APD_COMPONENT_REPAIR_ATTEMPTS` (default `2`, capped at `3`)
+- total attempts per phase are `1 + repair_attempts`
+
+Execution diagnostics in `ResearchBrief.metadata_json.last_execution` include:
+
+- `mode: component_execution`
+- `status`
+- `last_phase`
+- `attempts_by_phase`
+- concise `errors` and `warnings`
+
+This remains a synchronous prototype path:
+
+- no browser streaming
+- no WebSockets/SSE
+- no background jobs

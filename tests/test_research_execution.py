@@ -223,44 +223,75 @@ def test_execute_ollama_components_success_path_imports_run(db, monkeypatch):
     monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
     monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
     monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("APD_COMPONENT_REPAIR_ATTEMPTS", "2")
 
     brief = create_brief(db, title="Components brief", research_question="Q")
     brief = get_brief(db, brief.id)
     captured_payloads = []
-
-    def _fake_generate(config, payload):
-        captured_payloads.append(payload)
-        return (
+    responses = [
+        (
             {
                 "response": (
-                    '{"schema_version":"1.0","batch_id":"b1","events":['
-                    '{"schema_version":"1.0","event_type":"candidate.proposed","external_id":"cand-1","payload":{"title":"Candidate A","summary":"S"}},'
+                    '{"schema_version":"1.0","batch_id":"b-candidate","events":['
+                    '{"schema_version":"1.0","event_type":"candidate.proposed","external_id":"cand-1","payload":{"title":"Candidate A","summary":"S"}}'
+                    ']}'
+                )
+            },
+            None,
+        ),
+        (
+            {
+                "response": (
+                    '{"schema_version":"1.0","batch_id":"b-claim-theme","events":['
                     '{"schema_version":"1.0","event_type":"claim.proposed","external_id":"claim-1","payload":{"statement":"Claim A"}},'
                     '{"schema_version":"1.0","event_type":"theme.proposed","external_id":"theme-1","payload":{"name":"Theme A"}}'
                     ']}'
                 )
             },
             None,
-        )
+        ),
+        (
+            {
+                "response": (
+                    '{"schema_version":"1.0","batch_id":"b-gates","events":['
+                    '{"schema_version":"1.0","event_type":"validation_gate.proposed","external_id":"gate-1","payload":{"name":"Gate A","phase":"supported_opportunity","candidate_id":"cand-1"}}'
+                    ']}'
+                )
+            },
+            None,
+        ),
+    ]
+
+    def _fake_generate(config, payload):
+        captured_payloads.append(payload)
+        return responses.pop(0)
 
     monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
     result = execute_research_brief_ollama_components(db, brief)
     assert result["success"] is True
     assert result["status"] == "imported"
+    assert result["mode"] == "component_execution"
+    assert result["attempts_by_phase"]["candidate_batch"] == 1
+    assert result["attempts_by_phase"]["claim_theme_batch"] == 1
+    assert result["attempts_by_phase"]["validation_gate_batch"] == 1
     assert isinstance(result["run_id"], int)
     assert captured_payloads
     assert captured_payloads[0].get("keep_alive") == 0
+    assert len(captured_payloads) == 3
 
 
 def test_execute_ollama_components_zero_candidate_fails_before_import(db, monkeypatch):
     monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
     monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
     monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("APD_COMPONENT_REPAIR_ATTEMPTS", "2")
 
     brief = create_brief(db, title="Components no candidate", research_question="Q")
     brief = get_brief(db, brief.id)
+    call_count = {"count": 0}
 
     def _fake_generate(config, payload):
+        call_count["count"] += 1
         return (
             {
                 "response": (
@@ -276,6 +307,9 @@ def test_execute_ollama_components_zero_candidate_fails_before_import(db, monkey
     result = execute_research_brief_ollama_components(db, brief)
     assert result["success"] is False
     assert result["status"] == "quality_failed_no_candidates"
+    assert result["last_phase"] == "candidate_batch"
+    assert result["attempts_by_phase"]["candidate_batch"] == 3
+    assert call_count["count"] == 3
     assert result["run_id"] is None
 
 
@@ -283,11 +317,14 @@ def test_execute_ollama_components_malformed_batch_does_not_import(db, monkeypat
     monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
     monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
     monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("APD_COMPONENT_REPAIR_ATTEMPTS", "1")
 
     brief = create_brief(db, title="Components malformed", research_question="Q")
     brief = get_brief(db, brief.id)
+    call_count = {"count": 0}
 
     def _fake_generate(config, payload):
+        call_count["count"] += 1
         return (
             {
                 "response": (
@@ -302,8 +339,70 @@ def test_execute_ollama_components_malformed_batch_does_not_import(db, monkeypat
     monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
     result = execute_research_brief_ollama_components(db, brief)
     assert result["success"] is False
-    assert result["status"] == "component_validation_failed"
+    assert result["status"] == "quality_failed_no_candidates"
+    assert result["attempts_by_phase"]["candidate_batch"] == 2
+    assert call_count["count"] == 2
     assert result["run_id"] is None
+
+
+def test_execute_ollama_components_candidate_repair_then_imports(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("APD_COMPONENT_REPAIR_ATTEMPTS", "2")
+
+    brief = create_brief(db, title="Components candidate repair", research_question="Q")
+    brief = get_brief(db, brief.id)
+    prompts: list[str] = []
+    responses = [
+        ({"response": '{"schema_version":"1.0","batch_id":"bad","events":[{"schema_version":"1.0","event_type":"candidate.proposed","payload":{"title":"Missing ID"}}]}'}, None),
+        ({"response": '{"schema_version":"1.0","batch_id":"fixed","events":[{"schema_version":"1.0","event_type":"candidate.proposed","external_id":"cand-1","payload":{"title":"Candidate 1"}}]}'}, None),
+        ({"response": '{"schema_version":"1.0","batch_id":"claims","events":[{"schema_version":"1.0","event_type":"claim.proposed","external_id":"claim-1","payload":{"statement":"Claim text"}}]}'}, None),
+        ({"response": '{"schema_version":"1.0","batch_id":"gates","events":[{"schema_version":"1.0","event_type":"validation_gate.proposed","external_id":"gate-1","payload":{"name":"Gate A","phase":"supported_opportunity","candidate_id":"cand-1"}}]}'}, None),
+    ]
+
+    def _fake_generate(config, payload):
+        prompts.append(payload.get("prompt", ""))
+        return responses.pop(0)
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+    result = execute_research_brief_ollama_components(db, brief)
+    assert result["success"] is True
+    assert result["status"] == "imported"
+    assert result["attempts_by_phase"]["candidate_batch"] == 2
+    assert "phase repair request" in prompts[1].lower()
+
+
+def test_execute_ollama_components_candidate_repair_exhausted_fails(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("APD_COMPONENT_REPAIR_ATTEMPTS", "2")
+
+    brief = create_brief(db, title="Components candidate repair exhausted", research_question="Q")
+    brief = get_brief(db, brief.id)
+    call_count = {"count": 0}
+
+    def _fake_generate(config, payload):
+        call_count["count"] += 1
+        return (
+            {
+                "response": (
+                    '{"schema_version":"1.0","batch_id":"still-bad","events":['
+                    '{"schema_version":"1.0","event_type":"candidate.proposed","payload":{"title":"Missing ID"}}'
+                    ']}'
+                )
+            },
+            None,
+        )
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+    result = execute_research_brief_ollama_components(db, brief)
+    assert result["success"] is False
+    assert result["status"] == "quality_failed_no_candidates"
+    assert result["last_phase"] == "candidate_batch"
+    assert result["attempts_by_phase"]["candidate_batch"] == 3
+    assert call_count["count"] == 3
 
 
 def test_execute_ollama_unparseable_output_fails_without_import(db, monkeypatch):

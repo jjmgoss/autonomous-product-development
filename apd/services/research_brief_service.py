@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -256,3 +257,82 @@ def generate_ollama_component_prompt(brief: ResearchBrief) -> str:
     """Return a provider-agnostic component contract prompt for Ollama prototype execution."""
     base = generate_ollama_execution_prompt(brief)
     return "\n".join([base, "", "---", "", _COMPONENT_EXECUTION_CONSTRAINTS, "", "Return only the ResearchComponentBatch JSON object."])
+
+
+def generate_ollama_component_phase_prompt(
+    brief: ResearchBrief,
+    phase_name: str,
+    *,
+    candidate_ids: list[str] | None = None,
+) -> str:
+    """Return a phase-specific component batch prompt."""
+    base = generate_ollama_execution_prompt(brief)
+    candidates_block = ", ".join(candidate_ids or [])
+    if not candidates_block:
+        candidates_block = "(none yet)"
+
+    phase_instructions: dict[str, str] = {
+        "candidate_batch": (
+            "Phase: candidate_batch\n"
+            "- Return only ResearchComponentBatch JSON.\n"
+            "- Include at least one candidate.proposed event.\n"
+            "- No full APD draft package.\n"
+            "- No fake source URLs or citations."
+        ),
+        "claim_theme_batch": (
+            "Phase: claim_theme_batch\n"
+            "- Return only ResearchComponentBatch JSON.\n"
+            "- Use claim.proposed and/or theme.proposed events.\n"
+            "- Claims must be specific enough to influence product judgment.\n"
+            "- No fake source URLs or citations."
+        ),
+        "validation_gate_batch": (
+            "Phase: validation_gate_batch\n"
+            "- Return only ResearchComponentBatch JSON.\n"
+            "- Use validation_gate.proposed events.\n"
+            "- Prefer candidate_id values from existing candidates.\n"
+            f"- Existing candidate IDs: {candidates_block}"
+        ),
+    }
+    selected = phase_instructions.get(
+        phase_name,
+        "Phase: generic_component_batch\n- Return only ResearchComponentBatch JSON.",
+    )
+    return "\n".join([base, "", "---", "", _COMPONENT_EXECUTION_CONSTRAINTS, "", selected, "", "Return only the ResearchComponentBatch JSON object."])
+
+
+def generate_ollama_component_repair_prompt(
+    brief: ResearchBrief,
+    *,
+    phase_name: str,
+    validation_errors: list[str],
+    invalid_batch_data: dict[str, object] | None,
+) -> str:
+    """Return a phase-specific repair prompt for an invalid component batch."""
+    base = generate_ollama_execution_prompt(brief)
+    errors_block = "\n".join(f"- {line}" for line in validation_errors[:8]) or "- unknown validation error"
+    invalid_json = "{}" if invalid_batch_data is None else json.dumps(invalid_batch_data, ensure_ascii=False)
+    return "\n".join(
+        [
+            base,
+            "",
+            "---",
+            "",
+            _COMPONENT_EXECUTION_CONSTRAINTS,
+            "",
+            "Phase repair request:",
+            f"- Phase name: {phase_name}",
+            "- Return only corrected ResearchComponentBatch JSON.",
+            "- Preserve valid event external_id values where possible.",
+            "- Fix only schema/shape/required-content problems.",
+            "- Do not add prose.",
+            "",
+            "Validation errors:",
+            errors_block,
+            "",
+            "Invalid batch JSON:",
+            invalid_json,
+            "",
+            "Return only the corrected ResearchComponentBatch JSON object.",
+        ]
+    )

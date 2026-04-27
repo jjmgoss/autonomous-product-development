@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import StrEnum
@@ -74,6 +75,9 @@ class ComponentDraftAssembler:
         }
 
     def apply_batch(self, batch: ResearchComponentBatch) -> ComponentExecutionResult:
+        original_data = json.loads(json.dumps(self._data))
+        original_warnings = list(self._warnings)
+        original_event_ids = set(self._event_ids)
         errors: list[str] = []
         for index, event in enumerate(batch.events):
             if event.external_id in self._event_ids:
@@ -84,7 +88,12 @@ class ComponentDraftAssembler:
                 self._apply_event(event)
             except ValueError as exc:
                 errors.append(f"event[{index}] {event.event_type.value}: {exc}")
-        return ComponentExecutionResult(success=len(errors) == 0, package=self.package_dict(), errors=errors, warnings=list(self._warnings))
+        if errors:
+            self._data = original_data
+            self._warnings = original_warnings
+            self._event_ids = original_event_ids
+            return ComponentExecutionResult(success=False, package=None, errors=errors, warnings=list(self._warnings))
+        return ComponentExecutionResult(success=True, package=self.package_dict(), errors=[], warnings=list(self._warnings))
 
     def package_dict(self) -> dict[str, Any]:
         package = dict(self._data)
