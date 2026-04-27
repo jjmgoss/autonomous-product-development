@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from datetime import datetime
 
 from apd.app.db import SessionLocal
 from apd.domain.models import DecisionValue, ReviewStatus, ReviewTargetType
@@ -23,6 +23,10 @@ from apd.services.research_brief_service import (
     get_brief,
     list_briefs,
 )
+from apd.services.research_execution_ollama import (
+    execute_research_brief_ollama,
+    get_ollama_execution_config,
+)
 from apd.services.research_execution_stub import execute_research_brief_stub
 from apd.web.queries import get_recent_runs, get_run_detail
 
@@ -38,6 +42,19 @@ def _get_db():
         yield db
     finally:
         db.close()
+
+
+def _iso_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _save_last_execution(db: Session, brief, execution_data: dict) -> None:
+    meta = dict(brief.metadata_json or {})
+    meta["last_execution"] = dict(execution_data)
+    brief.metadata_json = meta
+    db.add(brief)
+    db.commit()
+    db.refresh(brief)
 
 
 @router.get("/", response_class=RedirectResponse, include_in_schema=False)
@@ -223,10 +240,17 @@ def brief_detail(brief_id: int, request: Request, db: Session = Depends(_get_db)
     if brief is None:
         raise HTTPException(status_code=404, detail="Research brief not found")
     prompt = generate_agent_prompt(brief)
+    ollama_config, missing_ollama_env = get_ollama_execution_config()
     return templates.TemplateResponse(
         request,
         "brief_detail.html",
-        {"brief": brief, "agent_prompt": prompt},
+        {
+            "brief": brief,
+            "agent_prompt": prompt,
+            "ollama_ready": ollama_config is not None,
+            "missing_ollama_env": missing_ollama_env,
+            "ollama_model": ollama_config.model if ollama_config else None,
+        },
     )
 
 
@@ -236,26 +260,83 @@ def start_research(brief_id: int, db: Session = Depends(_get_db)):
     if brief is None:
         raise HTTPException(status_code=404, detail="Research brief not found")
 
-    # record running status in brief metadata
-    meta = brief.metadata_json or {}
-    meta["last_execution"] = {"status": "running", "started_at": datetime.utcnow().isoformat()}
-    brief.metadata_json = meta
-    db.add(brief)
-    db.commit()
-    db.refresh(brief)
+    _save_last_execution(
+        db,
+        brief,
+        {
+            "provider": "stub",
+            "status": "running",
+            "started_at": _iso_now(),
+            "errors": [],
+            "warnings": [],
+            "run_id": None,
+        },
+    )
 
     result = execute_research_brief_stub(db, brief)
-
-    meta = brief.metadata_json or {}
-    meta["last_execution"] = {**meta.get("last_execution", {}), "finished_at": datetime.utcnow().isoformat(), "result": result}
-    brief.metadata_json = meta
-    db.add(brief)
-    db.commit()
-    db.refresh(brief)
+    _save_last_execution(
+        db,
+        brief,
+        {
+            "provider": "stub",
+            "status": "imported" if result.get("success") else "failed",
+            "started_at": (brief.metadata_json or {}).get("last_execution", {}).get("started_at") or _iso_now(),
+            "finished_at": _iso_now(),
+            "errors": [str(e) for e in (result.get("errors") or [])][:5],
+            "warnings": [str(w) for w in (result.get("warnings") or [])][:5],
+            "run_id": result.get("run_id"),
+        },
+    )
 
     if result.get("success") and result.get("run_id"):
         return RedirectResponse(url=f"/runs/{result.get('run_id')}", status_code=303)
 
     # On failure, return to brief detail so the UI can show last_execution with errors
+    return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
+
+
+@router.post("/briefs/{brief_id}/start-research-ollama", response_class=RedirectResponse)
+def start_research_ollama(brief_id: int, db: Session = Depends(_get_db)):
+    brief = get_brief(db, brief_id)
+    if brief is None:
+        raise HTTPException(status_code=404, detail="Research brief not found")
+
+    config, missing_env = get_ollama_execution_config()
+    if config is None:
+        _save_last_execution(
+            db,
+            brief,
+            {
+                "provider": "ollama",
+                "status": "config_missing",
+                "started_at": _iso_now(),
+                "finished_at": _iso_now(),
+                "errors": [f"Missing required env: {value}" for value in missing_env],
+                "warnings": [],
+                "run_id": None,
+            },
+        )
+        return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
+
+    _save_last_execution(
+        db,
+        brief,
+        {
+            "provider": "ollama",
+            "model": config.model,
+            "status": "running",
+            "started_at": _iso_now(),
+            "errors": [],
+            "warnings": [],
+            "run_id": None,
+        },
+    )
+
+    result = execute_research_brief_ollama(db, brief)
+    _save_last_execution(db, brief, result)
+
+    if result.get("success") and result.get("run_id"):
+        return RedirectResponse(url=f"/runs/{result.get('run_id')}", status_code=303)
+
     return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
 

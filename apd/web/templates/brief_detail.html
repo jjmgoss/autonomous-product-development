@@ -138,6 +138,33 @@
       <button type="submit" class="btn btn-sm btn-primary">Start Research (stub)</button>
     </form>
   </div>
+
+  <div class="notice-box" style="
+    background: #ecfeff;
+    border: 1px solid #a5f3fc;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: #155e75;
+  ">
+    <strong>Local Ollama execution (Issue #46):</strong>
+    {% if ollama_ready %}
+      APD is configured for Ollama model <code>{{ ollama_model }}</code>.
+      <form method="post" action="/briefs/{{ brief.id }}/start-research-ollama" style="display:inline; margin-left:0.5rem;">
+        <button type="submit" class="btn btn-sm btn-primary">Start Research with Ollama</button>
+      </form>
+    {% else %}
+      Configure all required env vars to enable this path:
+      <code>APD_MODEL_PROVIDER=ollama</code>,
+      <code>APD_OLLAMA_BASE_URL=http://localhost:11434</code>,
+      <code>APD_OLLAMA_MODEL=&lt;installed-model-name&gt;</code>.
+      {% if missing_ollama_env and missing_ollama_env|length > 0 %}
+        Missing now:
+        <code>{{ missing_ollama_env | join(", ") }}</code>.
+      {% endif %}
+    {% endif %}
+  </div>
   
   {% if brief.metadata_json and brief.metadata_json.get('last_execution') %}
   <div class="card" style="margin-top:1rem;">
