@@ -261,3 +261,19 @@ At the top of the run detail page is an "Update Run Decision" card. Select a dec
 Decision history is shown in a collapsible panel below the form.
 
 > **build_approved** requires an explicit human selection. The form labels it clearly — it is never set automatically.
+
+### Markdown report export (issue #9)
+
+Generate a local Markdown report from structured run data and record it as an Artifact:
+
+```text
+uv run python scripts/export_markdown_report.py --run-id 1
+```
+
+Behavior:
+- The export writes under `.local/exports/reports/run-<run-id>/`.
+- Filenames are timestamped (`run-<id>-report-YYYYMMDD-HHMMSS.md`) to avoid silent overwrite.
+- If a timestamp collision occurs, a version suffix is added (`-v2`, `-v3`, ...).
+- Each export creates an `Artifact` record with `artifact_type=markdown_report`.
+
+The run detail page also has an **Export Markdown Report** action that triggers the same export flow and records the output in Artifacts.
