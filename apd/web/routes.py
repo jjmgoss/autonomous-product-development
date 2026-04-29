@@ -19,7 +19,6 @@ from apd.web.mutations import (
 from apd.services.report_export import export_run_markdown_report
 from apd.services.research_brief_service import (
     create_brief,
-    generate_agent_prompt,
     get_brief,
     list_briefs,
 )
@@ -351,7 +350,6 @@ def brief_detail(brief_id: int, request: Request, db: Session = Depends(_get_db)
     brief = get_brief(db, brief_id)
     if brief is None:
         raise HTTPException(status_code=404, detail="Research brief not found")
-    prompt = generate_agent_prompt(brief)
     ollama_config, missing_ollama_env = get_ollama_execution_config(db)
     grounding_packet = get_grounding_source_packet_for_brief(db, brief)
     return templates.TemplateResponse(
@@ -359,7 +357,6 @@ def brief_detail(brief_id: int, request: Request, db: Session = Depends(_get_db)
         "brief_detail.html",
         {
             "brief": brief,
-            "agent_prompt": prompt,
             "ollama_ready": ollama_config is not None,
             "missing_ollama_env": missing_ollama_env,
             "ollama_model": ollama_config.model if ollama_config else None,
@@ -405,6 +402,11 @@ def settings_model_execution_save(
 
 @router.post("/briefs/{brief_id}/start-research", response_class=RedirectResponse)
 def start_research(brief_id: int, db: Session = Depends(_get_db)):
+    return start_research_ollama_components(brief_id, db)
+
+
+@router.post("/briefs/{brief_id}/start-research-stub", response_class=RedirectResponse)
+def start_research_stub(brief_id: int, db: Session = Depends(_get_db)):
     brief = get_brief(db, brief_id)
     if brief is None:
         raise HTTPException(status_code=404, detail="Research brief not found")

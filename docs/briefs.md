@@ -1,41 +1,30 @@
 # Research Briefs
 
-APD supports creating a small research brief that generates a copyable agent prompt.
+APD supports creating a small research brief and starting research directly from the brief detail page.
 
 Purpose
 
-- Reduce friction between a research question and the manual agent handoff.
+- Reduce friction between a research question and APD's autonomous local research workflow.
 
 Workflow
 
 1. Create a research brief in the APD UI under `/briefs`.
-2. Copy the generated agent prompt shown on the brief detail page and paste it into an external research agent (e.g. GPT-4, Claude).
-3. Save the agent's JSON output to a local file.
-4. Validate the JSON using APD's validation tooling:
-
-```bash
-uv run python scripts/validate_agent_draft.py --path <draft.json> --repair-hints
-uv run python scripts/normalize_agent_draft.py --path <draft.json> --out <normalized.json>
-```
-
-5. After validation passes, import the draft:
-
-```bash
-uv run python scripts/import_agent_draft.py --path <normalized.json>
-```
+2. Open the brief detail page and click `Start Research`.
+3. APD uses the configured local model to run the current autonomous research path internally.
+4. APD shows concise execution status on the brief detail page, including web discovery and component execution phases when applicable.
+5. If execution succeeds, APD redirects to the imported run. If execution fails, APD keeps the raw execution payload available behind a collapsed details disclosure.
 
 Notes
 
 - APD will import the package as draft/unreviewed research for human inspection and review.
 - The new brief form includes a local sample/randomizer for dogfooding. It does not call a model or save anything until you submit the brief form.
 - APD also supports optional model-generated brief ideation using configured local Ollama settings. These generated ideas are draft form prefills only, are not researched findings, do not perform web/source research, do not use hosted provider API keys, and are not saved until you submit the brief form.
+- The older prompt-copy / validate / normalize / import workflow is legacy/debug fallback only. It is no longer the normal brief-detail experience.
 
 Note: The run review UI is candidate-first — the run detail page surfaces product
 candidates before sources and reasoning so reviewers can prioritize candidate
 inspection and then trace claims/themes/gates back to supporting evidence.
-- The current workflow is manual: APD does not run models itself yet. Automation is tracked in issue #44.
- - A website-first prototype (Issue #44) is available that demonstrates an in-process, deterministic "stub" runner. The stub does not call external models or services; it builds a synthetic agent draft package, validates it with APD's validators, and imports it locally so you can exercise the end-to-end import and run creation flow without external network calls.
-- The generated prompt includes reminders about APD's expected field names and schema. Use them to avoid common near-miss errors (e.g. `sources.source_type`, `evidence_excerpts.excerpt_text`, `claims.statement`).
+- A deterministic stub runner still exists for tests and debugging, but it is no longer the normal user-facing brief workflow.
 
 ## Local Ollama execution (Issue #46)
 
@@ -93,14 +82,15 @@ Intended workflow:
 
 Current prototype behavior:
 
-- The brief detail page exposes a `Start web-assisted research (prototype)` action.
-- When captured sources already exist, the brief detail page also exposes `Start grounded component research`.
+- The brief detail page exposes one primary `Start Research` action for normal users.
+- `Start Research` routes to APD's current best local execution path: web discovery followed by grounded component execution.
 - Execution metadata records web discovery and component execution as separate phases under `metadata_json.last_execution`.
 - Captured sources are shown as part of execution status, not as a separate user prerequisite step.
 - Grounded component execution builds a bounded source packet from APD-captured `Source` and `EvidenceExcerpt` rows.
 - APD validates that model-generated `evidence_link.added` events only reference known captured `source_id` and `excerpt_id` values.
 - APD rejects grounded batches that invent source URLs, invent source/excerpt IDs, or produce claims without at least one supporting grounded evidence link.
 - This is grounding-by-reference only. APD does not verify that captured excerpts make generated claims true.
+- Brief execution status now prioritizes readable phase summaries and error summaries, with raw execution JSON collapsed behind a disclosure.
 
 Safety and budget controls:
 
@@ -150,8 +140,8 @@ Why this exists:
 
 What this is:
 
-- A synchronous website-first prototype path (`Start web-assisted research (prototype)`).
-- A follow-on grounded execution path that reuses APD-captured web sources (`Start grounded component research`).
+- A synchronous brief workflow exposed as `Start Research`.
+- A web-assisted grounded execution path that reuses APD-captured web sources internally.
 - Provider-agnostic schema names (`ResearchComponentEvent`, `ResearchComponentBatch`, `ComponentDraftAssembler`).
 - Ollama is the first adapter implementation.
 

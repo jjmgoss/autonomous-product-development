@@ -469,7 +469,7 @@ def test_brief_detail_page_loads(client):
     assert "No enterprise tools." in body
 
 
-def test_brief_detail_shows_generated_prompt(client):
+def test_brief_detail_hides_legacy_manual_prompt_flow(client):
     resp = client.post(
         "/briefs",
         data={
@@ -480,14 +480,16 @@ def test_brief_detail_shows_generated_prompt(client):
     )
     assert resp.status_code == 200
     body = resp.text
-    assert "Generated agent prompt" in body
+    assert "Configure a local model to start research." in body
     assert "What ops pain do small teams have?" in body
-    # Schema reminders should appear in the rendered prompt
-    assert "source_type" in body
-    assert "excerpt_text" in body
+    assert "Generated agent prompt" not in body
+    assert "Copy prompt" not in body
+    assert "validate_agent_draft.py" not in body
+    assert "normalize_agent_draft.py" not in body
+    assert "import_agent_draft.py" not in body
 
 
-def test_brief_detail_states_apd_not_running_model(client):
+def test_brief_detail_shows_concise_model_settings_prompt_when_missing(client):
     resp = client.post(
         "/briefs",
         data={
@@ -497,11 +499,11 @@ def test_brief_detail_states_apd_not_running_model(client):
         follow_redirects=True,
     )
     assert resp.status_code == 200
-    # Must clearly say APD is not running the model
-    assert "not yet running the model" in resp.text.lower() or "APD is not yet running" in resp.text
+    assert "Configure a local model to start research." in resp.text
+    assert "/settings/model-execution" in resp.text
 
 
-def test_brief_detail_shows_future_start_research_disabled(client):
+def test_brief_detail_shows_single_primary_start_research_action(client):
     resp = client.post(
         "/briefs",
         data={
@@ -512,9 +514,13 @@ def test_brief_detail_shows_future_start_research_disabled(client):
     )
     assert resp.status_code == 200
     body = resp.text
-    assert "Start Research" in body
-    # Website-first prototype now exposes Start Research (stub) — it should not be disabled
-    assert "not yet available" not in body
+    assert "Configure a local model to start research." in body
+    assert "/settings/model-execution" in body
+    assert "Start Research (stub)" not in body
+    assert "Start Research with Ollama" not in body
+    assert "Start web-assisted research (prototype)" not in body
+    assert "Start grounded component research" not in body
+    assert "Website-first prototype" not in body
 
 
 def test_brief_list_shows_created_brief(client):

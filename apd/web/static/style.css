@@ -319,6 +319,91 @@ tr.gate-weak td { background: #fffbeb; }
 }
 .review-form-details > summary:hover { text-decoration: underline; }
 
+.execution-helper-copy {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.execution-settings-notice {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.execution-settings-notice a {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.execution-summary-card {
+  margin-top: 1rem;
+}
+
+.execution-summary-table {
+  max-width: 900px;
+  margin-bottom: 1rem;
+}
+
+.execution-summary-table td {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.execution-error-notice {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  margin-bottom: 1rem;
+}
+
+.execution-messages {
+  margin-top: 1rem;
+}
+
+.execution-messages h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.execution-message-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.execution-message-list li + li {
+  margin-top: 0.35rem;
+}
+
+.execution-warnings {
+  color: #92400e;
+}
+
+.execution-raw-details {
+  margin-top: 1rem;
+}
+
+.execution-raw-details > summary {
+  cursor: pointer;
+  color: #1d4ed8;
+  font-size: 0.875rem;
+}
+
+.execution-raw-json {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-top: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /* shared form row */
 .form-row {
   display: flex;

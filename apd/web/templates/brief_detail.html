@@ -50,173 +50,61 @@
     {% endif %}
   </table>
 </div>
-
-<!-- Generated agent prompt -->
-<div class="card" id="agent-prompt">
-  <h2>Generated agent prompt</h2>
-
-  <div class="notice-box" style="
-    background: #fef9c3;
-    border: 1px solid #fde68a;
-    border-radius: 6px;
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
-    font-size: 0.85rem;
-  ">
-    <strong>Manual mode — APD is not yet running the model.</strong>
-    Copy the prompt below and paste it into an external research agent (e.g. Claude, GPT-4).
-    The agent will return an APD draft JSON package that you can validate and import.
-    This manual copy-paste step is temporary; automated execution is planned for a future release.
-  </div>
-
-  <div style="margin-bottom: 0.75rem;">
-    <button
-      type="button"
-      class="btn btn-primary btn-sm"
-      onclick="copyPrompt()"
-      id="copy-btn"
-    >Copy prompt</button>
-    <span id="copy-confirm" style="display:none; margin-left: 0.5rem; color: #065f46; font-size: 0.8rem;">Copied!</span>
-  </div>
-
-  <pre id="prompt-text" style="
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 1rem;
-    font-size: 0.78rem;
-    line-height: 1.5;
-    white-space: pre-wrap;
-    word-break: break-word;
-    max-height: 600px;
-    overflow-y: auto;
-  ">{{ agent_prompt }}</pre>
-</div>
-
-<!-- Next steps -->
-<div class="card" id="next-steps">
-  <h2>Next steps</h2>
-  <ol style="font-size: 0.875rem; line-height: 1.8; padding-left: 1.25rem;">
-    <li>Copy the prompt above and run it in your external research agent.</li>
-    <li>
-      Save the returned JSON to a local file, then validate it:
-      <br>
-      <code style="background:#f1f5f9; padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.8rem;">
-        uv run python scripts/validate_agent_draft.py --path &lt;draft.json&gt; --repair-hints
-      </code>
-    </li>
-    <li>
-      If validation fails, normalize common near-miss fields:
-      <br>
-      <code style="background:#f1f5f9; padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.8rem;">
-        uv run python scripts/normalize_agent_draft.py --path &lt;draft.json&gt; --out &lt;normalized.json&gt;
-      </code>
-    </li>
-    <li>
-      Import the validated draft:
-      <br>
-      <code style="background:#f1f5f9; padding: 0.15em 0.4em; border-radius: 4px; font-size: 0.8rem;">
-        uv run python scripts/import_agent_draft.py --path &lt;normalized.json&gt;
-      </code>
-    </li>
-    <li>Open the imported run in <a href="/runs">Runs</a> and review the evidence chain.</li>
-  </ol>
-
-  <div class="notice-box" style="
-    background: #f0f9ff;
-    border: 1px solid #bae6fd;
-    border-radius: 6px;
-    padding: 0.75rem 1rem;
-    margin-top: 1rem;
-    font-size: 0.8rem;
-    color: #0369a1;
-  ">
-    <strong>Website-first prototype:</strong>
-    This page can run a deterministic stub research runner that produces a clearly labeled synthetic APD draft.
-    It does not call any model or external service. Use the <em>Start Research (stub)</em> button below to run it.
-    <form method="post" action="/briefs/{{ brief.id }}/start-research" style="display:inline; margin-left:0.5rem;">
-      <button type="submit" class="btn btn-sm btn-primary">Start Research (stub)</button>
-    </form>
-  </div>
-
-  <div class="notice-box" style="
-    background: #ecfeff;
-    border: 1px solid #a5f3fc;
-    border-radius: 6px;
-    padding: 0.75rem 1rem;
-    margin-top: 0.75rem;
-    font-size: 0.8rem;
-    color: #155e75;
-  ">
-    <strong>Local Ollama execution (Issue #46):</strong>
-    {% if ollama_ready %}
-      APD is configured for Ollama model <code>{{ ollama_model }}</code>.
-      <form method="post" action="/briefs/{{ brief.id }}/start-research-ollama" style="display:inline; margin-left:0.5rem;">
-        <button type="submit" class="btn btn-sm btn-primary">Start Research with Ollama</button>
-      </form>
-      <form method="post" action="/briefs/{{ brief.id }}/start-research-ollama-components" style="display:inline; margin-left:0.5rem;">
-        <button type="submit" class="btn btn-sm btn-primary">Start web-assisted research (prototype)</button>
-      </form>
-      {% if grounded_source_count and grounded_excerpt_count %}
-      <form method="post" action="/briefs/{{ brief.id }}/start-grounded-research-ollama-components" style="display:inline; margin-left:0.5rem;">
-        <button type="submit" class="btn btn-sm btn-primary">Start grounded component research</button>
-      </form>
-      {% endif %}
-      <div style="margin-top:0.5rem;">
-        This prototype can run a web discovery phase first, capture validated public sources, then continue into grounded component execution.
-        APD validates source and excerpt IDs used in grounded evidence links, but does not verify claims as true.
-      </div>
-      {% if grounded_source_count and grounded_excerpt_count %}
-      <div style="margin-top:0.35rem;">
-        Captured web grounding context available: {{ grounded_source_count }} sources, {{ grounded_excerpt_count }} excerpts.
-      </div>
-      {% else %}
-      <div style="margin-top:0.35rem;">
-        No captured web sources are available yet for grounded component execution. Run web-assisted discovery first.
-      </div>
-      {% endif %}
-    {% else %}
-      Configure all required env vars to enable this path:
-      <code>APD_MODEL_PROVIDER=ollama</code>,
-      <code>APD_OLLAMA_BASE_URL=http://localhost:11434</code>,
-      <code>APD_OLLAMA_MODEL=&lt;installed-model-name&gt;</code>.
-      {% if missing_ollama_env and missing_ollama_env|length > 0 %}
-        Missing now:
-        <code>{{ missing_ollama_env | join(", ") }}</code>.
-      {% endif %}
+<div class="card">
+  <h2>Start research</h2>
+  {% if ollama_ready %}
+  <p class="execution-helper-copy">Uses your configured local model to run APD's current autonomous research path.</p>
+  <p class="muted" style="margin-top: -0.25rem; margin-bottom: 1rem;">
+    APD runs web discovery first, then continues into grounded component execution using captured sources when available.
+  </p>
+  <form method="post" action="/briefs/{{ brief.id }}/start-research">
+    <button type="submit" class="btn btn-primary">Start Research</button>
+  </form>
+  {% if grounded_source_count and grounded_excerpt_count %}
+  <p class="muted" style="margin-top: 0.75rem; margin-bottom: 0;">
+    Captured grounding context available: {{ grounded_source_count }} sources, {{ grounded_excerpt_count }} excerpts.
+  </p>
+  {% endif %}
+  {% else %}
+  <div class="notice-box execution-settings-notice">
+    <strong>Configure a local model to start research.</strong>
+    APD uses your saved local model settings for autonomous research runs.
+    <a href="/settings/model-execution">Open model execution settings</a>.
+    {% if missing_ollama_env and missing_ollama_env|length > 0 %}
+    <div class="muted" style="margin-top: 0.5rem;">
+      Missing now: {{ missing_ollama_env | join(", ") }}
+    </div>
     {% endif %}
   </div>
-  
+  {% endif %}
+
   {% if brief.metadata_json and brief.metadata_json.get('last_execution') %}
   {% set execution = brief.metadata_json.get('last_execution') %}
   {% set web_status = execution.get('web_discovery') %}
   {% set component_status = execution.get('component_execution') %}
   {% set component_failed_after_web_success = web_status and web_status.get('status') == 'completed' and component_status and component_status.get('status') in ['validation_failed', 'component_validation_failed', 'failed'] %}
-  <div class="card" style="margin-top:1rem;">
+  <div class="execution-summary-card">
     <h3>Last execution</h3>
 
     {% if component_failed_after_web_success %}
-    <div class="notice-box" style="
-      background: #fff7ed;
-      border: 1px solid #fdba74;
-      border-radius: 6px;
-      padding: 0.75rem 1rem;
-      margin-bottom: 1rem;
-      font-size: 0.85rem;
-      color: #9a3412;
-    ">
+    <div class="notice-box execution-error-notice">
       <strong>Web discovery succeeded; component generation failed validation.</strong>
       APD captured sources during the web discovery phase, but the later component generation step did not pass validation.
-      The raw execution JSON and detailed phase errors remain available below.
+      The detailed raw execution payload remains available below if needed.
     </div>
     {% endif %}
 
-    {% if execution.get('mode') == 'web_assisted_component_execution' or web_status %}
-    <table class="detail-table" style="max-width: 900px; margin-bottom: 1rem;">
+    <table class="detail-table execution-summary-table">
       <tr>
         <th style="width: 240px;">Overall status</th>
         <td>{{ execution.get('status', '—') }}</td>
       </tr>
+      {% if execution.get('provider') %}
+      <tr>
+        <th>Execution path</th>
+        <td>{{ execution.get('provider') }}</td>
+      </tr>
+      {% endif %}
       {% if web_status %}
       <tr>
         <th>Web discovery phase</th>
@@ -291,43 +179,39 @@
       {% endif %}
       {% if execution.get('source_grounding_note') %}
       <tr>
-        <th>Grounding status</th>
+        <th>Grounding note</th>
         <td>{{ execution.get('source_grounding_note') }}</td>
       </tr>
       {% endif %}
-      {% if execution.get('errors') %}
-      <tr>
-        <th>Errors</th>
-        <td>{{ execution.get('errors') | join('; ') }}</td>
-      </tr>
-      {% endif %}
-      {% if execution.get('warnings') %}
-      <tr>
-        <th>Warnings</th>
-        <td>{{ execution.get('warnings') | join('; ') }}</td>
-      </tr>
-      {% endif %}
     </table>
+
+    {% if execution.get('errors') %}
+    <div class="execution-messages">
+      <h4>Error summary</h4>
+      <ul class="execution-message-list">
+        {% for error in execution.get('errors') %}
+        <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
     {% endif %}
 
-    <pre style="background:#fff; padding:0.75rem; border-radius:6px;">{{ execution | tojson }}</pre>
+    {% if execution.get('warnings') %}
+    <div class="execution-messages execution-warnings">
+      <h4>Warnings</h4>
+      <ul class="execution-message-list">
+        {% for warning in execution.get('warnings') %}
+        <li>{{ warning }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <details class="execution-raw-details">
+      <summary>Show raw execution details</summary>
+      <pre class="execution-raw-json">{{ execution | tojson(indent=2) }}</pre>
+    </details>
   </div>
   {% endif %}
 </div>
-
-<script>
-function copyPrompt() {
-  var text = document.getElementById("prompt-text").textContent;
-  navigator.clipboard.writeText(text).then(function() {
-    var btn = document.getElementById("copy-btn");
-    var confirm = document.getElementById("copy-confirm");
-    btn.textContent = "Copied!";
-    confirm.style.display = "inline";
-    setTimeout(function() {
-      btn.textContent = "Copy prompt";
-      confirm.style.display = "none";
-    }, 2000);
-  });
-}
-</script>
 {% endblock %}
