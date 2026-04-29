@@ -50,6 +50,7 @@ Use this repository when you want an agent to:
 - `DISCOVERY_RUN_MODE.md` - boundary file for discovery-to-planning runs
 - `DISCOVERY_RUN_PROMPT.md` - detailed discovery-to-planning prompt when a tiny prompt is not enough
 - `agent/` - repo-wide operating instructions, gates, lifecycle map, and conventions
+- `skills/research/` - harness-injected phase-specific research skills and the manifest that will feed APD research prompts
 - `skills/product/` - discovery, scoring, validation, monetization, operability, requirements, design, and planning skills
 - `skills/engineering/` - prototype, implementation loop, debugging, testing, review, release, and deployment guidance
 - `skills/meta/` - anti-slop, evidence, critic, scope-cutting, and stuck-recovery guidance

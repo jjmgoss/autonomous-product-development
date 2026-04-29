@@ -9,6 +9,24 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+RESEARCH_SKILL_MANIFEST_PATH = "skills/research/manifest.yaml"
+RESEARCH_SKILL_SPECS = [
+    ("research_protocol", "skills/research/research_protocol.md"),
+    ("question_framing", "skills/research/question_framing.md"),
+    ("search_strategy", "skills/research/search_strategy.md"),
+    ("url_target_selection", "skills/research/url_target_selection.md"),
+    ("source_triage", "skills/research/source_triage.md"),
+    ("evidence_extraction", "skills/research/evidence_extraction.md"),
+    ("claim_grounding", "skills/research/claim_grounding.md"),
+    ("theme_synthesis", "skills/research/theme_synthesis.md"),
+    ("candidate_generation", "skills/research/candidate_generation.md"),
+    ("validation_gate_design", "skills/research/validation_gate_design.md"),
+    ("research_audit", "skills/research/research_audit.md"),
+]
+RESEARCH_SKILL_FILES = [path for _, path in RESEARCH_SKILL_SPECS]
+RESEARCH_SKILL_IDS = {skill_id for skill_id, _ in RESEARCH_SKILL_SPECS}
+RESEARCH_SKILL_PATH_TO_ID = {path: skill_id for skill_id, path in RESEARCH_SKILL_SPECS}
+
 REQUIRED_FILES = [
     "README.md",
     "START_HERE.md",
@@ -34,6 +52,8 @@ REQUIRED_FILES = [
     "skills/product/agent-operability-skill.md",
     "skills/product/competitor-substitute-analysis-skill.md",
     "skills/engineering/prototype-skill.md",
+    RESEARCH_SKILL_MANIFEST_PATH,
+    *RESEARCH_SKILL_FILES,
     "templates/research-source-note.md",
     "templates/candidate-evidence-map.md",
     "templates/discovery-summary.md",
@@ -94,6 +114,41 @@ ARTIFACT_MANIFEST_FIELDS = {
     "inputs",
     "purpose",
     "notes",
+}
+
+RESEARCH_SKILL_MANIFEST_FIELDS = {
+    "id",
+    "path",
+    "phases",
+    "trigger_terms",
+    "expected_inputs",
+    "expected_outputs",
+    "max_prompt_budget_chars",
+}
+
+RESEARCH_SKILL_DOC_HEADINGS = {
+    "## skill name/id",
+    "## use when",
+    "## inputs",
+    "## procedure",
+    "## output contract",
+    "## quality checks",
+    "## failure modes",
+    "## mini example",
+    "## eval hooks",
+}
+
+KNOWN_RESEARCH_PHASES = {
+    "brief_framing",
+    "research_planning",
+    "web_discovery",
+    "source_triage",
+    "evidence_extraction",
+    "grounded_claim_generation",
+    "theme_synthesis",
+    "candidate_generation",
+    "validation_gate_generation",
+    "audit_gap_analysis",
 }
 
 LAUNCH_SCAFFOLD_MARKER = "launch scaffold"
@@ -397,6 +452,166 @@ def parse_markdown_bullets(text: str) -> dict[str, str]:
 
 def count_candidate_sections(text: str) -> int:
     return sum(1 for line in text.splitlines() if line.strip().startswith("## Candidate:"))
+
+
+def _parse_inline_manifest_value(raw_value: str) -> object:
+    value = raw_value.strip()
+    if value.startswith("[") and value.endswith("]"):
+        items: list[str] = []
+        for part in value[1:-1].split(","):
+            item = part.strip().strip("\"'")
+            if item:
+                items.append(item)
+        return items
+    if re.fullmatch(r"\d+", value):
+        return int(value)
+    return value.strip("\"'")
+
+
+def load_research_skill_manifest(relative_path: str) -> tuple[list[dict[str, object]] | None, list[str]]:
+    text, load_error = load_text(relative_path)
+    if load_error:
+        return None, [load_error]
+    assert text is not None
+
+    skills: list[dict[str, object]] = []
+    current: dict[str, object] | None = None
+    found_skills_list = False
+
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip()
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if not found_skills_list:
+            if stripped == "skills:":
+                found_skills_list = True
+            continue
+
+        if stripped.startswith("- "):
+            if current is not None:
+                skills.append(current)
+            field_text = stripped[2:]
+            if ":" not in field_text:
+                return None, [f"{relative_path} has an invalid skill entry: {stripped}"]
+            key, value = field_text.split(":", 1)
+            current = {key.strip(): _parse_inline_manifest_value(value)}
+            continue
+
+        if current is None:
+            return None, [f"{relative_path} has fields before the first skill entry."]
+
+        if not line.startswith("    "):
+            return None, [f"{relative_path} has unsupported indentation for skill fields: {stripped}"]
+
+        if ":" not in stripped:
+            return None, [f"{relative_path} has an invalid skill field: {stripped}"]
+
+        key, value = stripped.split(":", 1)
+        current[key.strip()] = _parse_inline_manifest_value(value)
+
+    if current is not None:
+        skills.append(current)
+
+    if not found_skills_list:
+        return None, [f"{relative_path} must contain a top-level `skills:` list."]
+
+    return skills, []
+
+
+def validate_research_skill_doc(relative_path: str, *, expected_id: str | None = None) -> list[str]:
+    errors = validate_markdown(relative_path, RESEARCH_SKILL_DOC_HEADINGS)
+    text, load_error = load_text(relative_path)
+    if load_error:
+        return [load_error]
+    assert text is not None
+
+    if not text.lstrip().startswith("# Research Skill:"):
+        errors.append(f"{relative_path} must start with a `# Research Skill:` heading.")
+
+    match = re.search(r"## Skill name/id\s+`?([a-z0-9_]+)`?", text, re.IGNORECASE)
+    if not match:
+        errors.append(f"{relative_path} must declare a machine-readable skill id under `## Skill name/id`.")
+    elif expected_id and match.group(1).strip() != expected_id:
+        errors.append(
+            f"{relative_path} declares skill id `{match.group(1).strip()}` but manifest expects `{expected_id}`."
+        )
+
+    return errors
+
+
+def validate_research_skill_manifest(relative_path: str) -> list[str]:
+    skills, load_errors = load_research_skill_manifest(relative_path)
+    if load_errors:
+        return load_errors
+    assert skills is not None
+
+    errors: list[str] = []
+    seen_ids: set[str] = set()
+    seen_paths: set[str] = set()
+
+    for index, skill in enumerate(skills, start=1):
+        missing = sorted(
+            field for field in RESEARCH_SKILL_MANIFEST_FIELDS if skill.get(field) in (None, "", [])
+        )
+        if missing:
+            errors.append(f"{relative_path} skill #{index} is missing fields: {', '.join(missing)}")
+            continue
+
+        skill_id = str(skill.get("id") or "").strip()
+        path = str(skill.get("path") or "").strip()
+        phases = skill.get("phases")
+        trigger_terms = skill.get("trigger_terms")
+        expected_inputs = skill.get("expected_inputs")
+        expected_outputs = skill.get("expected_outputs")
+        max_prompt_budget_chars = skill.get("max_prompt_budget_chars")
+
+        if skill_id in seen_ids:
+            errors.append(f"{relative_path} contains duplicate skill id: {skill_id}")
+        seen_ids.add(skill_id)
+
+        if path in seen_paths:
+            errors.append(f"{relative_path} contains duplicate skill path: {path}")
+        seen_paths.add(path)
+
+        expected_id = RESEARCH_SKILL_PATH_TO_ID.get(path)
+        if expected_id and skill_id != expected_id:
+            errors.append(f"{relative_path} maps path {path} to id {skill_id}, expected {expected_id}.")
+
+        if not (ROOT / path).is_file():
+            errors.append(f"{relative_path} references a missing skill file: {path}")
+
+        if not isinstance(phases, list) or not phases:
+            errors.append(f"{relative_path} skill `{skill_id}` must declare a non-empty `phases` list.")
+        else:
+            unknown_phases = sorted({str(item).strip() for item in phases} - KNOWN_RESEARCH_PHASES)
+            if unknown_phases:
+                errors.append(
+                    f"{relative_path} skill `{skill_id}` uses unknown phases: {', '.join(unknown_phases)}"
+                )
+
+        for field_name, value in [
+            ("trigger_terms", trigger_terms),
+            ("expected_inputs", expected_inputs),
+            ("expected_outputs", expected_outputs),
+        ]:
+            if not isinstance(value, list) or not all(str(item).strip() for item in value):
+                errors.append(f"{relative_path} skill `{skill_id}` must declare a non-empty `{field_name}` list.")
+
+        if not isinstance(max_prompt_budget_chars, int) or max_prompt_budget_chars <= 0:
+            errors.append(
+                f"{relative_path} skill `{skill_id}` must declare a positive integer `max_prompt_budget_chars`."
+            )
+
+    missing_ids = sorted(RESEARCH_SKILL_IDS - seen_ids)
+    if missing_ids:
+        errors.append(f"{relative_path} is missing required skill ids: {', '.join(missing_ids)}")
+
+    missing_paths = sorted(set(RESEARCH_SKILL_FILES) - seen_paths)
+    if missing_paths:
+        errors.append(f"{relative_path} is missing required skill paths: {', '.join(missing_paths)}")
+
+    return errors
 
 
 def validate_run_index(relative_path: str) -> list[str]:
@@ -751,6 +966,9 @@ def validate_repo() -> int:
     errors.extend(validate_markdown("START_HERE.md", REQUIRED_START_HEADINGS))
     errors.extend(validate_markdown("ACTIVE_RUN.md", REQUIRED_ACTIVE_RUN_HEADINGS))
     errors.extend(validate_active_run())
+    errors.extend(validate_research_skill_manifest(RESEARCH_SKILL_MANIFEST_PATH))
+    for skill_id, skill_path in RESEARCH_SKILL_SPECS:
+        errors.extend(validate_research_skill_doc(skill_path, expected_id=skill_id))
 
     total_missing = len(missing_files) + len(missing_dirs)
     print()

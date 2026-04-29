@@ -1,0 +1,79 @@
+version: 1
+skills:
+  - id: research_protocol
+    path: skills/research/research_protocol.md
+    phases: [brief_framing, research_planning, web_discovery, source_triage, evidence_extraction, grounded_claim_generation, theme_synthesis, candidate_generation, validation_gate_generation, audit_gap_analysis]
+    trigger_terms: [evidence discipline, traceability, no invented sources, phase scope, safety]
+    expected_inputs: [research brief, phase objective, safety constraints, source availability]
+    expected_outputs: [phase compliance notes, grounded output decisions, uncertainty markers]
+    max_prompt_budget_chars: 1200
+  - id: question_framing
+    path: skills/research/question_framing.md
+    phases: [brief_framing, research_planning]
+    trigger_terms: [vague brief, scope narrowing, research question, non goals, clarify ask]
+    expected_inputs: [raw user curiosity, notes, constraints, desired depth]
+    expected_outputs: [research brief fields, clarification questions, non goals]
+    max_prompt_budget_chars: 900
+  - id: search_strategy
+    path: skills/research/search_strategy.md
+    phases: [research_planning, web_discovery]
+    trigger_terms: [search queries, source diversity, evidence plan, retrieval coverage]
+    expected_inputs: [research brief, target users, likely workflows, source budget]
+    expected_outputs: [query list, source type targets, search rationales]
+    max_prompt_budget_chars: 900
+  - id: url_target_selection
+    path: skills/research/url_target_selection.md
+    phases: [web_discovery]
+    trigger_terms: [direct urls, fetch targets, public pages, safe sources]
+    expected_inputs: [candidate urls, query intent, safety constraints, fetch budget]
+    expected_outputs: [url list, fetch rationales, expected source value]
+    max_prompt_budget_chars: 850
+  - id: source_triage
+    path: skills/research/source_triage.md
+    phases: [source_triage]
+    trigger_terms: [keep source, discard source, relevance, source quality, source packet]
+    expected_inputs: [captured sources, brief objective, source metadata, phase budget]
+    expected_outputs: [retained source ids, dropped source ids, triage notes]
+    max_prompt_budget_chars: 850
+  - id: evidence_extraction
+    path: skills/research/evidence_extraction.md
+    phases: [evidence_extraction]
+    trigger_terms: [excerpt selection, quote extraction, evidence snippets, prompt packet]
+    expected_inputs: [retained sources, source text, excerpt budget, target workflows]
+    expected_outputs: [excerpt candidates, excerpt metadata, why it matters notes]
+    max_prompt_budget_chars: 900
+  - id: claim_grounding
+    path: skills/research/claim_grounding.md
+    phases: [grounded_claim_generation]
+    trigger_terms: [grounded claims, evidence links, source ids, excerpt ids]
+    expected_inputs: [grounding packet, source ids, excerpt ids, claim schema]
+    expected_outputs: [claim.proposed events, evidence_link.added events]
+    max_prompt_budget_chars: 1100
+  - id: theme_synthesis
+    path: skills/research/theme_synthesis.md
+    phases: [theme_synthesis]
+    trigger_terms: [pain patterns, repeated themes, synthesis, clustering]
+    expected_inputs: [grounded claims, excerpts, candidate context, theme schema]
+    expected_outputs: [theme.proposed events, supporting theme links]
+    max_prompt_budget_chars: 950
+  - id: candidate_generation
+    path: skills/research/candidate_generation.md
+    phases: [candidate_generation]
+    trigger_terms: [product wedge, narrow candidate, first buyer, first workflow]
+    expected_inputs: [themes, claims, substitutes, product constraints]
+    expected_outputs: [candidate.proposed events, candidate evidence needs]
+    max_prompt_budget_chars: 1100
+  - id: validation_gate_design
+    path: skills/research/validation_gate_design.md
+    phases: [validation_gate_generation]
+    trigger_terms: [validation gates, missing evidence, candidate blockers, phase maturity]
+    expected_inputs: [candidate ids, research phase model, open risks, evidence gaps]
+    expected_outputs: [validation_gate.proposed events, gate blockers]
+    max_prompt_budget_chars: 900
+  - id: research_audit
+    path: skills/research/research_audit.md
+    phases: [audit_gap_analysis]
+    trigger_terms: [audit, unsupported synthesis, gap analysis, follow up]
+    expected_inputs: [claims, themes, candidates, evidence links, validation errors]
+    expected_outputs: [audit findings, unsupported item ids, follow up questions]
+    max_prompt_budget_chars: 900

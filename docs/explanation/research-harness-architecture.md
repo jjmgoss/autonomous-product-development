@@ -386,7 +386,7 @@ Future skill work should follow these rules:
 - skills are injected only when relevant to the current phase
 - APD does not dump the entire skill tree into every prompt
 
-Issue #69 introduces the initial skill tree and manifest. Issue #70 should make skill selection and prompt injection part of the harness runtime.
+The initial research skill tree now lives under `skills/research/manifest.yaml`. Issue #70 should make skill selection and prompt injection part of the harness runtime.
 
 ## Context assembly
 
