@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 import re
 
 from sqlalchemy.orm import Session
@@ -14,16 +15,36 @@ from apd.services.research_execution_ollama import (
 
 
 _IDEATION_THEMES = [
-    "AI-assisted product research",
-    "local-first developer tools",
-    "self-hosting and maintenance",
-    "personal knowledge management",
-    "small business operations",
-    "household maintenance and repairs",
-    "personal finance decision support",
-    "car ownership and insurance workflows",
-    "data quality and analytics trust",
-    "hobbyist project management",
+    "Restaurant inventory waste reduction",
+    "Hotel front-desk shift handoff workflows",
+    "Temporary staffing schedule coordination",
+    "Animal rescue foster placement matching",
+    "Small farm equipment maintenance tracking",
+    "Forestry compliance documentation",
+    "Independent theater ticketing and concessions operations",
+    "Youth sports league scheduling",
+    "Construction subcontractor change-order tracking",
+    "Trade school student placement coordination",
+    "Insurance claim documentation for small agencies",
+    "Credit union member onboarding workflows",
+    "Local government parcel mapping updates",
+    "Home health aide visit verification",
+    "Clinic referral leakage tracking",
+    "Local newsroom source and tip management",
+    "Internal approval workflows for field operations",
+    "Holding company portfolio reporting",
+    "Factory floor quality incident tracking",
+    "Machine shop quote-to-production handoff",
+    "Quarry equipment utilization tracking",
+    "Mailbox rental customer lifecycle management",
+    "Consulting firm proposal reuse and knowledge capture",
+    "Municipal permit review queue management",
+    "Property manager maintenance triage",
+    "Independent retailer stockout prediction",
+    "Utility outage customer communications",
+    "Hazardous waste pickup scheduling",
+    "Wholesale distributor backorder visibility",
+    "Small carrier dock appointment coordination",
 ]
 
 _OPTIONAL_FIELDS = ["constraints", "desired_depth", "expected_outputs", "notes"]
@@ -35,6 +56,10 @@ _RESEARCH_CLAIM_PATTERN = re.compile(
 
 def get_brief_ideation_themes() -> list[str]:
     return list(_IDEATION_THEMES)
+
+
+def pick_random_brief_ideation_theme() -> str:
+    return random.choice(_IDEATION_THEMES)
 
 
 def build_brief_ideation_prompt(selected_themes: list[str]) -> str:
@@ -101,15 +126,12 @@ def parse_generated_brief_idea(raw_model_output: str) -> tuple[dict[str, str] | 
 
 def generate_brief_idea_with_ollama(
     db: Session,
-    selected_themes: list[str],
+    selected_themes: list[str] | None,
 ) -> tuple[dict[str, str] | None, str | None]:
-    if not selected_themes:
-        return None, "Select at least one theme before generating a brief idea."
-
     valid_themes = set(_IDEATION_THEMES)
-    normalized_themes = [theme.strip() for theme in selected_themes if theme and theme.strip()]
+    normalized_themes = [theme.strip() for theme in (selected_themes or []) if theme and theme.strip()]
     if not normalized_themes:
-        return None, "Select at least one theme before generating a brief idea."
+        normalized_themes = [pick_random_brief_ideation_theme()]
     invalid_themes = [theme for theme in normalized_themes if theme not in valid_themes]
     if invalid_themes:
         return None, "One or more selected ideation themes are invalid."

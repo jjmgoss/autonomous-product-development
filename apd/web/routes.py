@@ -230,13 +230,16 @@ def briefs_new(request: Request, db: Session = Depends(_get_db)):
 async def briefs_ideate(request: Request, db: Session = Depends(_get_db)):
     payload = await request.json()
     selected_themes = payload.get("selected_themes") if isinstance(payload, dict) else None
-    if not isinstance(selected_themes, list) or not selected_themes:
+    if selected_themes is not None and not isinstance(selected_themes, list):
         return JSONResponse(
-            {"success": False, "error": "Select at least one theme before generating a brief idea."},
+            {"success": False, "error": "Invalid ideation request payload."},
             status_code=422,
         )
 
-    idea, ideation_error = generate_brief_idea_with_ollama(db, [str(value) for value in selected_themes])
+    idea, ideation_error = generate_brief_idea_with_ollama(
+        db,
+        [str(value) for value in selected_themes] if selected_themes is not None else None,
+    )
     if ideation_error:
         status_code = 503 if "not configured" in ideation_error.lower() else 400
         return JSONResponse({"success": False, "error": ideation_error}, status_code=status_code)

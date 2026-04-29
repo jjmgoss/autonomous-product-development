@@ -16,6 +16,7 @@ from apd.services.model_execution_settings import save_model_execution_settings
 from apd.services.research_brief_ideation import (
     build_brief_ideation_prompt,
     get_brief_ideation_themes,
+    pick_random_brief_ideation_theme,
     parse_generated_brief_idea,
 )
 from apd.services.research_brief_service import (
@@ -236,9 +237,13 @@ def test_sample_research_briefs_include_at_least_eight_product_prompts():
 
 def test_brief_ideation_themes_include_expected_options():
     themes = get_brief_ideation_themes()
-    assert "AI-assisted product research" in themes
-    assert "self-hosting and maintenance" in themes
+    assert "Restaurant inventory waste reduction" in themes
+    assert "Property manager maintenance triage" in themes
     assert len(themes) >= 8
+
+
+def test_pick_random_brief_ideation_theme_returns_known_theme():
+    assert pick_random_brief_ideation_theme() in get_brief_ideation_themes()
 
 
 def test_brief_ideation_prompt_includes_selected_themes():
@@ -297,10 +302,9 @@ def test_brief_new_page_shows_ideation_controls(client):
     resp = client.get("/briefs/new")
     assert resp.status_code == 200
     body = resp.text
-    assert "Generate fresh idea" in body
-    assert "AI-assisted product research" in body
-    assert "self-hosting and maintenance" in body
-    assert "Select at least one theme before generating a brief idea." in body
+    assert "let an LLM pick" in body
+    assert "randomly choose one local ideation theme" in body
+    assert 'type="checkbox"' not in body
 
 
 def test_brief_new_page_disables_ideation_when_model_not_configured(client, monkeypatch):
@@ -320,7 +324,7 @@ def test_brief_ideation_route_returns_config_error_without_model_settings(client
     monkeypatch.delenv("APD_OLLAMA_BASE_URL", raising=False)
     monkeypatch.delenv("APD_OLLAMA_MODEL", raising=False)
 
-    response = client.post("/briefs/ideate", json={"selected_themes": ["AI-assisted product research"]})
+    response = client.post("/briefs/ideate", json={})
     assert response.status_code == 503
     assert response.json()["success"] is False
     assert "not configured" in response.json()["error"].lower()
@@ -364,18 +368,22 @@ def test_brief_ideation_route_returns_generated_brief_and_does_not_persist(clien
             None,
         )
 
-    with patch("apd.services.research_brief_ideation._ollama_generate", _fake_generate):
-        response = client.post(
-            "/briefs/ideate",
-            json={"selected_themes": ["AI-assisted product research", "local-first developer tools"]},
-        )
+    with patch(
+        "apd.services.research_brief_ideation.pick_random_brief_ideation_theme",
+        return_value="Restaurant inventory waste reduction",
+    ):
+        with patch("apd.services.research_brief_ideation._ollama_generate", _fake_generate):
+            response = client.post(
+                "/briefs/ideate",
+                json={},
+            )
 
     assert response.status_code == 200
     payload = response.json()
     assert payload["success"] is True
     assert payload["title"] == "Fresh idea title"
     assert any(
-        "AI-assisted product research, local-first developer tools" in value.get("prompt", "")
+        "Use these selected themes: Restaurant inventory waste reduction." in value.get("prompt", "")
         for value in captured_payloads
     )
 
@@ -412,11 +420,15 @@ def test_brief_ideation_route_returns_useful_error_for_bad_model_output(client):
             return ({"response": ""}, None)
         return ({"response": "not json"}, None)
 
-    with patch("apd.services.research_brief_ideation._ollama_generate", _fake_generate):
-        response = client.post(
-            "/briefs/ideate",
-            json={"selected_themes": ["AI-assisted product research"]},
-        )
+    with patch(
+        "apd.services.research_brief_ideation.pick_random_brief_ideation_theme",
+        return_value="Restaurant inventory waste reduction",
+    ):
+        with patch("apd.services.research_brief_ideation._ollama_generate", _fake_generate):
+            response = client.post(
+                "/briefs/ideate",
+                json={},
+            )
 
     assert response.status_code == 400
     payload = response.json()
