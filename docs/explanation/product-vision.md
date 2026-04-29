@@ -7,8 +7,8 @@ Its job is not to be a generic research archive or a generic coding agent wrappe
 The central product loop is:
 
 1. A user enters a product investigation direction.
-2. An agent produces a draft research map: sources, excerpts, claims, themes, candidates, validation gates, and evidence links.
-3. APD imports that draft as unreviewed structured research.
+2. APD runs or imports a structured research flow that produces sources, excerpts, claims, themes, candidates, validation gates, and evidence links.
+3. APD imports that result as unreviewed structured research.
 4. The user reviews the reasoning chain from product candidates back to evidence.
 5. The user accepts, disputes, dismisses, or requests follow-up on parts of the map.
 6. APD converts that review into next actions: follow-up research, candidate validation, prototype brief, no-go decision, or build approval.
@@ -26,6 +26,10 @@ The differentiation is not simply that an LLM can research or write code. The di
 - It preserves decisions and follow-up needs.
 - It can eventually turn a validated candidate into a prototype brief or scaffolded project.
 
+APD should therefore be understood as the research harness around the model, not as a thin wrapper over model output. The model is one worker inside APD's loop. The product value comes from the harness: phase progression, constrained tool use, validation, persistence, observability, and human review.
+
+For the concrete harness view, see [Research Harness Architecture](research-harness-architecture.md).
+
 ## Primary user job
 
 The user starts from a question like:
@@ -42,6 +46,8 @@ APD should help them:
 - trace claims back to sources and evidence excerpts
 - separate supported claims from weak or disputed ones
 - decide which candidate deserves more validation or prototyping
+
+The normal product path should therefore feel like a guided investigation workflow. A user should not need to assemble their own prompts, source permissions, or agent graph in order to get useful product research out of APD.
 
 ## Product scope
 
@@ -84,3 +90,12 @@ The key is that build-forward work should be grounded in reviewed product reason
 ## Current constraint
 
 APD is currently local-first and single-user. It should continue to support dogfooding locally while avoiding design choices that block future hosted or multi-user versions.
+
+Current runtime direction:
+
+- the user creates a brief
+- APD starts research from that brief
+- APD owns the outer loop for web discovery, source capture, grounded generation, validation, and import
+- the user reviews the resulting run through candidate-first UI surfaces
+
+Manual prompt copy/paste and direct draft import may remain as legacy or debug paths, but they should not define the main product story.

@@ -1,144 +1,135 @@
 # Post-MVP roadmap
 
-This roadmap starts from the current local APD cockpit: a single-user app that can import structured agent drafts, display runs, support human review, record decisions, export reports, and link legacy artifacts.
+This roadmap starts from APD's current local-first baseline: a product-research harness that can start from a brief, run a bounded research loop, import structured output, and present the results for candidate-first review.
 
-The next phase is to turn that cockpit into a product investigation workflow.
+The roadmap should no longer treat manual prompt copy/paste as the main product path. That workflow still exists as a legacy or debug fallback, but the architectural direction is now harness maturity: APD owns the research loop, the tool boundaries, the validation gates, and the review surface.
 
 ## North star
 
-APD should help a user move from a product research question to a reviewed product opportunity and then, when appropriate, to a prototype brief or scaffolded project.
+APD should help a user move from a product research question to a reviewed product opportunity and then, when appropriate, to follow-up research, a validation brief, or a build-forward handoff.
 
-The product loop is:
+The target loop is:
 
-1. Create a research direction.
-2. Generate or import an agent draft.
-3. Review the candidate-centered reasoning chain.
-4. Accept, dispute, dismiss, or request follow-up on claims and themes.
-5. Promote, park, or reject candidates.
-6. Generate follow-up research tasks or a prototype brief.
-7. Preserve reviewed knowledge in the corpus.
+1. Create a research brief.
+2. Click `Start Research`.
+3. Let APD run a bounded research harness with explicit phases, tools, and safety checks.
+4. Review the resulting candidate-centered reasoning chain.
+5. Accept, dispute, dismiss, or request follow-up on the generated research.
+6. Preserve reviewed knowledge in the corpus.
+7. Generate follow-up tasks or build-forward artifacts only after review.
 
-## Phase 1: Make the dogfood loop ergonomic
+## Current baseline
 
-Goal: reduce friction between research question, agent output, and APD review.
+APD already has the minimum viable harness loop for local dogfooding:
 
-Relevant issues:
+- single `Start Research` brief workflow (#65)
+- local model settings (#55)
+- controlled web discovery and source capture (#62)
+- grounded component execution from captured sources (#63)
+- candidate-first run review (#35)
 
-- #31 Add research brief creation UI and generated agent prompt
-- #32 Add browser-based agent draft import flow
-- #34 Add agent draft validation and repair workflow
+That means the next phase is not "make APD run models at all." The next phase is to make the existing harness architecture explicit, observable, and extensible.
 
-Expected result:
+## Near-term harness maturity order
 
-A user can create a research brief in APD, copy a generated prompt to an external agent, paste the returned draft JSON back into APD, repair/validate it when needed, and immediately review the imported run.
+The recommended near-term order is:
 
-This is still not a fully automated agent runner. It is the minimum product-like workflow before APD starts calling models itself.
+1. #65 Single `Start Research` workflow and brief UI cleanup.
+2. #62 and #63 Web-assisted and source-grounded execution.
+3. #68 Research harness architecture docs and roadmap alignment.
+4. #69 Research skill tree and manifest.
+5. #70 Skill discovery and injection into phase prompts.
+6. #71 Research trace and event log.
+7. #72 Controlled research eval harness.
+8. #73 Model and harness scorecards.
+9. #74 Deterministic browser smoke coverage for the primary brief workflow.
+10. #22 Corpus browser and accepted-knowledge surfaces.
+11. #38, #39, #40, and #41 Review semantics, reasoning relationships, follow-up tasks, and candidate promotion refinements.
+12. Build-forward handoff: validation briefs, prototype briefs, requirements, issue drafts, and scaffolded project outputs.
 
-## Phase 2: Make run review candidate-centered
+This ordering reflects a practical dependency chain:
 
-Goal: make APD feel like a product investigation cockpit rather than a structured report viewer.
+- document the harness
+- define the skill layer
+- inject skills into the loop
+- add traceability
+- add evals
+- add scorecards
+- then expand corpus and post-review workflows on top of a measurable runtime
 
-Relevant issues:
+## Legacy baseline work
 
-- #35 Improve run detail UI for product-research review workflow
-- #38 Add explicit reasoning relationship model
-- #39 Add theme review surface and semantics
-- #40 Refine candidate review and promotion workflow
+Completed or baseline work that should remain supported, but no longer define the main product story:
 
-Expected result:
+- #31 Research brief creation UI
+- #32 Browser-based draft import flow
+- #34 Agent draft validation and repair workflow
 
-The user starts with product candidates, then drills down into validation gates, themes, claims, and evidence. The review actions fit the object being reviewed: claims are accepted/disputed/dismissed; themes are supported/weak/merged; candidates are rejected, watched, validated, prototyped later, or approved for build-forward work.
+Those paths still matter for testing, debugging, or importing externally created drafts. They should be documented as supporting workflows, not as the architectural center of APD.
 
-## Phase 3: Turn review into next actions
+## Harness maturity workstream
 
-Goal: make human review feed the next research or product-development loop.
+### Phase A: Make the harness explicit
 
-Relevant issues:
-
-- #41 Generate follow-up research tasks from review feedback
-- future issue: generate validation brief from candidate gates
-- future issue: generate prototype brief from promoted candidate
-
-Expected result:
-
-A disputed claim can become a follow-up research task. A weak theme can request more evidence. A candidate marked validate_next can produce validation questions, source requests, or interview prompts. A candidate marked prototype_later or build_approved can produce a prototype brief.
-
-## Phase 4: Make the corpus first-class
-
-Goal: make accumulated research inspectable and reusable across runs.
-
-Relevant issues:
-
-- #22 Add corpus browser as first-class product surface
-- future issue: define accepted knowledge layer
-- future issue: search across runs and reviewed knowledge
-- future issue: show related runs, recurring themes, and repeated candidates
-
-Expected result:
-
-APD is no longer only a run viewer. It becomes a workspace where sources, claims, themes, candidates, review states, decisions, and artifacts can be inspected across runs.
-
-Accepted or supported knowledge should be visually distinct from unreviewed draft output.
-
-## Phase 5: Add research contexts and source ingestion
-
-Goal: let users prime research runs with selected data sources.
+Goal:
+- document the runtime as a harness with fixed phases, tools, context assembly, safety rules, traces, and review boundaries
 
 Relevant issues:
-
-- #23 Add source pack model for reusable research contexts
-- #24 Add public URL source ingestion
-- #28 Add research brief and run config model
-- future issue: uploaded-file source ingestion
-- future issue: GitHub repository or issue source ingestion
+- #68 Research harness architecture docs
+- #69 Research skill tree and manifest
+- #70 Skill discovery and prompt integration
 
 Expected result:
+- future implementers understand that APD owns the outer research loop and the model operates inside that loop
 
-A user can define a source pack, create a research brief, and tell an external or future internal agent what sources are allowed for a run. Source access should be explicit and scoped, not global.
+### Phase B: Make the harness observable and measurable
 
-## Phase 6: Prepare for model/provider integrations
-
-Goal: avoid hardcoding APD to one AI provider or runtime.
+Goal:
+- make research executions inspectable, replayable, and comparable across harness or model changes
 
 Relevant issues:
-
-- #25 Add model provider abstraction design and local stubs
-- #33 Add future local agent runner design and stub
-- #26 Design workspace and user boundary for future multi-user APD
+- #71 Research trace/event log
+- #72 Research eval harness
+- #73 Model scorecards
+- #74 Browser smoke coverage
 
 Expected result:
+- APD can explain what happened during a run, compare harness changes across versions, and measure research quality beyond vibes
 
-APD has clear boundaries for model providers, source access, and user/workspace ownership. It remains local-first now, but does not paint itself into a corner if a hosted or multi-user version becomes useful.
+### Phase C: Make reviewed knowledge reusable
 
-## Phase 7: Build-forward workflow
+Goal:
+- turn one-off runs into reusable research memory and actionable next steps
 
-Goal: turn a promoted product candidate into useful product-building artifacts.
+Relevant issues:
+- #22 Corpus browser
+- #38 Explicit reasoning relationships
+- #39 Theme review semantics
+- #40 Candidate promotion workflow
+- #41 Follow-up research tasks
 
-Future issues should cover:
+Expected result:
+- APD becomes a workspace for accumulated product reasoning rather than only a one-run viewer
 
+### Phase D: Build-forward handoff
+
+Goal:
+- turn reviewed candidates into grounded downstream artifacts
+
+Future work should cover:
+
+- validation brief generation
 - prototype brief export
 - requirements and non-goals generation
 - GitHub issue draft export
 - scaffolded repository generation
-- repo-rails integration for generated projects
-- handoff from APD research run to a build project
+- handoff from APD research runs to build projects
 
 Expected result:
+- a reviewed opportunity can become a build package without skipping the research and review loop
 
-When a candidate is sufficiently reviewed and promoted, APD can create a build package. The package may include a prototype brief, requirements, backlog, issue drafts, and possibly a runnable scaffolded repository.
+## Provider and deployment posture
 
-The goal is not to guarantee a production app. The goal is to produce a grounded, inspectable, runnable starting point.
+APD remains local-first for now.
 
-## Recommended near-term order
-
-1. #34 Agent draft validation and repair workflow
-2. #31 Research brief creation UI
-3. #32 Browser-based draft import flow
-4. #35 Candidate-centered run detail UI
-5. #38 Explicit reasoning relationships
-6. #39 Theme review
-7. #40 Candidate promotion
-8. #41 Follow-up research tasks
-9. #22 Corpus browser
-
-This order keeps the dogfood loop usable while moving the product toward the reviewed product-investigation workflow.
+Future provider and deployment work should support the harness architecture rather than bypass it. Provider integrations should fit inside APD's phase boundaries, safety rules, traceability, and eval framework. Hosted or multi-user capabilities remain future design work, not the current product center.

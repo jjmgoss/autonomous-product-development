@@ -109,11 +109,11 @@ Current leaning:
 
 ### Should APD run the model, or only coordinate external agents?
 
-Near-term workflow:
+Current state:
 
-- APD creates a research brief and generated prompt.
-- The user runs an external agent manually.
-- The user imports or pastes the returned draft package.
+- APD already runs a local-first harness path from a brief.
+- The normal flow is brief -> `Start Research` -> controlled web discovery -> source capture -> grounded component execution -> import.
+- Manual prompt/import remains a legacy or debug-support workflow, not the primary product loop.
 
 Future options:
 
@@ -123,9 +123,11 @@ Future options:
 
 Open questions:
 
-- What is the first model provider worth integrating?
-- Should users bring their own API keys?
-- How should APD enforce source permissions before it has real multi-user auth?
+- How much of the runtime should stay in a fixed APD-owned harness versus becoming provider-pluggable?
+- What is the first additional provider worth integrating, if any?
+- Should users bring their own API keys, or should APD stay local-first longer?
+- How should APD enforce source permissions and tool boundaries before it has real multi-user auth?
+- Which execution details must become durable traces in order to support replay and evals later?
 
 ## Source access and integrations
 
