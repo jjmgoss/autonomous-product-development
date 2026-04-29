@@ -28,11 +28,12 @@ from apd.services.sample_research_briefs import get_sample_research_briefs
 from apd.services.model_execution_settings import get_model_execution_settings, save_model_execution_settings
 from apd.services.research_execution_ollama import (
     execute_research_brief_ollama_components,
+    execute_research_brief_ollama_components_grounded,
     execute_research_brief_ollama,
     get_ollama_execution_config,
 )
 from apd.services.research_execution_stub import execute_research_brief_stub
-from apd.services.web_research import run_web_research_for_brief
+from apd.services.web_research import get_grounding_source_packet_for_brief, run_web_research_for_brief
 from apd.web.queries import get_recent_runs, get_run_detail
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -93,6 +94,10 @@ def _component_execution_phase_data(result: dict) -> dict:
         "attempts_by_phase": dict(result.get("attempts_by_phase") or {}),
         "errors": [str(value) for value in (result.get("errors") or [])][:5],
         "warnings": [str(value) for value in (result.get("warnings") or [])][:5],
+        "grounding_status": result.get("grounding_status"),
+        "grounding_errors": [str(value) for value in (result.get("grounding_errors") or [])][:5],
+        "grounding_source_count": result.get("grounding_source_count"),
+        "grounding_excerpt_count": result.get("grounding_excerpt_count"),
     }
 
 
@@ -108,7 +113,6 @@ def _build_web_assisted_execution_result(
 
     warnings = _prefixed_messages("web_discovery", web_discovery_result.get("warnings"))
     warnings.extend(_prefixed_messages("component_execution", component_result.get("warnings")))
-    warnings.append("captured_sources_not_yet_used_for_grounded_component_generation")
 
     return {
         "success": bool(component_result.get("success")),
@@ -123,11 +127,11 @@ def _build_web_assisted_execution_result(
         "run_id": component_result.get("run_id"),
         "web_discovery": _web_discovery_phase_data(web_discovery_result),
         "component_execution": _component_execution_phase_data(component_result),
-        "source_grounding_status": "deferred_to_issue_63",
+        "source_grounding_status": component_result.get("grounding_status") or "unknown",
         "source_grounding_deferred_issue": 63,
         "source_grounding_note": (
-            "Web discovery captured sources, but the current component execution path is not yet fully source-grounded. "
-            "Grounding those phases to captured sources is follow-up work in issue #63."
+            "APD used captured sources as grounding context and validated source/excerpt IDs, "
+            "but this does not prove grounded claims are true. Human review is still required."
         ),
     }
 
@@ -349,6 +353,7 @@ def brief_detail(brief_id: int, request: Request, db: Session = Depends(_get_db)
         raise HTTPException(status_code=404, detail="Research brief not found")
     prompt = generate_agent_prompt(brief)
     ollama_config, missing_ollama_env = get_ollama_execution_config(db)
+    grounding_packet = get_grounding_source_packet_for_brief(db, brief)
     return templates.TemplateResponse(
         request,
         "brief_detail.html",
@@ -358,6 +363,8 @@ def brief_detail(brief_id: int, request: Request, db: Session = Depends(_get_db)
             "ollama_ready": ollama_config is not None,
             "missing_ollama_env": missing_ollama_env,
             "ollama_model": ollama_config.model if ollama_config else None,
+            "grounded_source_count": len(grounding_packet.sources),
+            "grounded_excerpt_count": len(grounding_packet.evidence_excerpts),
         },
     )
 
@@ -460,14 +467,64 @@ def research_web_sources(brief_id: int, db: Session = Depends(_get_db)):
             "warnings": _prefixed_messages("web_discovery", result.get("warnings"))[:5],
             "run_id": None,
             "web_discovery": _web_discovery_phase_data(result),
-            "source_grounding_status": "deferred_to_issue_63",
+            "source_grounding_status": "not_started",
             "source_grounding_deferred_issue": 63,
             "source_grounding_note": (
-                "This capture-only route reflects the web discovery phase of future research execution. "
-                "Source-grounded component generation remains follow-up work in issue #63."
+                "Web discovery captured sources for later grounded component execution. "
+                "APD validates source and excerpt IDs during grounded execution, but does not verify truth."
             ),
         },
     )
+    return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
+
+
+@router.post("/briefs/{brief_id}/start-grounded-research-ollama-components", response_class=RedirectResponse)
+def start_research_ollama_components_grounded(brief_id: int, db: Session = Depends(_get_db)):
+    brief = get_brief(db, brief_id)
+    if brief is None:
+        raise HTTPException(status_code=404, detail="Research brief not found")
+
+    config, missing_env = get_ollama_execution_config(db)
+    if config is None:
+        _save_last_execution(
+            db,
+            brief,
+            {
+                "provider": "ollama-components-grounded",
+                "status": "config_missing",
+                "started_at": _iso_now(),
+                "finished_at": _iso_now(),
+                "errors": [f"Missing required env: {value}" for value in missing_env],
+                "warnings": [],
+                "run_id": None,
+                "source_grounding_status": "config_missing",
+            },
+        )
+        return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
+
+    started_at = _iso_now()
+    _save_last_execution(
+        db,
+        brief,
+        {
+            "provider": "ollama-components-grounded",
+            "model": config.model,
+            "status": "running",
+            "started_at": started_at,
+            "errors": [],
+            "warnings": [],
+            "run_id": None,
+            "mode": "grounded_component_execution",
+            "component_execution": {"status": "pending"},
+            "source_grounding_status": "running",
+        },
+    )
+
+    result = execute_research_brief_ollama_components_grounded(db, brief)
+    _save_last_execution(db, brief, result)
+
+    if result.get("success") and result.get("run_id"):
+        return RedirectResponse(url=f"/runs/{result.get('run_id')}", status_code=303)
     return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
 
 
@@ -560,7 +617,7 @@ def start_research_ollama_components(brief_id: int, db: Session = Depends(_get_d
     )
 
     web_discovery_result = run_web_research_for_brief(db, brief)
-    component_result = execute_research_brief_ollama_components(db, brief)
+    component_result = execute_research_brief_ollama_components_grounded(db, brief)
     result = _build_web_assisted_execution_result(
         model=config.model,
         started_at=started_at,

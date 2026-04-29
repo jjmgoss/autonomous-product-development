@@ -94,10 +94,13 @@ Intended workflow:
 Current prototype behavior:
 
 - The brief detail page exposes a `Start web-assisted research (prototype)` action.
+- When captured sources already exist, the brief detail page also exposes `Start grounded component research`.
 - Execution metadata records web discovery and component execution as separate phases under `metadata_json.last_execution`.
 - Captured sources are shown as part of execution status, not as a separate user prerequisite step.
-- The current component generation path is still not fully source-grounded.
-- Source-grounded component generation is follow-up work in issue #63.
+- Grounded component execution builds a bounded source packet from APD-captured `Source` and `EvidenceExcerpt` rows.
+- APD validates that model-generated `evidence_link.added` events only reference known captured `source_id` and `excerpt_id` values.
+- APD rejects grounded batches that invent source URLs, invent source/excerpt IDs, or produce claims without at least one supporting grounded evidence link.
+- This is grounding-by-reference only. APD does not verify that captured excerpts make generated claims true.
 
 Safety and budget controls:
 
@@ -148,6 +151,7 @@ Why this exists:
 What this is:
 
 - A synchronous website-first prototype path (`Start web-assisted research (prototype)`).
+- A follow-on grounded execution path that reuses APD-captured web sources (`Start grounded component research`).
 - Provider-agnostic schema names (`ResearchComponentEvent`, `ResearchComponentBatch`, `ComponentDraftAssembler`).
 - Ollama is the first adapter implementation.
 
@@ -162,6 +166,8 @@ Current component minimum:
 
 - Supports candidate, claim, and theme events (plus optional source/excerpt/gate/link events).
 - Rejects zero-candidate assembled output before import.
+- In grounded mode, seeds captured sources/excerpts into the assembled package so evidence links resolve through normal draft import.
+- In grounded mode, allows only APD-provided source/excerpt identifiers and blocks invented URL-like citations.
 - Uses the same keep-alive behavior (`keep_alive: 0` default) to free local model resources after execution.
 
 ## Component repair and retry loop (Issue #53)

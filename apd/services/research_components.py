@@ -100,6 +100,37 @@ class ComponentDraftAssembler:
         package["warnings"] = list(self._warnings)
         return package
 
+    def seed_grounding_sources(
+        self,
+        *,
+        sources: list[dict[str, Any]],
+        evidence_excerpts: list[dict[str, Any]],
+    ) -> None:
+        for source in sources:
+            self._data["sources"].append(
+                {
+                    "id": source["id"],
+                    "title": source.get("title"),
+                    "source_type": source.get("source_type") or "public_web",
+                    "url": source.get("url"),
+                    "origin": source.get("origin"),
+                    "summary": source.get("summary"),
+                    "metadata_json": dict(source.get("metadata_json") or {}),
+                }
+            )
+
+        for excerpt in evidence_excerpts:
+            self._data["evidence_excerpts"].append(
+                {
+                    "id": excerpt["id"],
+                    "source_id": excerpt["source_id"],
+                    "excerpt_text": excerpt["excerpt_text"],
+                    "location_reference": excerpt.get("location_reference"),
+                    "excerpt_type": excerpt.get("excerpt_type"),
+                    "metadata_json": dict(excerpt.get("metadata_json") or {}),
+                }
+            )
+
     def _apply_event(self, event: ResearchComponentEvent) -> None:
         payload = dict(event.payload or {})
         metadata = payload.get("metadata_json")

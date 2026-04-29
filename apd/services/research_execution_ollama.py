@@ -408,6 +408,267 @@ def execute_research_brief_ollama_components(db: Session, brief) -> dict[str, An
         _unload_ollama_model(config)
 
 
+def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dict[str, Any]:
+    from apd.services.web_research import get_grounding_source_packet_for_brief, render_grounding_source_packet
+
+    config, missing_env = get_ollama_execution_config(db)
+    component_repair_attempts = _parse_component_repair_attempts_env("APD_COMPONENT_REPAIR_ATTEMPTS", default=2)
+    now = _iso_now()
+    if config is None:
+        return {
+            "success": False,
+            "provider": "ollama-components-grounded",
+            "status": "config_missing",
+            "started_at": now,
+            "finished_at": now,
+            "errors": [f"Missing required env: {value}" for value in missing_env],
+            "warnings": [],
+            "run_id": None,
+            "grounding_status": "config_missing",
+            "grounding_errors": [f"Missing required env: {value}" for value in missing_env],
+        }
+
+    grounding_packet = get_grounding_source_packet_for_brief(db, brief)
+    if not grounding_packet.sources or not grounding_packet.evidence_excerpts:
+        return {
+            "success": False,
+            "provider": "ollama-components-grounded",
+            "model": config.model,
+            "status": "grounding_missing_sources",
+            "started_at": now,
+            "finished_at": now,
+            "errors": ["No captured web sources are available for grounded component execution. Run web discovery first."],
+            "warnings": [],
+            "run_id": None,
+            "mode": "grounded_component_execution",
+            "grounding_status": "missing_sources",
+            "grounding_errors": ["Run web discovery first to capture sources before grounded component execution."],
+            "grounding_source_count": 0,
+            "grounding_excerpt_count": 0,
+        }
+
+    started_at = now
+    grounded_source_packet = render_grounding_source_packet(grounding_packet)
+    try:
+        run_title = brief.title or (brief.research_question[:120] if brief.research_question else "Grounded Component Research")
+        assembler = ComponentDraftAssembler(
+            run_title=run_title,
+            run_intent=brief.research_question,
+            agent_name="ollama-grounded-component-prototype",
+            external_draft_id=f"brief-{brief.id}-grounded-components-{started_at}",
+        )
+        assembler.seed_grounding_sources(
+            sources=grounding_packet.sources,
+            evidence_excerpts=grounding_packet.evidence_excerpts,
+        )
+
+        attempts_by_phase: dict[str, int] = {}
+        warnings_list: list[str] = []
+        candidate_ids: list[str] = []
+        phases = ["candidate_batch", "claim_theme_batch", "validation_gate_batch"]
+        known_source_ids = grounding_packet.source_ids
+        known_excerpt_ids = grounding_packet.excerpt_ids
+        excerpt_to_source_id = {
+            str(item["id"]): str(item["source_id"]) for item in grounding_packet.evidence_excerpts
+        }
+
+        for phase_name in phases:
+            errors_for_phase: list[str] = []
+            prior_raw_batch: dict[str, Any] | None = None
+            max_attempts = component_repair_attempts + 1
+            attempts_by_phase[phase_name] = 0
+
+            for attempt_index in range(max_attempts):
+                attempts_by_phase[phase_name] = attempt_index + 1
+                if attempt_index == 0:
+                    prompt = generate_ollama_component_phase_prompt(
+                        brief,
+                        phase_name,
+                        candidate_ids=candidate_ids,
+                        grounded_source_packet=grounded_source_packet,
+                    )
+                else:
+                    prompt = generate_ollama_component_repair_prompt(
+                        brief,
+                        phase_name=phase_name,
+                        validation_errors=errors_for_phase,
+                        invalid_batch_data=prior_raw_batch,
+                        grounded_source_packet=grounded_source_packet,
+                    )
+
+                raw_batch_data, parse_error = _call_ollama_for_component_batch(config, prompt)
+                if parse_error:
+                    errors_for_phase = [f"{phase_name}: {parse_error}"]
+                    prior_raw_batch = None
+                    continue
+
+                prior_raw_batch = raw_batch_data
+                batch, batch_errors = parse_component_batch_from_data(raw_batch_data)
+                if batch is None:
+                    errors_for_phase = [f"{phase_name}: {line}" for line in _first_errors(batch_errors, limit=5)]
+                    continue
+
+                phase_errors = _validate_component_phase_batch(phase_name, batch)
+                if phase_errors:
+                    errors_for_phase = phase_errors
+                    continue
+
+                grounding_errors = _validate_component_grounding(
+                    phase_name,
+                    batch,
+                    known_source_ids=known_source_ids,
+                    known_excerpt_ids=known_excerpt_ids,
+                    excerpt_to_source_id=excerpt_to_source_id,
+                )
+                if grounding_errors:
+                    errors_for_phase = grounding_errors
+                    continue
+
+                assembly_result = assembler.apply_batch(batch)
+                if not assembly_result.success:
+                    errors_for_phase = [f"{phase_name}: {line}" for line in _first_errors(assembly_result.errors, limit=5)]
+                    continue
+
+                if phase_name == "candidate_batch":
+                    candidate_ids = [
+                        event.external_id
+                        for event in batch.events
+                        if event.event_type == ResearchComponentEventType.CANDIDATE_PROPOSED
+                    ]
+                warnings_list.extend(_first_errors(assembly_result.warnings, limit=5))
+                break
+            else:
+                finished_at = _iso_now()
+                failure_status = "quality_failed_no_candidates" if phase_name == "candidate_batch" else "component_validation_failed"
+                if phase_name == "candidate_batch":
+                    errors_for_phase = [
+                        (
+                            "The model returned no product candidates. Refine the brief toward a product/problem/opportunity, "
+                            "or try a stronger model."
+                        )
+                    ]
+                return {
+                    **_build_result(
+                        config,
+                        failure_status,
+                        started_at,
+                        finished_at,
+                        None,
+                        _first_errors(errors_for_phase or [f"{phase_name}: failed"], limit=5),
+                        _first_errors(warnings_list, limit=5),
+                        provider_override="ollama-components-grounded",
+                        mode="grounded_component_execution",
+                        last_phase=phase_name,
+                        attempts_by_phase=attempts_by_phase,
+                    ),
+                    "grounding_status": "failed",
+                    "grounding_errors": _first_errors(errors_for_phase or [f"{phase_name}: failed"], limit=5),
+                    "grounding_source_count": len(grounding_packet.sources),
+                    "grounding_excerpt_count": len(grounding_packet.evidence_excerpts),
+                }
+
+        assembled_package = assembler.package_dict()
+        report = validate_agent_draft_data(Path("<ollama-grounded-components-output>"), assembled_package)
+        if not report.is_valid or report.package is None:
+            finished_at = _iso_now()
+            return {
+                **_build_result(
+                    config,
+                    "validation_failed",
+                    started_at,
+                    finished_at,
+                    None,
+                    _first_errors(report.errors, limit=5),
+                    _first_errors(warnings_list, limit=5),
+                    provider_override="ollama-components-grounded",
+                    mode="grounded_component_execution",
+                    last_phase="final_validation",
+                    attempts_by_phase=attempts_by_phase,
+                ),
+                "grounding_status": "passed",
+                "grounding_errors": [],
+                "grounding_source_count": len(grounding_packet.sources),
+                "grounding_excerpt_count": len(grounding_packet.evidence_excerpts),
+            }
+
+        quality_result = _evaluate_product_quality_gate(report.package)
+        warnings_list.extend(quality_result.warnings)
+        if quality_result.error:
+            finished_at = _iso_now()
+            return {
+                **_build_result(
+                    config,
+                    quality_result.status,
+                    started_at,
+                    finished_at,
+                    None,
+                    [quality_result.error],
+                    _first_errors(warnings_list, limit=5),
+                    provider_override="ollama-components-grounded",
+                    mode="grounded_component_execution",
+                    last_phase="quality_gate",
+                    attempts_by_phase=attempts_by_phase,
+                ),
+                "grounding_status": "passed",
+                "grounding_errors": [],
+                "grounding_source_count": len(grounding_packet.sources),
+                "grounding_excerpt_count": len(grounding_packet.evidence_excerpts),
+            }
+
+        try:
+            import_result = import_agent_draft_package(
+                db,
+                report.package,
+                package_path=None,
+                allow_duplicate_external_id=False,
+            )
+        except Exception as exc:
+            finished_at = _iso_now()
+            return {
+                **_build_result(
+                    config,
+                    "import_failed",
+                    started_at,
+                    finished_at,
+                    None,
+                    [f"import_failed: {exc}"],
+                    _first_errors(warnings_list, limit=5),
+                    provider_override="ollama-components-grounded",
+                    mode="grounded_component_execution",
+                    last_phase="import",
+                    attempts_by_phase=attempts_by_phase,
+                ),
+                "grounding_status": "passed",
+                "grounding_errors": [],
+                "grounding_source_count": len(grounding_packet.sources),
+                "grounding_excerpt_count": len(grounding_packet.evidence_excerpts),
+            }
+
+        finished_at = _iso_now()
+        warnings_list.extend(import_result.warnings)
+        return {
+            **_build_result(
+                config,
+                "imported",
+                started_at,
+                finished_at,
+                import_result.run_db_id,
+                [],
+                _first_errors(warnings_list, limit=5),
+                provider_override="ollama-components-grounded",
+                mode="grounded_component_execution",
+                last_phase="import",
+                attempts_by_phase=attempts_by_phase,
+            ),
+            "grounding_status": "passed",
+            "grounding_errors": [],
+            "grounding_source_count": len(grounding_packet.sources),
+            "grounding_excerpt_count": len(grounding_packet.evidence_excerpts),
+        }
+    finally:
+        _unload_ollama_model(config)
+
+
 def _build_result(
     config: OllamaExecutionConfig,
     status: str,
@@ -600,7 +861,10 @@ def _evaluate_product_quality_gate(package: AgentDraftPackage) -> ProductQuality
             warnings=[],
         )
 
-    has_source_urls = any(bool(source.url and str(source.url).strip()) for source in package.sources)
+    has_source_urls = any(
+        bool(source.url and str(source.url).strip()) and not bool((source.metadata_json or {}).get("grounding_source"))
+        for source in package.sources
+    )
     warnings: list[str] = []
     if has_source_urls:
         warnings.append("quality_warning_unprovided_source_urls")
@@ -682,6 +946,61 @@ def _validate_component_phase_batch(phase_name: str, batch: ResearchComponentBat
             return [f"{phase_name}: batch must include validation_gate.proposed"]
         return []
     return []
+
+
+def _validate_component_grounding(
+    phase_name: str,
+    batch: ResearchComponentBatch,
+    *,
+    known_source_ids: set[str],
+    known_excerpt_ids: set[str],
+    excerpt_to_source_id: dict[str, str],
+) -> list[str]:
+    errors: list[str] = []
+    claim_ids = {
+        event.external_id
+        for event in batch.events
+        if event.event_type == ResearchComponentEventType.CLAIM_PROPOSED
+    }
+    grounded_claim_links: set[str] = set()
+
+    for event in batch.events:
+        if event.event_type in {ResearchComponentEventType.SOURCE_ADDED, ResearchComponentEventType.EVIDENCE_EXCERPT_ADDED}:
+            errors.append(f"{phase_name}: do not add new source or excerpt events in grounded mode")
+            continue
+
+        payload = dict(event.payload or {})
+        for key in ("url", "source_url", "citation_url"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip().lower().startswith(("http://", "https://")):
+                errors.append(f"{phase_name}: do not invent source URLs in {event.event_type.value}")
+
+        if event.event_type != ResearchComponentEventType.EVIDENCE_LINK_ADDED:
+            continue
+
+        source_id = str(payload.get("source_id") or "").strip()
+        excerpt_id = str(payload.get("excerpt_id") or "").strip()
+        target_type = str(payload.get("target_type") or "").strip()
+        target_id = str(payload.get("target_id") or "").strip()
+        relationship = str(payload.get("relationship") or "").strip()
+
+        if not source_id and not excerpt_id:
+            errors.append(f"{phase_name}: grounded evidence links must reference source_id and/or excerpt_id")
+        if source_id and source_id not in known_source_ids:
+            errors.append(f"{phase_name}: unknown grounded source_id '{source_id}'")
+        if excerpt_id and excerpt_id not in known_excerpt_ids:
+            errors.append(f"{phase_name}: unknown grounded excerpt_id '{excerpt_id}'")
+        if source_id and excerpt_id and excerpt_to_source_id.get(excerpt_id) != source_id:
+            errors.append(f"{phase_name}: excerpt_id '{excerpt_id}' does not belong to source_id '{source_id}'")
+        if target_type == "claim" and target_id:
+            if target_id not in claim_ids:
+                errors.append(f"{phase_name}: evidence link references unknown claim target_id '{target_id}'")
+            if relationship == "supports" and (source_id or excerpt_id):
+                grounded_claim_links.add(target_id)
+
+    if phase_name == "claim_theme_batch" and claim_ids and not grounded_claim_links:
+        errors.append(f"{phase_name}: at least one claim needs a supporting grounded evidence link")
+    return errors
 
 
 def _safe_normalize_near_miss(raw_data: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:

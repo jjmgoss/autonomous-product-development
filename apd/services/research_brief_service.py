@@ -264,6 +264,7 @@ def generate_ollama_component_phase_prompt(
     phase_name: str,
     *,
     candidate_ids: list[str] | None = None,
+    grounded_source_packet: str | None = None,
 ) -> str:
     """Return a phase-specific component batch prompt."""
     base = generate_ollama_execution_prompt(brief)
@@ -298,7 +299,25 @@ def generate_ollama_component_phase_prompt(
         phase_name,
         "Phase: generic_component_batch\n- Return only ResearchComponentBatch JSON.",
     )
-    return "\n".join([base, "", "---", "", _COMPONENT_EXECUTION_CONSTRAINTS, "", selected, "", "Return only the ResearchComponentBatch JSON object."])
+    grounded_constraints = ""
+    if grounded_source_packet:
+        grounded_constraints = "\n".join(
+            [
+                "## Source-grounded execution constraints (mandatory)",
+                "- Use only the provided APD-captured source packet for factual claims.",
+                "- Do not invent sources, URLs, citations, source IDs, or excerpt IDs.",
+                "- Do not emit source.added or evidence_excerpt.added for provided packet sources.",
+                "- Every factual claim should have at least one evidence_link.added referencing a provided source_id and/or excerpt_id.",
+                "- Unsupported hypotheses may appear only when clearly marked as model-prior assumptions in metadata_json.",
+                "",
+                grounded_source_packet,
+            ]
+        )
+    parts = [base, "", "---", "", _COMPONENT_EXECUTION_CONSTRAINTS]
+    if grounded_constraints:
+        parts.extend(["", grounded_constraints])
+    parts.extend(["", selected, "", "Return only the ResearchComponentBatch JSON object."])
+    return "\n".join(parts)
 
 
 def generate_ollama_component_repair_prompt(
@@ -307,18 +326,33 @@ def generate_ollama_component_repair_prompt(
     phase_name: str,
     validation_errors: list[str],
     invalid_batch_data: dict[str, object] | None,
+    grounded_source_packet: str | None = None,
 ) -> str:
     """Return a phase-specific repair prompt for an invalid component batch."""
     base = generate_ollama_execution_prompt(brief)
     errors_block = "\n".join(f"- {line}" for line in validation_errors[:8]) or "- unknown validation error"
     invalid_json = "{}" if invalid_batch_data is None else json.dumps(invalid_batch_data, ensure_ascii=False)
-    return "\n".join(
+    parts = [
+        base,
+        "",
+        "---",
+        "",
+        _COMPONENT_EXECUTION_CONSTRAINTS,
+    ]
+    if grounded_source_packet:
+        parts.extend(
+            [
+                "",
+                "## Source-grounded execution constraints (mandatory)",
+                "- Use only the provided APD-captured source packet for factual claims.",
+                "- Do not invent sources, URLs, citations, source IDs, or excerpt IDs.",
+                "- Preserve valid source_id and excerpt_id references from the provided packet.",
+                "",
+                grounded_source_packet,
+            ]
+        )
+    parts.extend(
         [
-            base,
-            "",
-            "---",
-            "",
-            _COMPONENT_EXECUTION_CONSTRAINTS,
             "",
             "Phase repair request:",
             f"- Phase name: {phase_name}",
@@ -336,3 +370,4 @@ def generate_ollama_component_repair_prompt(
             "Return only the corrected ResearchComponentBatch JSON object.",
         ]
     )
+    return "\n".join(parts)

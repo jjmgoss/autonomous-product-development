@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from dataclasses import dataclass
 import html
 import ipaddress
 import json
@@ -26,12 +27,39 @@ FETCH_TIMEOUT_SECONDS = 10
 MAX_RESPONSE_BYTES = 1_000_000
 MAX_EXTRACTED_TEXT_CHARS = 12_000
 MAX_EXCERPT_TEXT_CHARS = 8_000
+MAX_GROUNDED_PACKET_SOURCES = 5
+MAX_GROUNDED_PACKET_EXCERPTS = 10
+MAX_GROUNDED_PACKET_EXCERPT_CHARS = 1500
+MAX_GROUNDED_PACKET_TOTAL_CHARS = 10000
 WEB_USER_AGENT = "APD local research prototype/1.0"
 
 _TAG_RE = re.compile(r"<[^>]+>")
 _SCRIPT_STYLE_RE = re.compile(r"<(script|style)[^>]*>.*?</\1>", flags=re.IGNORECASE | re.DOTALL)
 _TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", flags=re.IGNORECASE | re.DOTALL)
 _WHITESPACE_RE = re.compile(r"\s+")
+
+
+@dataclass(frozen=True)
+class GroundingSourcePacket:
+    sources: list[dict[str, object]]
+    evidence_excerpts: list[dict[str, object]]
+    total_chars: int
+
+    @property
+    def source_ids(self) -> set[str]:
+        return {str(item["id"]) for item in self.sources}
+
+    @property
+    def excerpt_ids(self) -> set[str]:
+        return {str(item["id"]) for item in self.evidence_excerpts}
+
+
+def _grounding_source_external_id(source_id: int) -> str:
+    return f"captured-source-{source_id}"
+
+
+def _grounding_excerpt_external_id(excerpt_id: int) -> str:
+    return f"captured-excerpt-{excerpt_id}"
 
 
 def _iso_now() -> str:
@@ -234,6 +262,131 @@ def _get_or_create_web_research_run(db: Session, brief: ResearchBrief) -> Run:
     db.commit()
     db.refresh(brief)
     return run
+
+
+def get_grounding_source_packet_for_brief(
+    db: Session,
+    brief: ResearchBrief,
+    *,
+    max_sources: int = MAX_GROUNDED_PACKET_SOURCES,
+    max_excerpts: int = MAX_GROUNDED_PACKET_EXCERPTS,
+    max_excerpt_chars: int = MAX_GROUNDED_PACKET_EXCERPT_CHARS,
+    max_total_chars: int = MAX_GROUNDED_PACKET_TOTAL_CHARS,
+) -> GroundingSourcePacket:
+    meta = dict(brief.metadata_json or {})
+    source_rows: list[Source] = []
+
+    web_research_run_id = meta.get("web_research_run_id")
+    if web_research_run_id:
+        source_rows = list(
+            db.scalars(
+                select(Source)
+                .where(Source.run_id == int(web_research_run_id))
+                .order_by(Source.id.asc())
+                .limit(max_sources)
+            )
+        )
+
+    if not source_rows:
+        source_rows = list(
+            db.scalars(
+                select(Source)
+                .where(Source.metadata_json["brief_id"].as_integer() == int(brief.id))
+                .order_by(Source.id.asc())
+                .limit(max_sources)
+            )
+        )
+
+    selected_sources = source_rows[:max_sources]
+    if not selected_sources:
+        return GroundingSourcePacket(sources=[], evidence_excerpts=[], total_chars=0)
+
+    source_id_map = {source.id: _grounding_source_external_id(source.id) for source in selected_sources}
+    source_packet: list[dict[str, object]] = []
+    for source in selected_sources:
+        source_packet.append(
+            {
+                "id": source_id_map[source.id],
+                "title": source.title,
+                "source_type": source.source_type,
+                "url": source.url,
+                "origin": source.origin,
+                "summary": source.summary,
+                "metadata_json": {
+                    "grounding_source": True,
+                    "captured_source_db_id": source.id,
+                    "brief_id": brief.id,
+                },
+            }
+        )
+
+    excerpt_rows = list(
+        db.scalars(
+            select(EvidenceExcerpt)
+            .where(EvidenceExcerpt.source_id.in_([source.id for source in selected_sources]))
+            .order_by(EvidenceExcerpt.id.asc())
+            .limit(max_excerpts * 2)
+        )
+    )
+
+    total_chars = 0
+    excerpt_packet: list[dict[str, object]] = []
+    for excerpt in excerpt_rows:
+        if excerpt.source_id not in source_id_map:
+            continue
+        excerpt_text = (excerpt.excerpt_text or "").strip()[:max_excerpt_chars]
+        if not excerpt_text:
+            continue
+        next_total = total_chars + len(excerpt_text)
+        if excerpt_packet and next_total > max_total_chars:
+            break
+        excerpt_packet.append(
+            {
+                "id": _grounding_excerpt_external_id(excerpt.id),
+                "source_id": source_id_map[excerpt.source_id],
+                "excerpt_text": excerpt_text,
+                "location_reference": excerpt.location_reference,
+                "excerpt_type": excerpt.excerpt_type,
+                "metadata_json": {
+                    "grounding_source": True,
+                    "captured_excerpt_db_id": excerpt.id,
+                    "captured_source_db_id": excerpt.source_id,
+                    "brief_id": brief.id,
+                },
+            }
+        )
+        total_chars = next_total
+        if len(excerpt_packet) >= max_excerpts:
+            break
+
+    return GroundingSourcePacket(
+        sources=source_packet,
+        evidence_excerpts=excerpt_packet,
+        total_chars=total_chars,
+    )
+
+
+def render_grounding_source_packet(packet: GroundingSourcePacket) -> str:
+    if not packet.sources or not packet.evidence_excerpts:
+        return "(no captured web source packet available)"
+
+    lines = ["## Captured source packet", "", "Use only these APD-captured sources for factual claims.", ""]
+    for source in packet.sources:
+        lines.append(f"Source ID: {source['id']}")
+        if source.get("title"):
+            lines.append(f"Title: {source['title']}")
+        if source.get("url"):
+            lines.append(f"URL: {source['url']}")
+        source_excerpts = [
+            excerpt
+            for excerpt in packet.evidence_excerpts
+            if excerpt.get("source_id") == source["id"]
+        ]
+        for excerpt in source_excerpts:
+            lines.append(f"Excerpt ID: {excerpt['id']}")
+            lines.append(f"Excerpt: {excerpt['excerpt_text']}")
+        lines.append("")
+    return "\n".join(lines).strip()
 
 
 def run_web_research_for_brief(db: Session, brief: ResearchBrief) -> dict[str, object]:

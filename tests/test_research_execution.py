@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 import pytest
 
 from apd.app.db import Base
+from apd.domain.models import EvidenceExcerpt, Run, RunPhase, Source
 from apd.services.research_components import (
     ComponentDraftAssembler,
     parse_component_batch_from_data,
@@ -15,6 +16,7 @@ from apd.services.research_components import (
 from apd.services.research_brief_service import create_brief, get_brief
 from apd.services.research_execution_ollama import (
     execute_research_brief_ollama_components,
+    execute_research_brief_ollama_components_grounded,
     execute_research_brief_ollama,
     extract_json_object_from_model_output,
     get_ollama_execution_config,
@@ -58,6 +60,45 @@ def _create_brief_via_ui(client, *, title: str) -> int:
     assert response.status_code == 303
     location = response.headers["location"]
     return int(location.split("/")[-1])
+
+
+def _seed_captured_web_source(db, brief, *, title: str = "Captured source"):
+    capture_run = Run(
+        title=f"{brief.title} capture",
+        intent=brief.research_question,
+        mode="web_research_capture",
+        phase=RunPhase.EVIDENCE_COLLECTED,
+        metadata_json={"brief_id": brief.id, "created_by": "apd_web_research"},
+    )
+    db.add(capture_run)
+    db.flush()
+
+    source = Source(
+        run_id=capture_run.id,
+        title=title,
+        source_type="public_web",
+        url="https://example.com/captured",
+        origin="example.com",
+        metadata_json={"brief_id": brief.id},
+    )
+    db.add(source)
+    db.flush()
+
+    excerpt = EvidenceExcerpt(
+        run_id=capture_run.id,
+        source_id=source.id,
+        excerpt_text="Teams keep losing time because handoff context is missing.",
+        excerpt_type="web_capture",
+        metadata_json={"brief_id": brief.id},
+    )
+    db.add(excerpt)
+    db.flush()
+
+    brief.metadata_json = {"web_research_run_id": capture_run.id}
+    db.add(brief)
+    db.commit()
+    db.refresh(brief)
+    return source, excerpt
 
 
 @pytest.fixture()
@@ -323,9 +364,13 @@ def test_start_research_ollama_components_uses_saved_db_settings(client, monkeyp
     _save_ui_model_settings(client)
     brief_id = _create_brief_via_ui(client, title="Saved DB config components")
 
-    monkeypatch.setattr(
-        "apd.web.routes.run_web_research_for_brief",
-        lambda db, brief: {
+    grounded_ids: dict[str, str] = {}
+
+    def _fake_run_web_research_for_brief(db, brief):
+        source, excerpt = _seed_captured_web_source(db, brief)
+        grounded_ids["source_id"] = f"captured-source-{source.id}"
+        grounded_ids["excerpt_id"] = f"captured-excerpt-{excerpt.id}"
+        return {
             "success": True,
             "status": "completed",
             "started_at": "2026-04-28T00:00:00+00:00",
@@ -339,8 +384,9 @@ def test_start_research_ollama_components_uses_saved_db_settings(client, monkeyp
             "sources": [{"url": "https://example.com/article", "title": "Example article"}],
             "skipped_urls": [],
             "web_research_run_id": 11,
-        },
-    )
+        }
+
+    monkeypatch.setattr("apd.web.routes.run_web_research_for_brief", _fake_run_web_research_for_brief)
 
     captured_payloads = []
     responses = [
@@ -358,8 +404,9 @@ def test_start_research_ollama_components_uses_saved_db_settings(client, monkeyp
             {
                 "response": (
                     '{"schema_version":"1.0","batch_id":"b-claim-theme","events":['
-                    '{"schema_version":"1.0","event_type":"claim.proposed","external_id":"claim-1","payload":{"statement":"Claim A"}},'
-                    '{"schema_version":"1.0","event_type":"theme.proposed","external_id":"theme-1","payload":{"name":"Theme A"}}'
+                        '{"schema_version":"1.0","event_type":"claim.proposed","external_id":"claim-1","payload":{"statement":"Claim A"}},'
+                        '{"schema_version":"1.0","event_type":"theme.proposed","external_id":"theme-1","payload":{"name":"Theme A"}},'
+                    '{"schema_version":"1.0","event_type":"evidence_link.added","external_id":"link-1","payload":{"source_id":"__SOURCE_ID__","excerpt_id":"__EXCERPT_ID__","target_type":"claim","target_id":"claim-1","relationship":"supports"}}'
                     ']}'
                 )
             },
@@ -381,7 +428,15 @@ def test_start_research_ollama_components_uses_saved_db_settings(client, monkeyp
         captured_payloads.append(payload)
         if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
             return ({"response": ""}, None)
-        return responses.pop(0)
+        response, error = responses.pop(0)
+        if response.get("response") and grounded_ids:
+            response = {
+                **response,
+                "response": response["response"].replace("__SOURCE_ID__", grounded_ids["source_id"]).replace(
+                    "__EXCERPT_ID__", grounded_ids["excerpt_id"]
+                ),
+            }
+        return response, error
 
     monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
 
@@ -389,6 +444,24 @@ def test_start_research_ollama_components_uses_saved_db_settings(client, monkeyp
     assert response.status_code == 303
     assert response.headers["location"].startswith("/runs/")
     assert captured_payloads
+    assert "Use only the provided APD-captured source packet" in captured_payloads[0]["prompt"]
+
+
+def test_brief_detail_shows_grounded_action_when_captured_sources_exist(client, monkeypatch):
+    _clear_ollama_env(monkeypatch)
+    _save_ui_model_settings(client)
+    brief_id = _create_brief_via_ui(client, title="Grounded action brief")
+
+    import apd.app.db as app_db
+    from apd.services.research_brief_service import get_brief as _get_brief
+
+    with app_db.SessionLocal() as db:
+        brief = _get_brief(db, brief_id)
+        _seed_captured_web_source(db, brief)
+
+    response = client.get(f"/briefs/{brief_id}")
+    assert response.status_code == 200
+    assert "Start grounded component research" in response.text
 
 
 def test_web_assisted_research_records_web_discovery_phase_in_last_execution(client, monkeypatch):
@@ -415,19 +488,23 @@ def test_web_assisted_research_records_web_discovery_phase_in_last_execution(cli
         },
     )
     monkeypatch.setattr(
-        "apd.web.routes.execute_research_brief_ollama_components",
+        "apd.web.routes.execute_research_brief_ollama_components_grounded",
         lambda db, brief: {
             "success": False,
-            "provider": "ollama-components",
+            "provider": "ollama-components-grounded",
             "status": "component_validation_failed",
             "started_at": "2026-04-28T00:00:03+00:00",
             "finished_at": "2026-04-28T00:00:04+00:00",
             "errors": ["component phase failed"],
             "warnings": [],
             "run_id": None,
-            "mode": "component_execution",
+            "mode": "grounded_component_execution",
             "last_phase": "claim_theme_batch",
             "attempts_by_phase": {"candidate_batch": 1, "claim_theme_batch": 2},
+            "grounding_status": "failed",
+            "grounding_errors": ["claim_theme_batch: unknown grounded source_id 'captured-source-9999'"],
+            "grounding_source_count": 1,
+            "grounding_excerpt_count": 1,
         },
     )
 
@@ -438,7 +515,159 @@ def test_web_assisted_research_records_web_discovery_phase_in_last_execution(cli
     assert "Captured source" in response.text
     assert "solo operator maintenance pain" in response.text
     assert "Web discovery succeeded; component generation failed validation." in response.text
-    assert "not yet fully source-grounded" in response.text
+    assert "Grounding status" in response.text
+    assert "unknown grounded source_id" in response.text
+
+
+def test_execute_grounded_components_requires_captured_sources(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+
+    brief = create_brief(db, title="No grounded sources", research_question="Q")
+    brief = get_brief(db, brief.id)
+
+    result = execute_research_brief_ollama_components_grounded(db, brief)
+
+    assert result["success"] is False
+    assert result["status"] == "grounding_missing_sources"
+    assert result["grounding_status"] == "missing_sources"
+    assert any("Run web discovery first" in err for err in result["grounding_errors"])
+
+
+def test_execute_grounded_components_imports_run_with_grounded_evidence_links(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("APD_COMPONENT_REPAIR_ATTEMPTS", "1")
+
+    brief = create_brief(db, title="Grounded success", research_question="Q")
+    brief = get_brief(db, brief.id)
+    source, excerpt = _seed_captured_web_source(db, brief)
+    grounded_source_id = f"captured-source-{source.id}"
+    grounded_excerpt_id = f"captured-excerpt-{excerpt.id}"
+    captured_payloads: list[dict] = []
+    responses = [
+        ({"response": '{"schema_version":"1.0","batch_id":"b-candidate","events":[{"schema_version":"1.0","event_type":"candidate.proposed","external_id":"cand-1","payload":{"title":"Grounded candidate","summary":"S"}}]}'}, None),
+        ({"response": (
+            '{"schema_version":"1.0","batch_id":"b-claim-theme","events":['
+            '{"schema_version":"1.0","event_type":"claim.proposed","external_id":"claim-1","payload":{"statement":"Teams lose time during handoffs."}},'
+            '{"schema_version":"1.0","event_type":"theme.proposed","external_id":"theme-1","payload":{"name":"Handoff context loss"}},'
+            '{"schema_version":"1.0","event_type":"evidence_link.added","external_id":"link-1","payload":{"source_id":"' + grounded_source_id + '","excerpt_id":"' + grounded_excerpt_id + '","target_type":"claim","target_id":"claim-1","relationship":"supports","strength":"strong"}}'
+            ']}'
+        )}, None),
+        ({"response": '{"schema_version":"1.0","batch_id":"b-gates","events":[{"schema_version":"1.0","event_type":"validation_gate.proposed","external_id":"gate-1","payload":{"name":"Confirm repeated buyer urgency","phase":"supported_opportunity","candidate_id":"cand-1"}}]}'}, None),
+    ]
+
+    def _fake_generate(config, payload):
+        captured_payloads.append(payload)
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
+        return responses.pop(0)
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+
+    result = execute_research_brief_ollama_components_grounded(db, brief)
+
+    assert result["success"] is True
+    assert result["status"] == "imported"
+    assert result["grounding_status"] == "passed"
+    assert isinstance(result["run_id"], int)
+    assert grounded_source_id in captured_payloads[0]["prompt"]
+    assert "Use only the provided APD-captured source packet" in captured_payloads[0]["prompt"]
+
+
+def test_execute_grounded_components_rejects_unknown_source_id(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("APD_COMPONENT_REPAIR_ATTEMPTS", "0")
+
+    brief = create_brief(db, title="Grounded bad source", research_question="Q")
+    brief = get_brief(db, brief.id)
+    _, excerpt = _seed_captured_web_source(db, brief)
+    grounded_excerpt_id = f"captured-excerpt-{excerpt.id}"
+
+    responses = [
+        ({"response": '{"schema_version":"1.0","batch_id":"b-candidate","events":[{"schema_version":"1.0","event_type":"candidate.proposed","external_id":"cand-1","payload":{"title":"Candidate","summary":"S"}}]}'}, None),
+        ({"response": (
+            '{"schema_version":"1.0","batch_id":"b-claim-theme","events":['
+            '{"schema_version":"1.0","event_type":"claim.proposed","external_id":"claim-1","payload":{"statement":"Claim text"}},'
+            '{"schema_version":"1.0","event_type":"evidence_link.added","external_id":"link-1","payload":{"source_id":"captured-source-9999","excerpt_id":"' + grounded_excerpt_id + '","target_type":"claim","target_id":"claim-1","relationship":"supports"}}'
+            ']}'
+        )}, None),
+    ]
+
+    def _fake_generate(config, payload):
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
+        return responses.pop(0)
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+    result = execute_research_brief_ollama_components_grounded(db, brief)
+    assert result["success"] is False
+    assert result["grounding_status"] == "failed"
+    assert any("unknown grounded source_id" in err for err in result["grounding_errors"])
+
+
+def test_execute_grounded_components_rejects_unknown_excerpt_id(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("APD_COMPONENT_REPAIR_ATTEMPTS", "0")
+
+    brief = create_brief(db, title="Grounded bad excerpt", research_question="Q")
+    brief = get_brief(db, brief.id)
+    source, _ = _seed_captured_web_source(db, brief)
+    grounded_source_id = f"captured-source-{source.id}"
+
+    responses = [
+        ({"response": '{"schema_version":"1.0","batch_id":"b-candidate","events":[{"schema_version":"1.0","event_type":"candidate.proposed","external_id":"cand-1","payload":{"title":"Candidate","summary":"S"}}]}'}, None),
+        ({"response": (
+            '{"schema_version":"1.0","batch_id":"b-claim-theme","events":['
+            '{"schema_version":"1.0","event_type":"claim.proposed","external_id":"claim-1","payload":{"statement":"Claim text"}},'
+            '{"schema_version":"1.0","event_type":"evidence_link.added","external_id":"link-1","payload":{"source_id":"' + grounded_source_id + '","excerpt_id":"captured-excerpt-9999","target_type":"claim","target_id":"claim-1","relationship":"supports"}}'
+            ']}'
+        )}, None),
+    ]
+
+    def _fake_generate(config, payload):
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
+        return responses.pop(0)
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+    result = execute_research_brief_ollama_components_grounded(db, brief)
+    assert result["success"] is False
+    assert result["grounding_status"] == "failed"
+    assert any("unknown grounded excerpt_id" in err for err in result["grounding_errors"])
+
+
+def test_execute_grounded_components_requires_supporting_claim_evidence(db, monkeypatch):
+    monkeypatch.setenv("APD_MODEL_PROVIDER", "ollama")
+    monkeypatch.setenv("APD_OLLAMA_BASE_URL", "http://localhost:11434")
+    monkeypatch.setenv("APD_OLLAMA_MODEL", "llama3")
+    monkeypatch.setenv("APD_COMPONENT_REPAIR_ATTEMPTS", "0")
+
+    brief = create_brief(db, title="Grounded unsupported claim", research_question="Q")
+    brief = get_brief(db, brief.id)
+    _seed_captured_web_source(db, brief)
+
+    responses = [
+        ({"response": '{"schema_version":"1.0","batch_id":"b-candidate","events":[{"schema_version":"1.0","event_type":"candidate.proposed","external_id":"cand-1","payload":{"title":"Candidate","summary":"S"}}]}'}, None),
+        ({"response": '{"schema_version":"1.0","batch_id":"b-claim-theme","events":[{"schema_version":"1.0","event_type":"claim.proposed","external_id":"claim-1","payload":{"statement":"Claim text"}}]}'}, None),
+    ]
+
+    def _fake_generate(config, payload):
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
+        return responses.pop(0)
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+    result = execute_research_brief_ollama_components_grounded(db, brief)
+    assert result["success"] is False
+    assert result["grounding_status"] == "failed"
+    assert any("at least one claim needs a supporting grounded evidence link" in err for err in result["grounding_errors"])
 
 
 def test_execute_ollama_components_success_path_imports_run(db, monkeypatch):
@@ -874,6 +1103,23 @@ def test_start_research_ollama_route_uses_mocked_service(client, monkeypatch):
         ),
     )
     monkeypatch.setattr(
+        "apd.web.routes.run_web_research_for_brief",
+        lambda db, brief: {
+            "success": True,
+            "status": "completed",
+            "started_at": "2026-01-01T00:00:00+00:00",
+            "finished_at": "2026-01-01T00:00:01+00:00",
+            "errors": [],
+            "warnings": [],
+            "proposed_query_count": 1,
+            "proposed_url_count": 1,
+            "fetched_source_count": 0,
+            "queries": [],
+            "sources": [],
+            "skipped_urls": [],
+        },
+    )
+    monkeypatch.setattr(
         "apd.web.routes.execute_research_brief_ollama",
         lambda db, brief: {
             "success": False,
@@ -906,10 +1152,10 @@ def test_start_research_ollama_components_route_uses_mocked_service(client, monk
         ),
     )
     monkeypatch.setattr(
-        "apd.web.routes.execute_research_brief_ollama_components",
+        "apd.web.routes.execute_research_brief_ollama_components_grounded",
         lambda db, brief: {
             "success": False,
-            "provider": "ollama-components",
+            "provider": "ollama-components-grounded",
             "model": "llama3",
             "status": "component_validation_failed",
             "started_at": "2026-01-01T00:00:00+00:00",
@@ -917,6 +1163,8 @@ def test_start_research_ollama_components_route_uses_mocked_service(client, monk
             "errors": ["mocked components failure"],
             "warnings": [],
             "run_id": None,
+            "grounding_status": "failed",
+            "grounding_errors": ["mocked components failure"],
         },
     )
 
