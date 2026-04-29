@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from apd.app.db import Base
-from apd.domain.models import EvidenceExcerpt, ResearchBrief, Run, Source
+from apd.domain.models import EvidenceExcerpt, ResearchBrief, Run, RunPhase, Source
 from apd.services.model_execution_settings import save_model_execution_settings
 from apd.services.research_brief_service import create_brief
 from apd.services import web_research
@@ -126,6 +126,56 @@ def test_run_web_research_stores_source_and_excerpt(db, monkeypatch):
     assert saved_excerpt is not None
     assert "backup checks" in saved_excerpt.excerpt_text
     assert saved_brief.metadata_json["web_research_run_id"] == result["web_research_run_id"]
+
+
+def test_get_grounding_source_packet_for_brief_includes_captured_ids_and_text(db):
+    brief = create_brief(db, title="Grounded packet", research_question="Q")
+
+    capture_run = Run(
+        title="Grounding capture",
+        intent="Q",
+        mode="web_research_capture",
+        phase=RunPhase.EVIDENCE_COLLECTED,
+        metadata_json={"brief_id": brief.id, "created_by": "apd_web_research"},
+    )
+    db.add(capture_run)
+    db.flush()
+
+    source = Source(
+        run_id=capture_run.id,
+        title="Example source",
+        source_type="public_web",
+        url="https://example.com/source",
+        origin="example.com",
+        metadata_json={"brief_id": brief.id},
+    )
+    db.add(source)
+    db.flush()
+
+    excerpt = EvidenceExcerpt(
+        run_id=capture_run.id,
+        source_id=source.id,
+        excerpt_text="Operators describe losing hours every week to manual incident triage.",
+        excerpt_type="web_capture",
+        metadata_json={"brief_id": brief.id},
+    )
+    db.add(excerpt)
+    db.flush()
+
+    brief.metadata_json = {"web_research_run_id": capture_run.id}
+    db.add(brief)
+    db.commit()
+
+    packet = web_research.get_grounding_source_packet_for_brief(db, brief)
+    rendered = web_research.render_grounding_source_packet(packet)
+
+    assert len(packet.sources) == 1
+    assert len(packet.evidence_excerpts) == 1
+    assert packet.sources[0]["id"] == f"captured-source-{source.id}"
+    assert packet.evidence_excerpts[0]["id"] == f"captured-excerpt-{excerpt.id}"
+    assert packet.evidence_excerpts[0]["source_id"] == f"captured-source-{source.id}"
+    assert "Example source" in rendered
+    assert "manual incident triage" in rendered
 
 
 @pytest.mark.parametrize(
@@ -282,4 +332,5 @@ def test_capture_only_web_discovery_route_renders_phase_status(client_and_sessio
     assert "Web discovery phase" in response.text
     assert "Example article" in response.text
     assert "support escalation pain" in response.text
-    assert "issue #63" in response.text
+    assert "grounded component execution" in response.text
+    assert "does not verify truth" in response.text
