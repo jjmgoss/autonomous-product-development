@@ -28,6 +28,7 @@ Notes
 
 - APD will import the package as draft/unreviewed research for human inspection and review.
 - The new brief form includes a local sample/randomizer for dogfooding. It does not call a model or save anything until you submit the brief form.
+- APD also supports optional model-generated brief ideation using configured local Ollama settings. These generated ideas are draft form prefills only, are not researched findings, do not perform web/source research, do not use hosted provider API keys, and are not saved until you submit the brief form.
 
 Note: The run review UI is candidate-first — the run detail page surfaces product
 candidates before sources and reasoning so reviewers can prioritize candidate

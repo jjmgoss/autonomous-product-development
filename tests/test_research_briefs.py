@@ -2,13 +2,23 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import func, select
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from apd.app.db import Base
 from apd.domain.models import ResearchBrief, ResearchBriefStatus
+from apd.services.model_execution_settings import save_model_execution_settings
+from apd.services.research_brief_ideation import (
+    build_brief_ideation_prompt,
+    get_brief_ideation_themes,
+    pick_random_brief_ideation_theme,
+    parse_generated_brief_idea,
+)
 from apd.services.research_brief_service import (
     create_brief,
     generate_agent_prompt,
@@ -225,6 +235,31 @@ def test_sample_research_briefs_include_at_least_eight_product_prompts():
         assert sample["title"].strip()
 
 
+def test_brief_ideation_themes_include_expected_options():
+    themes = get_brief_ideation_themes()
+    assert "Restaurant inventory waste reduction" in themes
+    assert "Property manager maintenance triage" in themes
+    assert len(themes) >= 8
+
+
+def test_pick_random_brief_ideation_theme_returns_known_theme():
+    assert pick_random_brief_ideation_theme() in get_brief_ideation_themes()
+
+
+def test_brief_ideation_prompt_includes_selected_themes():
+    prompt = build_brief_ideation_prompt(["AI-assisted product research", "local-first developer tools"])
+    assert "AI-assisted product research, local-first developer tools" in prompt
+    assert "Return only JSON." in prompt
+
+
+def test_parse_generated_brief_idea_rejects_researched_source_claims():
+    data, ideation_error = parse_generated_brief_idea(
+        '{"title":"T","research_question":"Q","notes":"Sources include https://example.com and citations."}'
+    )
+    assert data is None
+    assert ideation_error == "validation_failed: generated_idea_claims_researched_sources"
+
+
 # ── Web UI tests ───────────────────────────────────────────────────────────────
 
 
@@ -261,6 +296,144 @@ def test_brief_new_page_includes_sample_briefs_data(client):
     assert "sample-briefs-data" in body
     assert "Investigate product opportunities for solo developers who self-host small apps" in body
     assert "Math.random()" in body
+
+
+def test_brief_new_page_shows_ideation_controls(client):
+    resp = client.get("/briefs/new")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "let an LLM pick" in body
+    assert "randomly choose one local ideation theme" in body
+    assert 'type="checkbox"' not in body
+
+
+def test_brief_new_page_disables_ideation_when_model_not_configured(client, monkeypatch):
+    monkeypatch.delenv("APD_MODEL_PROVIDER", raising=False)
+    monkeypatch.delenv("APD_OLLAMA_BASE_URL", raising=False)
+    monkeypatch.delenv("APD_OLLAMA_MODEL", raising=False)
+
+    resp = client.get("/briefs/new")
+    assert resp.status_code == 200
+    assert "Configure local Ollama model settings to enable fresh idea generation." in resp.text
+    assert 'id="generate-brief-idea-btn"' in resp.text
+    assert "disabled" in resp.text
+
+
+def test_brief_ideation_route_returns_config_error_without_model_settings(client, monkeypatch):
+    monkeypatch.delenv("APD_MODEL_PROVIDER", raising=False)
+    monkeypatch.delenv("APD_OLLAMA_BASE_URL", raising=False)
+    monkeypatch.delenv("APD_OLLAMA_MODEL", raising=False)
+
+    response = client.post("/briefs/ideate", json={})
+    assert response.status_code == 503
+    assert response.json()["success"] is False
+    assert "not configured" in response.json()["error"].lower()
+
+
+def test_brief_ideation_route_returns_generated_brief_and_does_not_persist(client):
+    import apd.app.db as app_db
+
+    db = app_db.SessionLocal()
+    try:
+        save_model_execution_settings(
+            db,
+            {
+                "provider": "ollama",
+                "ollama_base_url": "http://localhost:11434",
+                "ollama_model": "llama3",
+                "ollama_timeout_seconds": 120,
+                "ollama_keep_alive": 0,
+                "component_repair_attempts": 2,
+                "enabled": True,
+            },
+        )
+        brief_count_before = db.scalar(select(func.count()).select_from(ResearchBrief)) or 0
+    finally:
+        db.close()
+
+    captured_payloads = []
+
+    def _fake_generate(config, payload):
+        captured_payloads.append(payload)
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
+        return (
+            {
+                "response": (
+                    '{"title":"Fresh idea title","research_question":"Investigate product opportunities for local-first developer tools that reduce deployment friction.",'
+                    '"constraints":"Focus on solo builders.","desired_depth":"Thorough with candidates and gates.",'
+                    '"expected_outputs":"At least 3 candidate wedges.","notes":"This is a draft idea, not researched output."}'
+                )
+            },
+            None,
+        )
+
+    with patch(
+        "apd.services.research_brief_ideation.pick_random_brief_ideation_theme",
+        return_value="Restaurant inventory waste reduction",
+    ):
+        with patch("apd.services.research_brief_ideation._ollama_generate", _fake_generate):
+            response = client.post(
+                "/briefs/ideate",
+                json={},
+            )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["title"] == "Fresh idea title"
+    assert any(
+        "Use these selected themes: Restaurant inventory waste reduction." in value.get("prompt", "")
+        for value in captured_payloads
+    )
+
+    db = app_db.SessionLocal()
+    try:
+        brief_count_after = db.scalar(select(func.count()).select_from(ResearchBrief)) or 0
+    finally:
+        db.close()
+    assert brief_count_after == brief_count_before
+
+
+def test_brief_ideation_route_returns_useful_error_for_bad_model_output(client):
+    import apd.app.db as app_db
+
+    db = app_db.SessionLocal()
+    try:
+        save_model_execution_settings(
+            db,
+            {
+                "provider": "ollama",
+                "ollama_base_url": "http://localhost:11434",
+                "ollama_model": "llama3",
+                "ollama_timeout_seconds": 120,
+                "ollama_keep_alive": 0,
+                "component_repair_attempts": 2,
+                "enabled": True,
+            },
+        )
+    finally:
+        db.close()
+
+    def _fake_generate(config, payload):
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
+        return ({"response": "not json"}, None)
+
+    with patch(
+        "apd.services.research_brief_ideation.pick_random_brief_ideation_theme",
+        return_value="Restaurant inventory waste reduction",
+    ):
+        with patch("apd.services.research_brief_ideation._ollama_generate", _fake_generate):
+            response = client.post(
+                "/briefs/ideate",
+                json={},
+            )
+
+    assert response.status_code == 400
+    payload = response.json()
+    assert payload["success"] is False
+    assert "parse_failed" in payload["error"]
 
 
 def test_create_brief_via_post_redirects_to_detail(client):

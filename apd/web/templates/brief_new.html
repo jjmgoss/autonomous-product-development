@@ -51,6 +51,34 @@
       ></textarea>
     </div>
 
+    <div class="form-field" style="margin-bottom: 1rem; padding: 0.85rem; border: 1px solid #dbe4ee; border-radius: 8px; background: #f8fafc; max-width: 760px;">
+      <div style="display: flex; align-items: baseline; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+        <strong>Generate fresh idea</strong>
+        <span class="muted" style="font-size: 0.85rem;">
+          Optional local Ollama ideation. Generates a draft brief prefill only; nothing is saved until you submit.
+        </span>
+      </div>
+      <div class="muted" style="font-size: 0.85rem; margin-bottom: 0.75rem;">
+        APD will randomly choose one local ideation theme and ask the model for a draft brief.
+        {% if ideation_enabled %}
+          Uses configured local model <strong>{{ ideation_model }}</strong>. This does not perform web research or source fetching.
+        {% else %}
+          {{ ideation_disabled_reason }}
+        {% endif %}
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+        <button
+          type="button"
+          class="btn"
+          id="generate-brief-idea-btn"
+          style="background: #dbeafe; color: #1e3a8a;"
+          {% if not ideation_enabled %}disabled{% endif %}
+        >let an LLM pick</button>
+        <span id="ideation-status" class="muted" style="font-size: 0.85rem;"></span>
+      </div>
+      <div id="ideation-error" style="display: none; margin-top: 0.75rem; color: #991b1b; font-size: 0.9rem;"></div>
+    </div>
+
     <div class="form-field" style="margin-bottom: 1rem;">
       <label for="constraints" style="display: block; font-weight: 600; margin-bottom: 0.25rem;">
         Constraints <span class="muted">(optional)</span>
@@ -114,6 +142,18 @@
 
 <script id="sample-briefs-data" type="application/json">{{ sample_briefs | tojson }}</script>
 <script>
+function fillBriefFormFields(data) {
+  var fieldNames = ["title", "research_question", "constraints", "desired_depth", "expected_outputs", "notes"];
+  for (var idx = 0; idx < fieldNames.length; idx++) {
+    var fieldName = fieldNames[idx];
+    var element = document.getElementById(fieldName);
+    if (!element) {
+      continue;
+    }
+    element.value = data[fieldName] || "";
+  }
+}
+
 function randomizeBriefForm() {
   var dataEl = document.getElementById("sample-briefs-data");
   if (!dataEl) {
@@ -132,20 +172,53 @@ function randomizeBriefForm() {
   }
 
   var sample = samples[Math.floor(Math.random() * samples.length)];
-  var fieldNames = ["title", "research_question", "constraints", "desired_depth", "expected_outputs", "notes"];
-  for (var idx = 0; idx < fieldNames.length; idx++) {
-    var fieldName = fieldNames[idx];
-    var element = document.getElementById(fieldName);
-    if (!element) {
-      continue;
+  fillBriefFormFields(sample);
+}
+
+async function generateFreshBriefIdea() {
+  var errorEl = document.getElementById("ideation-error");
+  var statusEl = document.getElementById("ideation-status");
+  var button = document.getElementById("generate-brief-idea-btn");
+
+  errorEl.style.display = "none";
+  errorEl.textContent = "";
+  statusEl.textContent = "";
+
+  button.disabled = true;
+  statusEl.textContent = "Generating draft idea...";
+  try {
+    var response = await fetch("/briefs/ideate", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({})
+    });
+    var payload = await response.json();
+    if (!response.ok || !payload.success) {
+      throw new Error(payload.error || "Failed to generate a brief idea.");
     }
-    element.value = sample[fieldName] || "";
+    fillBriefFormFields(payload);
+    statusEl.textContent = "Draft idea generated. Review and edit before saving.";
+  } catch (err) {
+    errorEl.textContent = err && err.message ? err.message : "Failed to generate a brief idea.";
+    errorEl.style.display = "block";
+    statusEl.textContent = "";
+  } finally {
+    {% if ideation_enabled %}
+    button.disabled = false;
+    {% else %}
+    button.disabled = true;
+    {% endif %}
   }
 }
 
 var randomizeButton = document.getElementById("randomize-brief-btn");
 if (randomizeButton) {
   randomizeButton.addEventListener("click", randomizeBriefForm);
+}
+
+var generateIdeaButton = document.getElementById("generate-brief-idea-btn");
+if (generateIdeaButton && !generateIdeaButton.disabled) {
+  generateIdeaButton.addEventListener("click", generateFreshBriefIdea);
 }
 </script>
 {% endblock %}

@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -23,6 +23,7 @@ from apd.services.research_brief_service import (
     get_brief,
     list_briefs,
 )
+from apd.services.research_brief_ideation import generate_brief_idea_with_ollama, get_brief_ideation_themes
 from apd.services.sample_research_briefs import get_sample_research_briefs
 from apd.services.model_execution_settings import get_model_execution_settings, save_model_execution_settings
 from apd.services.research_execution_ollama import (
@@ -205,12 +206,45 @@ def briefs_list(request: Request, db: Session = Depends(_get_db)):
 
 
 @router.get("/briefs/new", response_class=HTMLResponse)
-def briefs_new(request: Request):
+def briefs_new(request: Request, db: Session = Depends(_get_db)):
+    ollama_config, missing_ollama_env = get_ollama_execution_config(db)
     return templates.TemplateResponse(
         request,
         "brief_new.html",
-        {"sample_briefs": get_sample_research_briefs()},
+        {
+            "sample_briefs": get_sample_research_briefs(),
+            "ideation_themes": get_brief_ideation_themes(),
+            "ideation_enabled": ollama_config is not None,
+            "ideation_disabled_reason": (
+                "Configure local Ollama model settings to enable fresh idea generation."
+                if ollama_config is None
+                else None
+            ),
+            "ideation_model": ollama_config.model if ollama_config else None,
+            "missing_ollama_env": missing_ollama_env,
+        },
     )
+
+
+@router.post("/briefs/ideate")
+async def briefs_ideate(request: Request, db: Session = Depends(_get_db)):
+    payload = await request.json()
+    selected_themes = payload.get("selected_themes") if isinstance(payload, dict) else None
+    if selected_themes is not None and not isinstance(selected_themes, list):
+        return JSONResponse(
+            {"success": False, "error": "Invalid ideation request payload."},
+            status_code=422,
+        )
+
+    idea, ideation_error = generate_brief_idea_with_ollama(
+        db,
+        [str(value) for value in selected_themes] if selected_themes is not None else None,
+    )
+    if ideation_error:
+        status_code = 503 if "not configured" in ideation_error.lower() else 400
+        return JSONResponse({"success": False, "error": ideation_error}, status_code=status_code)
+
+    return JSONResponse({"success": True, **idea})
 
 
 @router.post("/briefs", response_class=RedirectResponse)
