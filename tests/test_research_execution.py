@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from fastapi.responses import RedirectResponse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -160,19 +161,30 @@ def test_execute_stub_service_imports_run(db):
     assert isinstance(result.get("run_id"), int)
 
 
-def test_start_research_route_creates_run(client):
-    # create brief via web route then start research
+def test_start_research_route_uses_current_best_path(client, monkeypatch):
+    resp = client.post("/briefs", data={"title": "Web path", "research_question": "What is X?"}, follow_redirects=False)
+    assert resp.status_code == 303
+    brief_id = int(resp.headers["location"].split("/")[-1])
+
+    monkeypatch.setattr(
+        "apd.web.routes.start_research_ollama_components",
+        lambda brief_id, db: RedirectResponse(url="/runs/123", status_code=303),
+    )
+
+    resp2 = client.post(f"/briefs/{brief_id}/start-research", follow_redirects=False)
+    assert resp2.status_code == 303
+    assert resp2.headers["location"] == "/runs/123"
+
+
+def test_start_research_stub_route_creates_run(client):
     resp = client.post("/briefs", data={"title": "Web stub", "research_question": "What is X?"}, follow_redirects=False)
     assert resp.status_code == 303
     location = resp.headers["location"]
-    # get brief id from redirect
     assert location.startswith("/briefs/")
     brief_id = int(location.split("/")[-1])
 
-    # invoke start research
-    resp2 = client.post(f"/briefs/{brief_id}/start-research", follow_redirects=True)
+    resp2 = client.post(f"/briefs/{brief_id}/start-research-stub", follow_redirects=True)
     assert resp2.status_code == 200
-    # Should redirect to run detail and show the run title
     assert "Web stub" in resp2.text
 
 
@@ -187,15 +199,17 @@ def test_settings_page_save_and_reload_persists_saved_values(client, monkeypatch
     assert 'value="llama3"' in response.text
 
 
-def test_brief_detail_shows_ollama_actions_from_saved_db_settings(client, monkeypatch):
+def test_brief_detail_shows_single_start_research_action_from_saved_db_settings(client, monkeypatch):
     _clear_ollama_env(monkeypatch)
     _save_ui_model_settings(client)
     brief_id = _create_brief_via_ui(client, title="DB-backed config brief")
 
     response = client.get(f"/briefs/{brief_id}")
     assert response.status_code == 200
-    assert "Start Research with Ollama" in response.text
-    assert "Start web-assisted research (prototype)" in response.text
+    assert response.text.count("Start Research") == 1
+    assert "Uses your configured local model to run APD's current autonomous research path." in response.text
+    assert "Start Research with Ollama" not in response.text
+    assert "Start web-assisted research (prototype)" not in response.text
     assert "Missing required env" not in response.text
 
 
@@ -447,7 +461,7 @@ def test_start_research_ollama_components_uses_saved_db_settings(client, monkeyp
     assert "Use only the provided APD-captured source packet" in captured_payloads[0]["prompt"]
 
 
-def test_brief_detail_shows_grounded_action_when_captured_sources_exist(client, monkeypatch):
+def test_brief_detail_shows_grounding_context_without_extra_action_buttons(client, monkeypatch):
     _clear_ollama_env(monkeypatch)
     _save_ui_model_settings(client)
     brief_id = _create_brief_via_ui(client, title="Grounded action brief")
@@ -461,7 +475,8 @@ def test_brief_detail_shows_grounded_action_when_captured_sources_exist(client, 
 
     response = client.get(f"/briefs/{brief_id}")
     assert response.status_code == 200
-    assert "Start grounded component research" in response.text
+    assert "Captured grounding context available: 1 sources, 1 excerpts." in response.text
+    assert "Start grounded component research" not in response.text
 
 
 def test_web_assisted_research_records_web_discovery_phase_in_last_execution(client, monkeypatch):
@@ -515,8 +530,10 @@ def test_web_assisted_research_records_web_discovery_phase_in_last_execution(cli
     assert "Captured source" in response.text
     assert "solo operator maintenance pain" in response.text
     assert "Web discovery succeeded; component generation failed validation." in response.text
+    assert "Error summary" in response.text
     assert "Grounding status" in response.text
     assert "unknown grounded source_id" in response.text
+    assert "Show raw execution details" in response.text
 
 
 def test_execute_grounded_components_requires_captured_sources(db, monkeypatch):
@@ -1171,6 +1188,7 @@ def test_start_research_ollama_components_route_uses_mocked_service(client, monk
     resp2 = client.post(f"/briefs/{brief_id}/start-research-ollama-components", follow_redirects=True)
     assert resp2.status_code == 200
     assert "mocked components failure" in resp2.text
+    assert "Show raw execution details" in resp2.text
 
 
 def test_start_research_ollama_route_handles_missing_config(client, monkeypatch):
@@ -1194,7 +1212,7 @@ def test_stub_route_still_works_when_ollama_path_exists(client):
     assert resp.status_code == 303
     brief_id = int(resp.headers["location"].split("/")[-1])
 
-    resp2 = client.post(f"/briefs/{brief_id}/start-research", follow_redirects=True)
+    resp2 = client.post(f"/briefs/{brief_id}/start-research-stub", follow_redirects=True)
     assert resp2.status_code == 200
     assert "Stub still works" in resp2.text
 
