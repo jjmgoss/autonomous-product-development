@@ -23,6 +23,7 @@ from apd.services.research_brief_service import (
     get_brief,
     list_briefs,
 )
+from apd.services.sample_research_briefs import get_sample_research_briefs
 from apd.services.model_execution_settings import get_model_execution_settings, save_model_execution_settings
 from apd.services.research_execution_ollama import (
     execute_research_brief_ollama_components,
@@ -208,7 +209,7 @@ def briefs_new(request: Request):
     return templates.TemplateResponse(
         request,
         "brief_new.html",
-        {},
+        {"sample_briefs": get_sample_research_briefs()},
     )
 
 

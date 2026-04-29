@@ -35,6 +35,12 @@
       <label for="research_question" style="display: block; font-weight: 600; margin-bottom: 0.25rem;">
         Research question / direction <span class="required-mark" style="color: #ef4444;">*</span>
       </label>
+      <div style="margin-bottom: 0.5rem;">
+        <button type="button" class="btn" id="randomize-brief-btn" style="background: #e2e8f0; color: #1a1a1a;">Randomize brief</button>
+        <span class="muted" style="font-size: 0.85rem; margin-left: 0.5rem;">
+          Fills this form with a product-investigation prompt for dogfooding. You can edit before saving.
+        </span>
+      </div>
       <textarea
         id="research_question"
         name="research_question"
@@ -105,4 +111,41 @@
 
   </form>
 </div>
+
+<script id="sample-briefs-data" type="application/json">{{ sample_briefs | tojson }}</script>
+<script>
+function randomizeBriefForm() {
+  var dataEl = document.getElementById("sample-briefs-data");
+  if (!dataEl) {
+    return;
+  }
+
+  var samples = [];
+  try {
+    samples = JSON.parse(dataEl.textContent || "[]");
+  } catch (err) {
+    return;
+  }
+
+  if (!Array.isArray(samples) || samples.length === 0) {
+    return;
+  }
+
+  var sample = samples[Math.floor(Math.random() * samples.length)];
+  var fieldNames = ["title", "research_question", "constraints", "desired_depth", "expected_outputs", "notes"];
+  for (var idx = 0; idx < fieldNames.length; idx++) {
+    var fieldName = fieldNames[idx];
+    var element = document.getElementById(fieldName);
+    if (!element) {
+      continue;
+    }
+    element.value = sample[fieldName] || "";
+  }
+}
+
+var randomizeButton = document.getElementById("randomize-brief-btn");
+if (randomizeButton) {
+  randomizeButton.addEventListener("click", randomizeBriefForm);
+}
+</script>
 {% endblock %}
