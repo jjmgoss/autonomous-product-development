@@ -154,7 +154,7 @@ def test_brief_detail_shows_ollama_actions_from_saved_db_settings(client, monkey
     response = client.get(f"/briefs/{brief_id}")
     assert response.status_code == 200
     assert "Start Research with Ollama" in response.text
-    assert "Start Research with Components (experimental)" in response.text
+    assert "Start web-assisted research (prototype)" in response.text
     assert "Missing required env" not in response.text
 
 
@@ -323,6 +323,25 @@ def test_start_research_ollama_components_uses_saved_db_settings(client, monkeyp
     _save_ui_model_settings(client)
     brief_id = _create_brief_via_ui(client, title="Saved DB config components")
 
+    monkeypatch.setattr(
+        "apd.web.routes.run_web_research_for_brief",
+        lambda db, brief: {
+            "success": True,
+            "status": "completed",
+            "started_at": "2026-04-28T00:00:00+00:00",
+            "finished_at": "2026-04-28T00:00:01+00:00",
+            "errors": [],
+            "warnings": [],
+            "proposed_query_count": 1,
+            "proposed_url_count": 1,
+            "fetched_source_count": 1,
+            "queries": [{"query": "support escalation pain", "rationale": "seed"}],
+            "sources": [{"url": "https://example.com/article", "title": "Example article"}],
+            "skipped_urls": [],
+            "web_research_run_id": 11,
+        },
+    )
+
     captured_payloads = []
     responses = [
         (
@@ -370,6 +389,55 @@ def test_start_research_ollama_components_uses_saved_db_settings(client, monkeyp
     assert response.status_code == 303
     assert response.headers["location"].startswith("/runs/")
     assert captured_payloads
+
+
+def test_web_assisted_research_records_web_discovery_phase_in_last_execution(client, monkeypatch):
+    _clear_ollama_env(monkeypatch)
+    _save_ui_model_settings(client)
+    brief_id = _create_brief_via_ui(client, title="Web-assisted prototype")
+
+    monkeypatch.setattr(
+        "apd.web.routes.run_web_research_for_brief",
+        lambda db, brief: {
+            "success": True,
+            "status": "completed",
+            "started_at": "2026-04-28T00:00:00+00:00",
+            "finished_at": "2026-04-28T00:00:02+00:00",
+            "errors": [],
+            "warnings": [],
+            "proposed_query_count": 1,
+            "proposed_url_count": 1,
+            "fetched_source_count": 1,
+            "queries": [{"query": "solo operator maintenance pain", "rationale": "seed"}],
+            "sources": [{"url": "https://example.com/source", "title": "Captured source"}],
+            "skipped_urls": [],
+            "web_research_run_id": 12,
+        },
+    )
+    monkeypatch.setattr(
+        "apd.web.routes.execute_research_brief_ollama_components",
+        lambda db, brief: {
+            "success": False,
+            "provider": "ollama-components",
+            "status": "component_validation_failed",
+            "started_at": "2026-04-28T00:00:03+00:00",
+            "finished_at": "2026-04-28T00:00:04+00:00",
+            "errors": ["component phase failed"],
+            "warnings": [],
+            "run_id": None,
+            "mode": "component_execution",
+            "last_phase": "claim_theme_batch",
+            "attempts_by_phase": {"candidate_batch": 1, "claim_theme_batch": 2},
+        },
+    )
+
+    response = client.post(f"/briefs/{brief_id}/start-research-ollama-components", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert "Web discovery phase" in response.text
+    assert "Captured source" in response.text
+    assert "solo operator maintenance pain" in response.text
+    assert "not yet fully source-grounded" in response.text
 
 
 def test_execute_ollama_components_success_path_imports_run(db, monkeypatch):

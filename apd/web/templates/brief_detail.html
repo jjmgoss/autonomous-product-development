@@ -155,8 +155,12 @@
         <button type="submit" class="btn btn-sm btn-primary">Start Research with Ollama</button>
       </form>
       <form method="post" action="/briefs/{{ brief.id }}/start-research-ollama-components" style="display:inline; margin-left:0.5rem;">
-        <button type="submit" class="btn btn-sm btn-primary">Start Research with Components (experimental)</button>
+        <button type="submit" class="btn btn-sm btn-primary">Start web-assisted research (prototype)</button>
       </form>
+      <div style="margin-top:0.5rem;">
+        This prototype runs a web discovery phase first, captures validated public sources, then continues into component execution.
+        Captured sources are not yet fully used to ground component generation; that grounding step is deferred to issue #63.
+      </div>
     {% else %}
       Configure all required env vars to enable this path:
       <code>APD_MODEL_PROVIDER=ollama</code>,
@@ -170,9 +174,94 @@
   </div>
   
   {% if brief.metadata_json and brief.metadata_json.get('last_execution') %}
+  {% set execution = brief.metadata_json.get('last_execution') %}
+  {% set web_status = execution.get('web_discovery') %}
+  {% set component_status = execution.get('component_execution') %}
   <div class="card" style="margin-top:1rem;">
     <h3>Last execution</h3>
-    <pre style="background:#fff; padding:0.75rem; border-radius:6px;">{{ brief.metadata_json.get('last_execution') | tojson }}</pre>
+
+    {% if execution.get('mode') == 'web_assisted_component_execution' or web_status %}
+    <table class="detail-table" style="max-width: 900px; margin-bottom: 1rem;">
+      <tr>
+        <th style="width: 240px;">Overall status</th>
+        <td>{{ execution.get('status', '—') }}</td>
+      </tr>
+      {% if web_status %}
+      <tr>
+        <th>Web discovery phase</th>
+        <td>{{ web_status.get('status', '—') }}</td>
+      </tr>
+      <tr>
+        <th>Captured sources</th>
+        <td>{{ web_status.get('fetched_source_count', 0) }}</td>
+      </tr>
+      {% if web_status.get('sources') %}
+      <tr>
+        <th>Fetched sources</th>
+        <td>
+          {% for source in web_status.get('sources', []) %}
+            <div>
+              {% if source.get('url') %}<a href="{{ source.get('url') }}">{{ source.get('title') or source.get('url') }}</a>{% else %}{{ source.get('title') or 'Source' }}{% endif %}
+            </div>
+          {% endfor %}
+        </td>
+      </tr>
+      {% endif %}
+      {% if web_status.get('queries') %}
+      <tr>
+        <th>Model-proposed queries</th>
+        <td>
+          {% for query in web_status.get('queries', []) %}
+            <div>{{ query.get('query') }}</div>
+          {% endfor %}
+        </td>
+      </tr>
+      {% endif %}
+      {% if web_status.get('skipped_urls') %}
+      <tr>
+        <th>Rejected or skipped URLs</th>
+        <td>
+          {% for item in web_status.get('skipped_urls', []) %}
+            <div>{{ item.get('url') }}{% if item.get('reason') %} ({{ item.get('reason') }}){% endif %}</div>
+          {% endfor %}
+        </td>
+      </tr>
+      {% endif %}
+      {% endif %}
+      {% if component_status %}
+      <tr>
+        <th>Component execution phase</th>
+        <td>{{ component_status.get('status', '—') }}</td>
+      </tr>
+      {% if component_status.get('run_id') %}
+      <tr>
+        <th>Imported run</th>
+        <td><a href="/runs/{{ component_status.get('run_id') }}">Open run {{ component_status.get('run_id') }}</a></td>
+      </tr>
+      {% endif %}
+      {% endif %}
+      {% if execution.get('source_grounding_note') %}
+      <tr>
+        <th>Grounding status</th>
+        <td>{{ execution.get('source_grounding_note') }}</td>
+      </tr>
+      {% endif %}
+      {% if execution.get('errors') %}
+      <tr>
+        <th>Errors</th>
+        <td>{{ execution.get('errors') | join('; ') }}</td>
+      </tr>
+      {% endif %}
+      {% if execution.get('warnings') %}
+      <tr>
+        <th>Warnings</th>
+        <td>{{ execution.get('warnings') | join('; ') }}</td>
+      </tr>
+      {% endif %}
+    </table>
+    {% endif %}
+
+    <pre style="background:#fff; padding:0.75rem; border-radius:6px;">{{ execution | tojson }}</pre>
   </div>
   {% endif %}
 </div>

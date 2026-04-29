@@ -77,6 +77,46 @@ Limitations:
 - Local/Ollama runs should not invent sources, URLs, citations, or claims of fetched web evidence.
 - Tests mock Ollama calls; live Ollama verification is manual.
 
+## APD-orchestrated web discovery phase (Issue #62)
+
+APD now includes a controlled web discovery phase inside the website execution prototype.
+
+Intended workflow:
+
+1. Create a research brief.
+2. Start one research execution.
+3. APD runs an internal web discovery phase.
+4. The local model proposes a small JSON list of search queries and direct public URLs.
+5. APD validates and fetches only explicit public URLs that pass safety checks.
+6. APD stores captured pages as APD-owned `Source` and `EvidenceExcerpt` records where feasible.
+7. Execution continues into component generation.
+
+Current prototype behavior:
+
+- The brief detail page exposes a `Start web-assisted research (prototype)` action.
+- Execution metadata records web discovery and component execution as separate phases under `metadata_json.last_execution`.
+- Captured sources are shown as part of execution status, not as a separate user prerequisite step.
+- The current component generation path is still not fully source-grounded.
+- Source-grounded component generation is follow-up work in issue #63.
+
+Safety and budget controls:
+
+- This is not free browsing.
+- No crawling beyond explicit proposed URLs.
+- No authenticated or private sources.
+- No localhost, loopback, or private-network targets.
+- Only validated public `http` or `https` URLs are fetched.
+- Max model-proposed queries: `5`
+- Max fetched URLs per run: `5`
+- Small fixed timeout and response/text caps are enforced in code.
+
+Notes:
+
+- Proposed queries are stored in execution status for future search-provider integration, but this issue only fetches direct validated URLs.
+- Captured web sources remain draft research material for later human review.
+- Because sources are still run-scoped in the current schema, APD creates a small capture run for the brief and records the originating `brief_id` in metadata.
+- Tests mock both model output and HTTP fetches; no live network access is required.
+
 ## UI-managed local model settings (Issue #55)
 
 APD now includes a Settings page at `/settings/model-execution` for local model execution configuration.
@@ -107,7 +147,7 @@ Why this exists:
 
 What this is:
 
-- A synchronous website-first prototype path (`Start Research with Components (experimental)`).
+- A synchronous website-first prototype path (`Start web-assisted research (prototype)`).
 - Provider-agnostic schema names (`ResearchComponentEvent`, `ResearchComponentBatch`, `ComponentDraftAssembler`).
 - Ollama is the first adapter implementation.
 
