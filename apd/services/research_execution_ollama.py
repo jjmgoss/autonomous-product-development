@@ -47,33 +47,61 @@ class ProductQualityGateResult:
     warnings: list[str]
 
 
-def get_ollama_execution_config() -> tuple[OllamaExecutionConfig | None, list[str]]:
-    provider = (os.getenv("APD_MODEL_PROVIDER") or "").strip().lower()
-    base_url = (os.getenv("APD_OLLAMA_BASE_URL") or "").strip()
-    model = (os.getenv("APD_OLLAMA_MODEL") or "").strip()
+def get_ollama_execution_config(db: Session | None = None) -> tuple[OllamaExecutionConfig | None, list[str]]:
+    # Prefer DB-backed settings when available. Import lazily to avoid circular imports.
+    try:
+        from apd.services.model_execution_settings import resolve_ollama_execution_config
 
-    missing: list[str] = []
-    if provider != "ollama":
-        missing.append("APD_MODEL_PROVIDER=ollama")
-    if not base_url:
-        missing.append("APD_OLLAMA_BASE_URL")
-    if not model:
-        missing.append("APD_OLLAMA_MODEL")
+        resolved, missing = resolve_ollama_execution_config(db)
+    except Exception:
+        resolved = None
+        missing = []
 
-    if missing:
-        return None, missing
+    if resolved is None:
+        # fallback to env-based resolution
+        provider = (os.getenv("APD_MODEL_PROVIDER") or "").strip().lower()
+        base_url = (os.getenv("APD_OLLAMA_BASE_URL") or "").strip()
+        model = (os.getenv("APD_OLLAMA_MODEL") or "").strip()
 
-    timeout_seconds = _parse_positive_int_env("APD_OLLAMA_TIMEOUT_SECONDS", default=120)
-    repair_attempts = _parse_nonnegative_int_env("APD_OLLAMA_REPAIR_ATTEMPTS", default=1)
-    # Scope guardrail: permit at most one repair call.
+        missing = []
+        if provider != "ollama":
+            missing.append("APD_MODEL_PROVIDER=ollama")
+        if not base_url:
+            missing.append("APD_OLLAMA_BASE_URL")
+        if not model:
+            missing.append("APD_OLLAMA_MODEL")
+
+        if missing:
+            return None, missing
+
+        timeout_seconds = _parse_positive_int_env("APD_OLLAMA_TIMEOUT_SECONDS", default=120)
+        repair_attempts = _parse_nonnegative_int_env("APD_OLLAMA_REPAIR_ATTEMPTS", default=1)
+        repair_attempts = min(repair_attempts, 1)
+        keep_alive = _parse_keep_alive_env("APD_OLLAMA_KEEP_ALIVE", default=0)
+
+        return (
+            OllamaExecutionConfig(
+                provider=provider,
+                base_url=base_url.rstrip("/"),
+                model=model,
+                timeout_seconds=timeout_seconds,
+                repair_attempts=repair_attempts,
+                keep_alive=keep_alive,
+            ),
+            [],
+        )
+
+    # Build typed config from resolved dict
+    timeout_seconds = int(resolved.get("ollama_timeout_seconds") or 120)
+    repair_attempts = int(resolved.get("component_repair_attempts") or 1)
     repair_attempts = min(repair_attempts, 1)
-    keep_alive = _parse_keep_alive_env("APD_OLLAMA_KEEP_ALIVE", default=0)
+    keep_alive = resolved.get("ollama_keep_alive")
 
     return (
         OllamaExecutionConfig(
-            provider=provider,
-            base_url=base_url.rstrip("/"),
-            model=model,
+            provider=resolved.get("provider"),
+            base_url=resolved.get("ollama_base_url"),
+            model=resolved.get("ollama_model"),
             timeout_seconds=timeout_seconds,
             repair_attempts=repair_attempts,
             keep_alive=keep_alive,
@@ -108,7 +136,7 @@ def extract_json_object_from_model_output(text: str) -> tuple[dict[str, Any] | N
 
 
 def execute_research_brief_ollama(db: Session, brief) -> dict[str, Any]:
-    config, missing_env = get_ollama_execution_config()
+    config, missing_env = get_ollama_execution_config(db)
     now = _iso_now()
 
     if config is None:
@@ -201,7 +229,7 @@ def execute_research_brief_ollama(db: Session, brief) -> dict[str, Any]:
 
 def execute_research_brief_ollama_components(db: Session, brief) -> dict[str, Any]:
     """Experimental component-based execution path using provider-agnostic event schema."""
-    config, missing_env = get_ollama_execution_config()
+    config, missing_env = get_ollama_execution_config(db)
     component_repair_attempts = _parse_component_repair_attempts_env("APD_COMPONENT_REPAIR_ATTEMPTS", default=2)
     now = _iso_now()
     if config is None:

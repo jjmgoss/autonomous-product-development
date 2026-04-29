@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Model Execution Settings — APD{% endblock %}
+{% block content %}
+<div class="breadcrumb">
+  <a href="/briefs">Research Briefs</a> &rsaquo; Model Execution Settings
+</div>
+
+<div class="card">
+  <h2>Model Execution Settings</h2>
+  <p class="muted" style="margin-top: -0.4rem;">
+    Stores non-secret local model settings in the APD database. Hosted provider API keys are not supported on this page.
+  </p>
+  <form method="post" action="/settings/model-execution">
+    <table class="detail-table">
+      <tr>
+        <th>Provider</th>
+        <td>
+          <select name="provider">
+            <option value="ollama" {% if settings.provider == 'ollama' %}selected{% endif %}>Ollama</option>
+            <option value="none" {% if settings.provider != 'ollama' %}selected{% endif %}>Other / None</option>
+          </select>
+        </td>
+      </tr>
+      <tr>
+        <th>Ollama base URL</th>
+        <td><input type="text" name="ollama_base_url" value="{{ settings.ollama_base_url or '' }}" style="width:400px;"></td>
+      </tr>
+      <tr>
+        <th>Ollama model</th>
+        <td><input type="text" name="ollama_model" value="{{ settings.ollama_model or '' }}"></td>
+      </tr>
+      <tr>
+        <th>Timeout seconds</th>
+        <td><input type="number" name="ollama_timeout_seconds" value="{{ settings.ollama_timeout_seconds or 120 }}"></td>
+      </tr>
+      <tr>
+        <th>Keep alive</th>
+        <td><input type="text" name="ollama_keep_alive" value="{{ settings.ollama_keep_alive or 0 }}"></td>
+      </tr>
+      <tr>
+        <th>Component repair attempts</th>
+        <td><input type="number" name="component_repair_attempts" min="0" max="3" value="{{ settings.component_repair_attempts or 1 }}"></td>
+      </tr>
+    </table>
+
+    <div style="margin-top:1rem;">
+      <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
