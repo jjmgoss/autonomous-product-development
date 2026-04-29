@@ -75,6 +75,24 @@ Limitations:
 - Local/Ollama runs should not invent sources, URLs, citations, or claims of fetched web evidence.
 - Tests mock Ollama calls; live Ollama verification is manual.
 
+## UI-managed local model settings (Issue #55)
+
+APD now includes a Settings page at `/settings/model-execution` for local model execution configuration.
+
+What changed:
+
+- PowerShell `$env:` values are process-scoped and temporary unless persisted in a profile.
+- You can save local/Ollama execution settings from the APD UI.
+- Saved settings are stored in the APD database (`app_settings`) and persist across app restarts.
+- Environment variables remain fallback values when DB settings are not present.
+- This feature stores non-secret local settings only.
+- Hosted provider API keys are not implemented by this feature.
+
+Testing notes:
+
+- Tests for this feature use local DB state and mocked execution paths.
+- No live Ollama calls are required in tests.
+
 ## Component-based execution prototype (Issue #51)
 
 APD now includes an experimental component-based execution path that uses a provider-agnostic event contract.

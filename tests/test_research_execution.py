@@ -22,6 +22,44 @@ from apd.services.research_execution_ollama import (
 from apd.services.research_execution_stub import execute_research_brief_stub
 
 
+def _clear_ollama_env(monkeypatch):
+    monkeypatch.delenv("APD_MODEL_PROVIDER", raising=False)
+    monkeypatch.delenv("APD_OLLAMA_BASE_URL", raising=False)
+    monkeypatch.delenv("APD_OLLAMA_MODEL", raising=False)
+    monkeypatch.delenv("APD_OLLAMA_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("APD_OLLAMA_KEEP_ALIVE", raising=False)
+    monkeypatch.delenv("APD_OLLAMA_REPAIR_ATTEMPTS", raising=False)
+    monkeypatch.delenv("APD_COMPONENT_REPAIR_ATTEMPTS", raising=False)
+
+
+def _save_ui_model_settings(client):
+    response = client.post(
+        "/settings/model-execution",
+        data={
+            "provider": "ollama",
+            "ollama_base_url": "http://localhost:11434",
+            "ollama_model": "llama3",
+            "ollama_timeout_seconds": "120",
+            "ollama_keep_alive": "0",
+            "component_repair_attempts": "2",
+            "enabled": "on",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+
+def _create_brief_via_ui(client, *, title: str) -> int:
+    response = client.post(
+        "/briefs",
+        data={"title": title, "research_question": "What is X?"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    location = response.headers["location"]
+    return int(location.split("/")[-1])
+
+
 @pytest.fixture()
 def db(tmp_path):
     db_path = tmp_path / "test_exec.db"
@@ -95,6 +133,29 @@ def test_start_research_route_creates_run(client):
     assert resp2.status_code == 200
     # Should redirect to run detail and show the run title
     assert "Web stub" in resp2.text
+
+
+def test_settings_page_save_and_reload_persists_saved_values(client, monkeypatch):
+    _clear_ollama_env(monkeypatch)
+
+    _save_ui_model_settings(client)
+
+    response = client.get("/settings/model-execution")
+    assert response.status_code == 200
+    assert 'value="http://localhost:11434"' in response.text
+    assert 'value="llama3"' in response.text
+
+
+def test_brief_detail_shows_ollama_actions_from_saved_db_settings(client, monkeypatch):
+    _clear_ollama_env(monkeypatch)
+    _save_ui_model_settings(client)
+    brief_id = _create_brief_via_ui(client, title="DB-backed config brief")
+
+    response = client.get(f"/briefs/{brief_id}")
+    assert response.status_code == 200
+    assert "Start Research with Ollama" in response.text
+    assert "Start Research with Components (experimental)" in response.text
+    assert "Missing required env" not in response.text
 
 
 def test_ollama_config_detection_missing_env(monkeypatch):
@@ -224,6 +285,91 @@ def test_execute_ollama_success_path_imports_run(db, monkeypatch):
     assert isinstance(result["run_id"], int)
     assert captured_payloads[0].get("keep_alive") == "5m"
     assert captured_payloads[-1].get("keep_alive") == 0
+
+
+def test_start_research_ollama_uses_saved_db_settings(client, monkeypatch):
+    _clear_ollama_env(monkeypatch)
+    _save_ui_model_settings(client)
+    brief_id = _create_brief_via_ui(client, title="Saved DB config ollama")
+
+    captured_payloads = []
+
+    def _fake_generate(config, payload):
+        captured_payloads.append(payload)
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
+        return (
+            {
+                "response": (
+                    '{"schema_version":"1.0","external_draft_id":"ollama-1","agent_name":"ollama-test",'
+                    '"run":{"title":"Saved DB config ollama","intent":"What is X?"},'
+                    '"claims":[{"id":"c1","statement":"S"}],'
+                    '"candidates":[{"id":"cand-1","title":"Candidate 1","summary":"S"}]}'
+                )
+            },
+            None,
+        )
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+
+    response = client.post(f"/briefs/{brief_id}/start-research-ollama", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("/runs/")
+    assert captured_payloads
+
+
+def test_start_research_ollama_components_uses_saved_db_settings(client, monkeypatch):
+    _clear_ollama_env(monkeypatch)
+    _save_ui_model_settings(client)
+    brief_id = _create_brief_via_ui(client, title="Saved DB config components")
+
+    captured_payloads = []
+    responses = [
+        (
+            {
+                "response": (
+                    '{"schema_version":"1.0","batch_id":"b-candidate","events":['
+                    '{"schema_version":"1.0","event_type":"candidate.proposed","external_id":"cand-1","payload":{"title":"Candidate A","summary":"S"}}'
+                    ']}'
+                )
+            },
+            None,
+        ),
+        (
+            {
+                "response": (
+                    '{"schema_version":"1.0","batch_id":"b-claim-theme","events":['
+                    '{"schema_version":"1.0","event_type":"claim.proposed","external_id":"claim-1","payload":{"statement":"Claim A"}},'
+                    '{"schema_version":"1.0","event_type":"theme.proposed","external_id":"theme-1","payload":{"name":"Theme A"}}'
+                    ']}'
+                )
+            },
+            None,
+        ),
+        (
+            {
+                "response": (
+                    '{"schema_version":"1.0","batch_id":"b-gates","events":['
+                    '{"schema_version":"1.0","event_type":"validation_gate.proposed","external_id":"gate-1","payload":{"name":"Gate A","phase":"supported_opportunity","candidate_id":"cand-1"}}'
+                    ']}'
+                )
+            },
+            None,
+        ),
+    ]
+
+    def _fake_generate(config, payload):
+        captured_payloads.append(payload)
+        if payload.get("keep_alive") == 0 and not str(payload.get("prompt", "")).strip():
+            return ({"response": ""}, None)
+        return responses.pop(0)
+
+    monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
+
+    response = client.post(f"/briefs/{brief_id}/start-research-ollama-components", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("/runs/")
+    assert captured_payloads
 
 
 def test_execute_ollama_components_success_path_imports_run(db, monkeypatch):
@@ -653,7 +799,7 @@ def test_start_research_ollama_route_uses_mocked_service(client, monkeypatch):
 
     monkeypatch.setattr(
         "apd.web.routes.get_ollama_execution_config",
-        lambda: (
+        lambda *_args, **_kwargs: (
             type("Cfg", (), {"model": "llama3"})(),
             [],
         ),
@@ -685,7 +831,7 @@ def test_start_research_ollama_components_route_uses_mocked_service(client, monk
 
     monkeypatch.setattr(
         "apd.web.routes.get_ollama_execution_config",
-        lambda: (
+        lambda *_args, **_kwargs: (
             type("Cfg", (), {"model": "llama3"})(),
             [],
         ),
@@ -717,7 +863,7 @@ def test_start_research_ollama_route_handles_missing_config(client, monkeypatch)
 
     monkeypatch.setattr(
         "apd.web.routes.get_ollama_execution_config",
-        lambda: (None, ["APD_MODEL_PROVIDER=ollama", "APD_OLLAMA_MODEL"]),
+        lambda *_args, **_kwargs: (None, ["APD_MODEL_PROVIDER=ollama", "APD_OLLAMA_MODEL"]),
     )
 
     resp2 = client.post(f"/briefs/{brief_id}/start-research-ollama", follow_redirects=True)

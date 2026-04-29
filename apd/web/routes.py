@@ -23,6 +23,7 @@ from apd.services.research_brief_service import (
     get_brief,
     list_briefs,
 )
+from apd.services.model_execution_settings import get_model_execution_settings, save_model_execution_settings
 from apd.services.research_execution_ollama import (
     execute_research_brief_ollama_components,
     execute_research_brief_ollama,
@@ -241,7 +242,7 @@ def brief_detail(brief_id: int, request: Request, db: Session = Depends(_get_db)
     if brief is None:
         raise HTTPException(status_code=404, detail="Research brief not found")
     prompt = generate_agent_prompt(brief)
-    ollama_config, missing_ollama_env = get_ollama_execution_config()
+    ollama_config, missing_ollama_env = get_ollama_execution_config(db)
     return templates.TemplateResponse(
         request,
         "brief_detail.html",
@@ -253,6 +254,40 @@ def brief_detail(brief_id: int, request: Request, db: Session = Depends(_get_db)
             "ollama_model": ollama_config.model if ollama_config else None,
         },
     )
+
+
+@router.get("/settings/model-execution", response_class=HTMLResponse)
+def settings_model_execution(request: Request, db: Session = Depends(_get_db)):
+    settings = get_model_execution_settings(db)
+    return templates.TemplateResponse(
+        request,
+        "settings_model_execution.html",
+        {"settings": settings},
+    )
+
+
+@router.post("/settings/model-execution", response_class=RedirectResponse)
+def settings_model_execution_save(
+    provider: str = Form("ollama"),
+    ollama_base_url: str = Form(""),
+    ollama_model: str = Form(""),
+    ollama_timeout_seconds: int = Form(120),
+    ollama_keep_alive: str = Form("0"),
+    component_repair_attempts: int = Form(1),
+    enabled: str = Form("on"),
+    db: Session = Depends(_get_db),
+):
+    data = {
+        "provider": provider,
+        "ollama_base_url": ollama_base_url or None,
+        "ollama_model": ollama_model or None,
+        "ollama_timeout_seconds": ollama_timeout_seconds,
+        "ollama_keep_alive": int(ollama_keep_alive) if str(ollama_keep_alive).isdigit() else ollama_keep_alive,
+        "component_repair_attempts": min(max(int(component_repair_attempts), 0), 3),
+        "enabled": bool(enabled),
+    }
+    save_model_execution_settings(db, data)
+    return RedirectResponse(url="/settings/model-execution", status_code=303)
 
 
 @router.post("/briefs/{brief_id}/start-research", response_class=RedirectResponse)
@@ -302,7 +337,7 @@ def start_research_ollama(brief_id: int, db: Session = Depends(_get_db)):
     if brief is None:
         raise HTTPException(status_code=404, detail="Research brief not found")
 
-    config, missing_env = get_ollama_execution_config()
+    config, missing_env = get_ollama_execution_config(db)
     if config is None:
         _save_last_execution(
             db,
@@ -348,7 +383,7 @@ def start_research_ollama_components(brief_id: int, db: Session = Depends(_get_d
     if brief is None:
         raise HTTPException(status_code=404, detail="Research brief not found")
 
-    config, missing_env = get_ollama_execution_config()
+    config, missing_env = get_ollama_execution_config(db)
     if config is None:
         _save_last_execution(
             db,
