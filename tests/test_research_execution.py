@@ -437,6 +437,7 @@ def test_web_assisted_research_records_web_discovery_phase_in_last_execution(cli
     assert "Web discovery phase" in response.text
     assert "Captured source" in response.text
     assert "solo operator maintenance pain" in response.text
+    assert "Web discovery succeeded; component generation failed validation." in response.text
     assert "not yet fully source-grounded" in response.text
 
 

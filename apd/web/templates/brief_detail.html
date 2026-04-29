@@ -177,8 +177,25 @@
   {% set execution = brief.metadata_json.get('last_execution') %}
   {% set web_status = execution.get('web_discovery') %}
   {% set component_status = execution.get('component_execution') %}
+  {% set component_failed_after_web_success = web_status and web_status.get('status') == 'completed' and component_status and component_status.get('status') in ['validation_failed', 'component_validation_failed', 'failed'] %}
   <div class="card" style="margin-top:1rem;">
     <h3>Last execution</h3>
+
+    {% if component_failed_after_web_success %}
+    <div class="notice-box" style="
+      background: #fff7ed;
+      border: 1px solid #fdba74;
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      color: #9a3412;
+    ">
+      <strong>Web discovery succeeded; component generation failed validation.</strong>
+      APD captured sources during the web discovery phase, but the later component generation step did not pass validation.
+      The raw execution JSON and detailed phase errors remain available below.
+    </div>
+    {% endif %}
 
     {% if execution.get('mode') == 'web_assisted_component_execution' or web_status %}
     <table class="detail-table" style="max-width: 900px; margin-bottom: 1rem;">
