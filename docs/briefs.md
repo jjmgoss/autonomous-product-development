@@ -27,6 +27,7 @@ uv run python scripts/import_agent_draft.py --path <normalized.json>
 Notes
 
 - APD will import the package as draft/unreviewed research for human inspection and review.
+- The new brief form includes a local sample/randomizer for dogfooding. It does not call a model or save anything until you submit the brief form.
 
 Note: The run review UI is candidate-first — the run detail page surfaces product
 candidates before sources and reasoning so reviewers can prioritize candidate

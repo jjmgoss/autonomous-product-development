@@ -15,6 +15,7 @@ from apd.services.research_brief_service import (
     get_brief,
     list_briefs,
 )
+from apd.services.sample_research_briefs import get_sample_research_briefs
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -215,6 +216,15 @@ def test_prompt_references_apd_allowed_phases():
     assert "evidence_collected" in prompt
 
 
+def test_sample_research_briefs_include_at_least_eight_product_prompts():
+    samples = get_sample_research_briefs()
+    assert len(samples) >= 8
+    for sample in samples:
+        question = sample["research_question"]
+        assert "Investigate product opportunities" in question
+        assert sample["title"].strip()
+
+
 # ── Web UI tests ───────────────────────────────────────────────────────────────
 
 
@@ -235,6 +245,22 @@ def test_brief_new_page_loads(client):
     assert resp.status_code == 200
     assert "New Research Brief" in resp.text
     assert "research_question" in resp.text
+
+
+def test_brief_new_page_shows_randomizer_button_and_helper_text(client):
+    resp = client.get("/briefs/new")
+    assert resp.status_code == 200
+    assert "Randomize brief" in resp.text
+    assert "You can edit before saving" in resp.text
+
+
+def test_brief_new_page_includes_sample_briefs_data(client):
+    resp = client.get("/briefs/new")
+    assert resp.status_code == 200
+    body = resp.text
+    assert "sample-briefs-data" in body
+    assert "Investigate product opportunities for solo developers who self-host small apps" in body
+    assert "Math.random()" in body
 
 
 def test_create_brief_via_post_redirects_to_detail(client):
