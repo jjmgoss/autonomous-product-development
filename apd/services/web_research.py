@@ -19,6 +19,7 @@ from apd.services.research_execution_ollama import (
     extract_json_object_from_model_output,
     get_ollama_execution_config,
 )
+from apd.services.research_skills import render_research_skill_context_for_phase
 
 SCHEMA_VERSION = "1.0"
 MAX_PROPOSED_QUERIES = 5
@@ -31,6 +32,7 @@ MAX_GROUNDED_PACKET_SOURCES = 5
 MAX_GROUNDED_PACKET_EXCERPTS = 10
 MAX_GROUNDED_PACKET_EXCERPT_CHARS = 1500
 MAX_GROUNDED_PACKET_TOTAL_CHARS = 10000
+WEB_DISCOVERY_SKILL_CONTEXT_CHARS = 4200
 WEB_USER_AGENT = "APD local research prototype/1.0"
 
 _TAG_RE = re.compile(r"<[^>]+>")
@@ -77,6 +79,10 @@ def get_web_research_limits() -> dict[str, int]:
 
 
 def build_web_research_target_prompt(brief: ResearchBrief) -> str:
+    skill_context = render_research_skill_context_for_phase(
+        "web_discovery",
+        max_chars=WEB_DISCOVERY_SKILL_CONTEXT_CHARS,
+    )
     parts = [
         "You are helping APD plan a controlled web research loop.",
         "Return only JSON.",
@@ -87,18 +93,24 @@ def build_web_research_target_prompt(brief: ResearchBrief) -> str:
         f"Cap yourself to at most {MAX_PROPOSED_QUERIES} queries and {MAX_FETCH_URLS} URLs.",
         "Only include public http/https URLs likely relevant to the product investigation.",
         "Do not include localhost, private hosts, file URLs, or authenticated sources.",
-        "",
-        "Return JSON with this shape:",
-        "{",
-        '  "schema_version": "1.0",',
-        '  "queries": [{"query": "string", "rationale": "string"}],',
-        '  "urls": [{"url": "https://example.com", "rationale": "string"}]',
-        "}",
-        "",
-        "Research brief:",
-        f"Title: {brief.title}",
-        f"Research question: {brief.research_question}",
     ]
+    if skill_context:
+        parts.extend(["", skill_context])
+    parts.extend(
+        [
+            "",
+            "Return JSON with this shape:",
+            "{",
+            '  "schema_version": "1.0",',
+            '  "queries": [{"query": "string", "rationale": "string"}],',
+            '  "urls": [{"url": "https://example.com", "rationale": "string"}]',
+            "}",
+            "",
+            "Research brief:",
+            f"Title: {brief.title}",
+            f"Research question: {brief.research_question}",
+        ]
+    )
     if brief.constraints:
         parts.append(f"Constraints: {brief.constraints}")
     if brief.desired_depth:
