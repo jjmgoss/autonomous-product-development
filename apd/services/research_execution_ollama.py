@@ -24,6 +24,12 @@ from apd.services.research_components import (
     ResearchComponentEventType,
     parse_component_batch_from_data,
 )
+from apd.services.research_skills import resolve_research_skills_for_phase
+from apd.services.research_trace import (
+    append_research_trace_event,
+    attach_run_to_trace_events,
+    create_trace_correlation_id,
+)
 
 
 def _iso_now() -> str:
@@ -45,6 +51,32 @@ class ProductQualityGateResult:
     status: str
     error: str | None
     warnings: list[str]
+
+
+def _trace_execution_event(
+    db: Session,
+    brief,
+    *,
+    correlation_id: str | None,
+    event_type: str,
+    phase: str | None = None,
+    message: str | None = None,
+    payload: dict[str, Any] | None = None,
+    run_id: int | None = None,
+) -> None:
+    if not correlation_id:
+        return
+
+    append_research_trace_event(
+        db,
+        brief_id=getattr(brief, "id", None),
+        run_id=run_id,
+        correlation_id=correlation_id,
+        phase=phase,
+        event_type=event_type,
+        message=message,
+        payload=payload,
+    )
 
 
 def get_ollama_execution_config(db: Session | None = None) -> tuple[OllamaExecutionConfig | None, list[str]]:
@@ -135,9 +167,16 @@ def extract_json_object_from_model_output(text: str) -> tuple[dict[str, Any] | N
     return None, "parse_failed: unable_to_extract_json_object"
 
 
-def execute_research_brief_ollama(db: Session, brief) -> dict[str, Any]:
+def execute_research_brief_ollama(
+    db: Session,
+    brief,
+    *,
+    trace_correlation_id: str | None = None,
+) -> dict[str, Any]:
     config, missing_env = get_ollama_execution_config(db)
     now = _iso_now()
+    trace_correlation_id = trace_correlation_id or create_trace_correlation_id(brief_id=brief.id)
+    trace_phase = "draft_execution"
 
     if config is None:
         return {
@@ -149,6 +188,7 @@ def execute_research_brief_ollama(db: Session, brief) -> dict[str, Any]:
             "errors": [f"Missing required env: {value}" for value in missing_env],
             "warnings": [],
             "run_id": None,
+            "trace_correlation_id": trace_correlation_id,
         }
 
     prompt = generate_ollama_execution_prompt(brief)
@@ -159,12 +199,64 @@ def execute_research_brief_ollama(db: Session, brief) -> dict[str, Any]:
     started_at = now
     finished_at = now
     try:
+        _trace_execution_event(
+            db,
+            brief,
+            correlation_id=trace_correlation_id,
+            event_type="phase_started",
+            phase=trace_phase,
+            message="Draft execution started.",
+            payload={"provider": config.provider, "model": config.model},
+        )
+        _trace_execution_event(
+            db,
+            brief,
+            correlation_id=trace_correlation_id,
+            event_type="model_call_started",
+            phase=trace_phase,
+            message="Started draft model call.",
+            payload={"provider": config.provider, "model": config.model, "attempt": 1, "prompt_chars": len(prompt)},
+        )
         draft_data, parse_error = _call_ollama_for_draft(config, prompt)
+        _trace_execution_event(
+            db,
+            brief,
+            correlation_id=trace_correlation_id,
+            event_type="model_call_completed",
+            phase=trace_phase,
+            message="Completed draft model call.",
+            payload={
+                "provider": config.provider,
+                "model": config.model,
+                "attempt": 1,
+                "success": parse_error is None,
+                "error": parse_error,
+                "response_keys": sorted(draft_data.keys())[:8] if draft_data else [],
+            },
+        )
         if parse_error:
             status = "parse_failed" if parse_error.startswith("parse_failed") else "provider_error"
             errors_list.append(parse_error)
             finished_at = _iso_now()
-            return _build_result(config, status, started_at, finished_at, run_id, errors_list, warnings_list)
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="phase_completed",
+                phase=trace_phase,
+                message="Draft execution failed.",
+                payload={"status": status, "error_count": len(errors_list)},
+            )
+            return _build_result(
+                config,
+                status,
+                started_at,
+                finished_at,
+                run_id,
+                errors_list,
+                warnings_list,
+                trace_correlation_id=trace_correlation_id,
+            )
 
         report = validate_agent_draft_data(Path("<ollama-output>"), draft_data)
         package = report.package
@@ -179,7 +271,42 @@ def execute_research_brief_ollama(db: Session, brief) -> dict[str, Any]:
 
         if (package is None or not report.is_valid) and config.repair_attempts > 0:
             warnings_list.append("repair_attempted=1")
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="repair_attempted",
+                phase=trace_phase,
+                message="Attempting draft repair after validation failure.",
+                payload={"attempt": 1, "validation_error_count": len(report.grouped_errors or report.errors)},
+            )
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="model_call_started",
+                phase=trace_phase,
+                message="Started repair model call.",
+                payload={"provider": config.provider, "model": config.model, "attempt": 2, "repair": True},
+            )
             repaired_data, repair_error = _call_ollama_for_repair(config, draft_data, report.grouped_errors or report.errors)
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="model_call_completed",
+                phase=trace_phase,
+                message="Completed repair model call.",
+                payload={
+                    "provider": config.provider,
+                    "model": config.model,
+                    "attempt": 2,
+                    "repair": True,
+                    "success": repair_error is None,
+                    "error": repair_error,
+                    "response_keys": sorted(repaired_data.keys())[:8] if repaired_data else [],
+                },
+            )
             if repair_error:
                 errors_list.append(repair_error)
             elif repaired_data is not None:
@@ -196,14 +323,68 @@ def execute_research_brief_ollama(db: Session, brief) -> dict[str, Any]:
             if not errors_list:
                 errors_list.extend(_first_errors(report.errors, limit=5))
             finished_at = _iso_now()
-            return _build_result(config, status, started_at, finished_at, run_id, errors_list, warnings_list)
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="validation_failed",
+                phase=trace_phase,
+                message="Draft execution failed validation.",
+                payload={"status": status, "errors": _first_errors(report.errors, limit=3)},
+            )
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="phase_completed",
+                phase=trace_phase,
+                message="Draft execution failed.",
+                payload={"status": status, "error_count": len(errors_list)},
+            )
+            return _build_result(
+                config,
+                status,
+                started_at,
+                finished_at,
+                run_id,
+                errors_list,
+                warnings_list,
+                trace_correlation_id=trace_correlation_id,
+            )
 
         quality_result = _evaluate_product_quality_gate(package)
         warnings_list.extend(quality_result.warnings)
         if quality_result.error:
             finished_at = _iso_now()
             errors_list.append(quality_result.error)
-            return _build_result(config, quality_result.status, started_at, finished_at, run_id, errors_list, warnings_list)
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="validation_failed",
+                phase="quality_gate",
+                message="Draft execution failed the quality gate.",
+                payload={"status": quality_result.status, "error": quality_result.error},
+            )
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="phase_completed",
+                phase=trace_phase,
+                message="Draft execution failed.",
+                payload={"status": quality_result.status, "error_count": len(errors_list)},
+            )
+            return _build_result(
+                config,
+                quality_result.status,
+                started_at,
+                finished_at,
+                run_id,
+                errors_list,
+                warnings_list,
+                trace_correlation_id=trace_correlation_id,
+            )
 
         try:
             import_result = import_agent_draft_package(
@@ -216,13 +397,61 @@ def execute_research_brief_ollama(db: Session, brief) -> dict[str, Any]:
             status = "import_failed"
             errors_list.append(f"import_failed: {exc}")
             finished_at = _iso_now()
-            return _build_result(config, status, started_at, finished_at, run_id, errors_list, warnings_list)
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="phase_completed",
+                phase=trace_phase,
+                message="Draft execution failed during import.",
+                payload={"status": status, "error_count": len(errors_list)},
+            )
+            return _build_result(
+                config,
+                status,
+                started_at,
+                finished_at,
+                run_id,
+                errors_list,
+                warnings_list,
+                trace_correlation_id=trace_correlation_id,
+            )
 
         run_id = import_result.run_db_id
+        attach_run_to_trace_events(db, correlation_id=trace_correlation_id, run_id=run_id)
         warnings_list.extend(_first_errors(import_result.warnings, limit=5))
         status = "imported"
         finished_at = _iso_now()
-        return _build_result(config, status, started_at, finished_at, run_id, errors_list, warnings_list)
+        _trace_execution_event(
+            db,
+            brief,
+            correlation_id=trace_correlation_id,
+            event_type="import_completed",
+            phase="import",
+            message="Imported draft execution result.",
+            payload={"run_id": run_id, "warning_count": len(import_result.warnings)},
+            run_id=run_id,
+        )
+        _trace_execution_event(
+            db,
+            brief,
+            correlation_id=trace_correlation_id,
+            event_type="phase_completed",
+            phase=trace_phase,
+            message="Draft execution completed.",
+            payload={"status": status, "warning_count": len(warnings_list)},
+            run_id=run_id,
+        )
+        return _build_result(
+            config,
+            status,
+            started_at,
+            finished_at,
+            run_id,
+            errors_list,
+            warnings_list,
+            trace_correlation_id=trace_correlation_id,
+        )
     finally:
         _unload_ollama_model(config)
 
@@ -408,12 +637,19 @@ def execute_research_brief_ollama_components(db: Session, brief) -> dict[str, An
         _unload_ollama_model(config)
 
 
-def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dict[str, Any]:
+def execute_research_brief_ollama_components_grounded(
+    db: Session,
+    brief,
+    *,
+    trace_correlation_id: str | None = None,
+) -> dict[str, Any]:
     from apd.services.web_research import get_grounding_source_packet_for_brief, render_grounding_source_packet
 
     config, missing_env = get_ollama_execution_config(db)
     component_repair_attempts = _parse_component_repair_attempts_env("APD_COMPONENT_REPAIR_ATTEMPTS", default=2)
     now = _iso_now()
+    trace_correlation_id = trace_correlation_id or create_trace_correlation_id(brief_id=brief.id)
+    execution_phase = "grounded_component_execution"
     if config is None:
         return {
             "success": False,
@@ -426,10 +662,39 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
             "run_id": None,
             "grounding_status": "config_missing",
             "grounding_errors": [f"Missing required env: {value}" for value in missing_env],
+            "trace_correlation_id": trace_correlation_id,
         }
+
+    _trace_execution_event(
+        db,
+        brief,
+        correlation_id=trace_correlation_id,
+        event_type="phase_started",
+        phase=execution_phase,
+        message="Grounded component execution started.",
+        payload={"provider": config.provider, "model": config.model},
+    )
 
     grounding_packet = get_grounding_source_packet_for_brief(db, brief)
     if not grounding_packet.sources or not grounding_packet.evidence_excerpts:
+        _trace_execution_event(
+            db,
+            brief,
+            correlation_id=trace_correlation_id,
+            event_type="validation_failed",
+            phase=execution_phase,
+            message="Grounded component execution requires captured sources.",
+            payload={"status": "grounding_missing_sources"},
+        )
+        _trace_execution_event(
+            db,
+            brief,
+            correlation_id=trace_correlation_id,
+            event_type="phase_completed",
+            phase=execution_phase,
+            message="Grounded component execution failed.",
+            payload={"status": "grounding_missing_sources"},
+        )
         return {
             "success": False,
             "provider": "ollama-components-grounded",
@@ -445,6 +710,7 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
             "grounding_errors": ["Run web discovery first to capture sources before grounded component execution."],
             "grounding_source_count": 0,
             "grounding_excerpt_count": 0,
+            "trace_correlation_id": trace_correlation_id,
         }
 
     started_at = now
@@ -477,6 +743,27 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
             prior_raw_batch: dict[str, Any] | None = None
             max_attempts = component_repair_attempts + 1
             attempts_by_phase[phase_name] = 0
+            selected_skill_ids = resolve_research_skills_for_phase(phase_name, max_skills=None)
+
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="phase_started",
+                phase=phase_name,
+                message=f"Component phase {phase_name} started.",
+                payload={"attempt_limit": max_attempts, "candidate_count": len(candidate_ids)},
+            )
+            if selected_skill_ids:
+                _trace_execution_event(
+                    db,
+                    brief,
+                    correlation_id=trace_correlation_id,
+                    event_type="skill_context_selected",
+                    phase=phase_name,
+                    message=f"Selected research skills for {phase_name}.",
+                    payload={"skill_ids": selected_skill_ids, "skill_count": len(selected_skill_ids)},
+                )
 
             for attempt_index in range(max_attempts):
                 attempts_by_phase[phase_name] = attempt_index + 1
@@ -496,21 +783,90 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
                         grounded_source_packet=grounded_source_packet,
                     )
 
+                if attempt_index > 0:
+                    _trace_execution_event(
+                        db,
+                        brief,
+                        correlation_id=trace_correlation_id,
+                        event_type="repair_attempted",
+                        phase=phase_name,
+                        message=f"Attempting repair for {phase_name}.",
+                        payload={"attempt": attempt_index + 1, "validation_error_count": len(errors_for_phase)},
+                    )
+
+                _trace_execution_event(
+                    db,
+                    brief,
+                    correlation_id=trace_correlation_id,
+                    event_type="model_call_started",
+                    phase=phase_name,
+                    message=f"Started model call for {phase_name}.",
+                    payload={
+                        "provider": config.provider,
+                        "model": config.model,
+                        "attempt": attempt_index + 1,
+                        "repair": attempt_index > 0,
+                    },
+                )
                 raw_batch_data, parse_error = _call_ollama_for_component_batch(config, prompt)
+                _trace_execution_event(
+                    db,
+                    brief,
+                    correlation_id=trace_correlation_id,
+                    event_type="model_call_completed",
+                    phase=phase_name,
+                    message=f"Completed model call for {phase_name}.",
+                    payload={
+                        "provider": config.provider,
+                        "model": config.model,
+                        "attempt": attempt_index + 1,
+                        "repair": attempt_index > 0,
+                        "success": parse_error is None,
+                        "error": parse_error,
+                        "event_count": len(raw_batch_data.get("events") or []) if raw_batch_data else 0,
+                    },
+                )
                 if parse_error:
                     errors_for_phase = [f"{phase_name}: {parse_error}"]
                     prior_raw_batch = None
+                    _trace_execution_event(
+                        db,
+                        brief,
+                        correlation_id=trace_correlation_id,
+                        event_type="validation_failed",
+                        phase=phase_name,
+                        message=f"Model output for {phase_name} failed parsing.",
+                        payload={"attempt": attempt_index + 1, "kind": "parse", "errors": errors_for_phase[:3]},
+                    )
                     continue
 
                 prior_raw_batch = raw_batch_data
                 batch, batch_errors = parse_component_batch_from_data(raw_batch_data)
                 if batch is None:
                     errors_for_phase = [f"{phase_name}: {line}" for line in _first_errors(batch_errors, limit=5)]
+                    _trace_execution_event(
+                        db,
+                        brief,
+                        correlation_id=trace_correlation_id,
+                        event_type="validation_failed",
+                        phase=phase_name,
+                        message=f"Model output for {phase_name} failed batch validation.",
+                        payload={"attempt": attempt_index + 1, "kind": "batch", "errors": errors_for_phase[:3]},
+                    )
                     continue
 
                 phase_errors = _validate_component_phase_batch(phase_name, batch)
                 if phase_errors:
                     errors_for_phase = phase_errors
+                    _trace_execution_event(
+                        db,
+                        brief,
+                        correlation_id=trace_correlation_id,
+                        event_type="validation_failed",
+                        phase=phase_name,
+                        message=f"Component batch for {phase_name} failed phase validation.",
+                        payload={"attempt": attempt_index + 1, "kind": "phase", "errors": errors_for_phase[:3]},
+                    )
                     continue
 
                 grounding_errors = _validate_component_grounding(
@@ -522,11 +878,29 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
                 )
                 if grounding_errors:
                     errors_for_phase = grounding_errors
+                    _trace_execution_event(
+                        db,
+                        brief,
+                        correlation_id=trace_correlation_id,
+                        event_type="validation_failed",
+                        phase=phase_name,
+                        message=f"Component batch for {phase_name} failed grounding validation.",
+                        payload={"attempt": attempt_index + 1, "kind": "grounding", "errors": errors_for_phase[:3]},
+                    )
                     continue
 
                 assembly_result = assembler.apply_batch(batch)
                 if not assembly_result.success:
                     errors_for_phase = [f"{phase_name}: {line}" for line in _first_errors(assembly_result.errors, limit=5)]
+                    _trace_execution_event(
+                        db,
+                        brief,
+                        correlation_id=trace_correlation_id,
+                        event_type="validation_failed",
+                        phase=phase_name,
+                        message=f"Component batch for {phase_name} failed assembly.",
+                        payload={"attempt": attempt_index + 1, "kind": "assembly", "errors": errors_for_phase[:3]},
+                    )
                     continue
 
                 if phase_name == "candidate_batch":
@@ -536,6 +910,19 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
                         if event.event_type == ResearchComponentEventType.CANDIDATE_PROPOSED
                     ]
                 warnings_list.extend(_first_errors(assembly_result.warnings, limit=5))
+                _trace_execution_event(
+                    db,
+                    brief,
+                    correlation_id=trace_correlation_id,
+                    event_type="phase_completed",
+                    phase=phase_name,
+                    message=f"Component phase {phase_name} completed.",
+                    payload={
+                        "status": "completed",
+                        "attempts": attempts_by_phase[phase_name],
+                        "event_count": len(batch.events),
+                    },
+                )
                 break
             else:
                 finished_at = _iso_now()
@@ -547,6 +934,24 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
                             "or try a stronger model."
                         )
                     ]
+                _trace_execution_event(
+                    db,
+                    brief,
+                    correlation_id=trace_correlation_id,
+                    event_type="phase_completed",
+                    phase=phase_name,
+                    message=f"Component phase {phase_name} failed.",
+                    payload={"status": failure_status, "attempts": attempts_by_phase[phase_name], "errors": errors_for_phase[:3]},
+                )
+                _trace_execution_event(
+                    db,
+                    brief,
+                    correlation_id=trace_correlation_id,
+                    event_type="phase_completed",
+                    phase=execution_phase,
+                    message="Grounded component execution failed.",
+                    payload={"status": failure_status, "last_phase": phase_name},
+                )
                 return {
                     **_build_result(
                         config,
@@ -560,6 +965,7 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
                         mode="grounded_component_execution",
                         last_phase=phase_name,
                         attempts_by_phase=attempts_by_phase,
+                        trace_correlation_id=trace_correlation_id,
                     ),
                     "grounding_status": "failed",
                     "grounding_errors": _first_errors(errors_for_phase or [f"{phase_name}: failed"], limit=5),
@@ -571,6 +977,24 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
         report = validate_agent_draft_data(Path("<ollama-grounded-components-output>"), assembled_package)
         if not report.is_valid or report.package is None:
             finished_at = _iso_now()
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="validation_failed",
+                phase="final_validation",
+                message="Grounded component execution failed final validation.",
+                payload={"errors": _first_errors(report.errors, limit=3)},
+            )
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="phase_completed",
+                phase=execution_phase,
+                message="Grounded component execution failed.",
+                payload={"status": "validation_failed", "last_phase": "final_validation"},
+            )
             return {
                 **_build_result(
                     config,
@@ -584,6 +1008,7 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
                     mode="grounded_component_execution",
                     last_phase="final_validation",
                     attempts_by_phase=attempts_by_phase,
+                    trace_correlation_id=trace_correlation_id,
                 ),
                 "grounding_status": "passed",
                 "grounding_errors": [],
@@ -595,6 +1020,24 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
         warnings_list.extend(quality_result.warnings)
         if quality_result.error:
             finished_at = _iso_now()
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="validation_failed",
+                phase="quality_gate",
+                message="Grounded component execution failed the quality gate.",
+                payload={"status": quality_result.status, "error": quality_result.error},
+            )
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="phase_completed",
+                phase=execution_phase,
+                message="Grounded component execution failed.",
+                payload={"status": quality_result.status, "last_phase": "quality_gate"},
+            )
             return {
                 **_build_result(
                     config,
@@ -608,6 +1051,7 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
                     mode="grounded_component_execution",
                     last_phase="quality_gate",
                     attempts_by_phase=attempts_by_phase,
+                    trace_correlation_id=trace_correlation_id,
                 ),
                 "grounding_status": "passed",
                 "grounding_errors": [],
@@ -624,6 +1068,15 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
             )
         except Exception as exc:
             finished_at = _iso_now()
+            _trace_execution_event(
+                db,
+                brief,
+                correlation_id=trace_correlation_id,
+                event_type="phase_completed",
+                phase=execution_phase,
+                message="Grounded component execution failed during import.",
+                payload={"status": "import_failed", "last_phase": "import"},
+            )
             return {
                 **_build_result(
                     config,
@@ -637,6 +1090,7 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
                     mode="grounded_component_execution",
                     last_phase="import",
                     attempts_by_phase=attempts_by_phase,
+                    trace_correlation_id=trace_correlation_id,
                 ),
                 "grounding_status": "passed",
                 "grounding_errors": [],
@@ -646,6 +1100,27 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
 
         finished_at = _iso_now()
         warnings_list.extend(import_result.warnings)
+        attach_run_to_trace_events(db, correlation_id=trace_correlation_id, run_id=import_result.run_db_id)
+        _trace_execution_event(
+            db,
+            brief,
+            correlation_id=trace_correlation_id,
+            event_type="import_completed",
+            phase="import",
+            message="Imported grounded component execution result.",
+            payload={"run_id": import_result.run_db_id, "warning_count": len(import_result.warnings)},
+            run_id=import_result.run_db_id,
+        )
+        _trace_execution_event(
+            db,
+            brief,
+            correlation_id=trace_correlation_id,
+            event_type="phase_completed",
+            phase=execution_phase,
+            message="Grounded component execution completed.",
+            payload={"status": "imported", "last_phase": "import"},
+            run_id=import_result.run_db_id,
+        )
         return {
             **_build_result(
                 config,
@@ -659,6 +1134,7 @@ def execute_research_brief_ollama_components_grounded(db: Session, brief) -> dic
                 mode="grounded_component_execution",
                 last_phase="import",
                 attempts_by_phase=attempts_by_phase,
+                trace_correlation_id=trace_correlation_id,
             ),
             "grounding_status": "passed",
             "grounding_errors": [],
@@ -681,6 +1157,7 @@ def _build_result(
     mode: str | None = None,
     last_phase: str | None = None,
     attempts_by_phase: dict[str, int] | None = None,
+    trace_correlation_id: str | None = None,
 ) -> dict[str, Any]:
     result = {
         "success": status == "imported" and run_id is not None,
@@ -699,6 +1176,8 @@ def _build_result(
         result["last_phase"] = last_phase
     if attempts_by_phase is not None:
         result["attempts_by_phase"] = dict(attempts_by_phase)
+    if trace_correlation_id is not None:
+        result["trace_correlation_id"] = trace_correlation_id
     return result
 
 

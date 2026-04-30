@@ -84,6 +84,8 @@ If the manifest references a missing skill file or invalid skill id, prompt cons
 
 The brief detail page stores and displays a concise `last_execution` summary.
 
+Each research execution also writes a bounded research trace log keyed to that execution's correlation id. Those trace events are durable debugging and observability data for replay preparation, future eval harness work, and model/harness comparison rather than normal user-facing output.
+
 The page prioritizes:
 
 - overall status
@@ -94,6 +96,8 @@ The page prioritizes:
 - readable error summaries
 
 Raw execution JSON is secondary debug material. It remains available behind a collapsed details disclosure.
+
+Raw trace events are also exposed behind a collapsed disclosure near the raw execution payload. Trace payloads are sanitized and bounded so APD does not persist credentials, secrets, or local file paths as trace data.
 
 Common execution outcomes include:
 

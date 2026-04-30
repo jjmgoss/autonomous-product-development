@@ -17,6 +17,7 @@ EXPECTED_TABLES = {
     "review_notes",
     "decisions",
     "artifacts",
+    "research_trace_events",
 }
 
 

@@ -22,6 +22,7 @@ from apd.services.research_execution_ollama import (
     extract_json_object_from_model_output,
     get_ollama_execution_config,
 )
+from apd.services.research_trace import list_research_trace_events
 from apd.services.research_execution_stub import execute_research_brief_stub
 
 
@@ -380,7 +381,7 @@ def test_start_research_ollama_components_uses_saved_db_settings(client, monkeyp
 
     grounded_ids: dict[str, str] = {}
 
-    def _fake_run_web_research_for_brief(db, brief):
+    def _fake_run_web_research_for_brief(db, brief, trace_correlation_id=None):
         source, excerpt = _seed_captured_web_source(db, brief)
         grounded_ids["source_id"] = f"captured-source-{source.id}"
         grounded_ids["excerpt_id"] = f"captured-excerpt-{excerpt.id}"
@@ -398,6 +399,7 @@ def test_start_research_ollama_components_uses_saved_db_settings(client, monkeyp
             "sources": [{"url": "https://example.com/article", "title": "Example article"}],
             "skipped_urls": [],
             "web_research_run_id": 11,
+            "trace_correlation_id": trace_correlation_id,
         }
 
     monkeypatch.setattr("apd.web.routes.run_web_research_for_brief", _fake_run_web_research_for_brief)
@@ -486,7 +488,7 @@ def test_web_assisted_research_records_web_discovery_phase_in_last_execution(cli
 
     monkeypatch.setattr(
         "apd.web.routes.run_web_research_for_brief",
-        lambda db, brief: {
+        lambda db, brief, trace_correlation_id=None: {
             "success": True,
             "status": "completed",
             "started_at": "2026-04-28T00:00:00+00:00",
@@ -500,11 +502,12 @@ def test_web_assisted_research_records_web_discovery_phase_in_last_execution(cli
             "sources": [{"url": "https://example.com/source", "title": "Captured source"}],
             "skipped_urls": [],
             "web_research_run_id": 12,
+            "trace_correlation_id": trace_correlation_id,
         },
     )
     monkeypatch.setattr(
         "apd.web.routes.execute_research_brief_ollama_components_grounded",
-        lambda db, brief: {
+        lambda db, brief, trace_correlation_id=None: {
             "success": False,
             "provider": "ollama-components-grounded",
             "status": "component_validation_failed",
@@ -520,6 +523,7 @@ def test_web_assisted_research_records_web_discovery_phase_in_last_execution(cli
             "grounding_errors": ["claim_theme_batch: unknown grounded source_id 'captured-source-9999'"],
             "grounding_source_count": 1,
             "grounding_excerpt_count": 1,
+            "trace_correlation_id": trace_correlation_id,
         },
     )
 
@@ -585,6 +589,9 @@ def test_execute_grounded_components_imports_run_with_grounded_evidence_links(db
     monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
 
     result = execute_research_brief_ollama_components_grounded(db, brief)
+    trace_events = list_research_trace_events(db, brief_id=brief.id, correlation_id=result["trace_correlation_id"])
+    phase_completed = [event.phase for event in trace_events if event.event_type == "phase_completed"]
+    event_types = [event.event_type for event in trace_events]
 
     assert result["success"] is True
     assert result["status"] == "imported"
@@ -592,6 +599,14 @@ def test_execute_grounded_components_imports_run_with_grounded_evidence_links(db
     assert isinstance(result["run_id"], int)
     assert grounded_source_id in captured_payloads[0]["prompt"]
     assert "Use only the provided APD-captured source packet" in captured_payloads[0]["prompt"]
+    assert "skill_context_selected" in event_types
+    assert "model_call_started" in event_types
+    assert "model_call_completed" in event_types
+    assert "import_completed" in event_types
+    assert "candidate_batch" in phase_completed
+    assert "claim_theme_batch" in phase_completed
+    assert "validation_gate_batch" in phase_completed
+    assert "grounded_component_execution" in phase_completed
 
 
 def test_execute_grounded_components_rejects_unknown_source_id(db, monkeypatch):
@@ -622,9 +637,11 @@ def test_execute_grounded_components_rejects_unknown_source_id(db, monkeypatch):
 
     monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
     result = execute_research_brief_ollama_components_grounded(db, brief)
+    trace_events = list_research_trace_events(db, brief_id=brief.id, correlation_id=result["trace_correlation_id"])
     assert result["success"] is False
     assert result["grounding_status"] == "failed"
     assert any("unknown grounded source_id" in err for err in result["grounding_errors"])
+    assert any(event.event_type == "validation_failed" for event in trace_events)
 
 
 def test_execute_grounded_components_rejects_unknown_excerpt_id(db, monkeypatch):
@@ -946,10 +963,14 @@ def test_execute_ollama_validation_failure_repair_succeeds(db, monkeypatch):
     monkeypatch.setattr("apd.services.research_execution_ollama._ollama_generate", _fake_generate)
 
     result = execute_research_brief_ollama(db, brief)
+    trace_events = list_research_trace_events(db, brief_id=brief.id, correlation_id=result["trace_correlation_id"])
+    event_types = [event.event_type for event in trace_events]
     assert calls["count"] == 2
     assert result["success"] is True
     assert result["status"] == "imported"
     assert isinstance(result["run_id"], int)
+    assert "repair_attempted" in event_types
+    assert "import_completed" in event_types
 
 
 def test_execute_ollama_zero_candidate_fails_quality_gate(db, monkeypatch):
@@ -1121,7 +1142,7 @@ def test_start_research_ollama_route_uses_mocked_service(client, monkeypatch):
     )
     monkeypatch.setattr(
         "apd.web.routes.run_web_research_for_brief",
-        lambda db, brief: {
+        lambda db, brief, trace_correlation_id=None: {
             "success": True,
             "status": "completed",
             "started_at": "2026-01-01T00:00:00+00:00",
@@ -1134,11 +1155,12 @@ def test_start_research_ollama_route_uses_mocked_service(client, monkeypatch):
             "queries": [],
             "sources": [],
             "skipped_urls": [],
+            "trace_correlation_id": trace_correlation_id,
         },
     )
     monkeypatch.setattr(
         "apd.web.routes.execute_research_brief_ollama",
-        lambda db, brief: {
+        lambda db, brief, trace_correlation_id=None: {
             "success": False,
             "provider": "ollama",
             "model": "llama3",
@@ -1148,6 +1170,7 @@ def test_start_research_ollama_route_uses_mocked_service(client, monkeypatch):
             "errors": ["mocked failure"],
             "warnings": [],
             "run_id": None,
+            "trace_correlation_id": trace_correlation_id,
         },
     )
 
@@ -1170,7 +1193,7 @@ def test_start_research_ollama_components_route_uses_mocked_service(client, monk
     )
     monkeypatch.setattr(
         "apd.web.routes.execute_research_brief_ollama_components_grounded",
-        lambda db, brief: {
+        lambda db, brief, trace_correlation_id=None: {
             "success": False,
             "provider": "ollama-components-grounded",
             "model": "llama3",
@@ -1182,6 +1205,7 @@ def test_start_research_ollama_components_route_uses_mocked_service(client, monk
             "run_id": None,
             "grounding_status": "failed",
             "grounding_errors": ["mocked components failure"],
+            "trace_correlation_id": trace_correlation_id,
         },
     )
 
