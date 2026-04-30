@@ -8,6 +8,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from apd.domain.models import ResearchBrief, ResearchBriefStatus
+from apd.services.research_skills import render_research_skill_context_for_phase
 
 # ── APD schema field reminders embedded in every generated prompt ─────────────
 _SCHEMA_REMINDERS = """\
@@ -122,6 +123,9 @@ Rules:
 - Do not invent source URLs or citations.
 - If ungrounded, mark metadata as synthetic/model-prior.
 """
+
+_COMPONENT_PHASE_SKILL_CONTEXT_CHARS = 4400
+_COMPONENT_REPAIR_SKILL_CONTEXT_CHARS = 3000
 
 # ── CRUD ─────────────────────────────────────────────────────────────────────
 
@@ -268,6 +272,10 @@ def generate_ollama_component_phase_prompt(
 ) -> str:
     """Return a phase-specific component batch prompt."""
     base = generate_ollama_execution_prompt(brief)
+    skill_context = render_research_skill_context_for_phase(
+        phase_name,
+        max_chars=_COMPONENT_PHASE_SKILL_CONTEXT_CHARS,
+    )
     candidates_block = ", ".join(candidate_ids or [])
     if not candidates_block:
         candidates_block = "(none yet)"
@@ -314,6 +322,8 @@ def generate_ollama_component_phase_prompt(
             ]
         )
     parts = [base, "", "---", "", _COMPONENT_EXECUTION_CONSTRAINTS]
+    if skill_context:
+        parts.extend(["", skill_context])
     if grounded_constraints:
         parts.extend(["", grounded_constraints])
     parts.extend(["", selected, "", "Return only the ResearchComponentBatch JSON object."])
@@ -330,6 +340,10 @@ def generate_ollama_component_repair_prompt(
 ) -> str:
     """Return a phase-specific repair prompt for an invalid component batch."""
     base = generate_ollama_execution_prompt(brief)
+    skill_context = render_research_skill_context_for_phase(
+        phase_name,
+        max_chars=_COMPONENT_REPAIR_SKILL_CONTEXT_CHARS,
+    )
     errors_block = "\n".join(f"- {line}" for line in validation_errors[:8]) or "- unknown validation error"
     invalid_json = "{}" if invalid_batch_data is None else json.dumps(invalid_batch_data, ensure_ascii=False)
     parts = [
@@ -339,6 +353,8 @@ def generate_ollama_component_repair_prompt(
         "",
         _COMPONENT_EXECUTION_CONSTRAINTS,
     ]
+    if skill_context:
+        parts.extend(["", skill_context])
     if grounded_source_packet:
         parts.extend(
             [

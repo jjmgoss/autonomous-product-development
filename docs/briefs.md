@@ -65,6 +65,21 @@ Today that means:
 
 This path is synchronous and local-first. It does not do unrestricted browsing, background jobs, or hosted provider calls.
 
+## Research skill context
+
+APD now treats `skills/research/manifest.yaml` as runtime prompt context, not just documentation.
+
+For each prompt phase, APD deterministically resolves a small set of skills and injects bounded excerpts into the model prompt:
+
+- web discovery uses `research_protocol`, `search_strategy`, and `url_target_selection`
+- candidate batches use `research_protocol` and `candidate_generation`
+- claim/theme batches use `research_protocol`, `claim_grounding`, and `theme_synthesis`
+- validation gate batches use `research_protocol` and `validation_gate_design`
+
+Runtime batch names such as `candidate_batch`, `claim_theme_batch`, and `validation_gate_batch` are mapped to the durable research-harness phase names in the manifest. Skill context is character-bounded before prompt insertion so the model gets operational guidance without dumping the full skill tree into every call.
+
+If the manifest references a missing skill file or invalid skill id, prompt construction should fail clearly. `scripts/check_repo_readiness.py` also validates the manifest and skill files so drift is usually caught before runtime.
+
 ## Execution results and failure states
 
 The brief detail page stores and displays a concise `last_execution` summary.
