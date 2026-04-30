@@ -9,6 +9,11 @@ import re
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RESEARCH_SKILL_MANIFEST = REPO_ROOT / "skills" / "research" / "manifest.yaml"
+PRIORITY_SKILL_SECTION_HEADINGS: tuple[str, ...] = (
+    "## Procedure",
+    "## Output contract",
+    "## Quality checks",
+)
 
 # Runtime phases use a few pragmatic batch names that are intentionally narrower
 # than the durable research-harness phase names in the skill manifest.
@@ -221,6 +226,56 @@ def _trim_to_chars(text: str, max_chars: int) -> str:
     return cleaned[: max_chars - len(marker)].rstrip() + marker
 
 
+def _prioritize_operational_skill_sections(text: str) -> str:
+    cleaned = text.strip()
+    if not cleaned:
+        return cleaned
+
+    leading_lines: list[str] = []
+    sections: list[tuple[str, str]] = []
+    current_heading: str | None = None
+    current_lines: list[str] = []
+
+    for line in cleaned.splitlines():
+        if line.startswith("## "):
+            if current_heading is not None:
+                sections.append((current_heading, "\n".join(current_lines).strip()))
+            current_heading = line
+            current_lines = [line]
+            continue
+
+        if current_heading is None:
+            leading_lines.append(line)
+        else:
+            current_lines.append(line)
+
+    if current_heading is None:
+        return cleaned
+
+    sections.append((current_heading, "\n".join(current_lines).strip()))
+
+    prioritized_sections: list[str] = []
+    seen_headings: set[str] = set()
+    for heading in PRIORITY_SKILL_SECTION_HEADINGS:
+        for section_heading, block in sections:
+            if section_heading == heading:
+                prioritized_sections.append(block)
+                seen_headings.add(section_heading)
+                break
+
+    for section_heading, block in sections:
+        if section_heading in seen_headings:
+            continue
+        prioritized_sections.append(block)
+
+    ordered_chunks: list[str] = []
+    leading_text = "\n".join(leading_lines).strip()
+    if leading_text:
+        ordered_chunks.append(leading_text)
+    ordered_chunks.extend(prioritized_sections)
+    return "\n\n".join(chunk for chunk in ordered_chunks if chunk)
+
+
 def render_research_skill_context(
     skill_ids: list[str] | tuple[str, ...],
     *,
@@ -251,7 +306,8 @@ def render_research_skill_context(
 
         text = spec.file_path.read_text(encoding="utf-8")
         per_skill_budget = max(300, min(spec.max_prompt_budget_chars, remaining))
-        trimmed = _trim_to_chars(text, per_skill_budget)
+        prioritized_text = _prioritize_operational_skill_sections(text)
+        trimmed = _trim_to_chars(prioritized_text, per_skill_budget)
         chunk = "\n".join(
             [
                 "",

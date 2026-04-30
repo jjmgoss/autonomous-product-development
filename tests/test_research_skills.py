@@ -51,12 +51,13 @@ def test_resolve_research_skills_for_web_discovery_and_component_aliases():
 
 
 def test_render_research_skill_context_is_bounded_and_operational():
-    context = render_research_skill_context(["search_strategy"], max_chars=2200)
+    context = render_research_skill_context(["search_strategy"], max_chars=1300)
 
-    assert len(context) <= 2200
+    assert len(context) <= 1300
     assert "Research skill: search_strategy" in context
     assert "## Procedure" in context
     assert "## Output contract" in context
+    assert "## Quality checks" in context
 
 
 def test_web_discovery_prompt_includes_selected_research_skills():
