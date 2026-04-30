@@ -13,6 +13,8 @@ Thumbs.db
 research-corpus/runs/*
 artifacts/runs/*
 evals/research/results/*.json
+evals/research/scorecards/*.json
+evals/research/scorecards/*.md
 
 # Keep the run container docs/structure
 !research-corpus/runs/README.md
