@@ -16,6 +16,7 @@ RESEARCH_EVAL_CASES_DIR = "evals/research/cases"
 RESEARCH_EVAL_FIXTURES_DIR = "evals/research/fixtures/pages"
 RESEARCH_EVAL_RESULTS_DIR = "evals/research/results"
 RESEARCH_EVAL_DOC_PATH = "docs/reference/research-eval-harness.md"
+RESEARCH_SCORECARD_DOC_PATH = "docs/reference/research-scorecards.md"
 RESEARCH_SKILL_SPECS = [
     ("research_protocol", "skills/research/research_protocol.md"),
     ("question_framing", "skills/research/question_framing.md"),
@@ -85,8 +86,11 @@ REQUIRED_FILES = [
     "scripts/clean_empty_run_dirs.py",
     "apd/evals/__init__.py",
     "apd/evals/research_runner.py",
+    "apd/evals/research_scorecard.py",
     "scripts/run_research_evals.py",
+    "scripts/run_research_scorecard.py",
     RESEARCH_EVAL_DOC_PATH,
+    RESEARCH_SCORECARD_DOC_PATH,
     "LAUNCH_MODEL_SUMMARY.md",
 ]
 
@@ -245,6 +249,16 @@ RESEARCH_EVAL_DOC_HEADINGS = {
     "## case schema",
     "## scoring",
     "## adding cases",
+}
+
+RESEARCH_SCORECARD_DOC_HEADINGS = {
+    "## overview",
+    "## running scorecards",
+    "## loaded fields",
+    "## scorecard metrics",
+    "## approximations",
+    "## comparing runs",
+    "## reading the output",
 }
 
 MIN_NONEMPTY_LINES = {
@@ -829,6 +843,10 @@ def validate_research_eval_harness() -> list[str]:
     return errors
 
 
+def validate_research_scorecards() -> list[str]:
+    return validate_markdown(RESEARCH_SCORECARD_DOC_PATH, RESEARCH_SCORECARD_DOC_HEADINGS)
+
+
 def validate_research_manifest(relative_path: str) -> list[str]:
     errors: list[str] = []
     data, load_error = load_json(relative_path)
@@ -1062,6 +1080,7 @@ def validate_repo() -> int:
     errors.extend(validate_active_run())
     errors.extend(validate_research_skill_manifest(RESEARCH_SKILL_MANIFEST_PATH))
     errors.extend(validate_research_eval_harness())
+    errors.extend(validate_research_scorecards())
     for skill_id, skill_path in RESEARCH_SKILL_SPECS:
         errors.extend(validate_research_skill_doc(skill_path, expected_id=skill_id))
 
