@@ -12,6 +12,7 @@ Thumbs.db
 # Generated autonomous run outputs
 research-corpus/runs/*
 artifacts/runs/*
+evals/research/results/*.json
 
 # Keep the run container docs/structure
 !research-corpus/runs/README.md

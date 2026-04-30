@@ -1,0 +1,2 @@
+Pricing tiers for a generic vendor platform.
+Enterprise seat bundles, annual discount tables, and add-on package names.

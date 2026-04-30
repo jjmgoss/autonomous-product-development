@@ -1,0 +1,2 @@
+Yesterday's maintenance window slipped because the firewall checklist lived in chat and the storage check lived in a notebook.
+As a solo operator I had to piece the workflow back together before I could start the preventive maintenance pass.

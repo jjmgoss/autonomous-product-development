@@ -1,0 +1,90 @@
+id: maintenance_handoff
+title: MSP shift handoff context loss
+brief:
+  title: MSP shift handoff context loss
+  research_question: What repeatable pain appears when MSP technicians hand off tickets between shifts?
+fixture_sources:
+  - id: handoff_forum_thread
+    path: maintenance_handoff_forum.html
+    url: https://fixtures.apd.local/msp/handoff-thread
+    relevant: true
+  - id: vendor_pricing_page
+    path: vendor_pricing_bait.txt
+    url: https://fixtures.apd.local/bait/vendor-pricing
+    relevant: false
+relevant_source_ids:
+  - handoff_forum_thread
+irrelevant_source_ids:
+  - vendor_pricing_page
+expected_claim_traits:
+  - shift handoffs
+  - ticket context
+  - lose time
+expected_theme_traits:
+  - handoff
+  - context loss
+expected_candidate_traits:
+  - async
+  - handoff
+  - MSP
+forbidden_claim_patterns:
+  - universal AI operations platform
+rubric_metadata:
+  track: grounded_research
+  focus: handoff_pain
+simulated_execution:
+  attempts_by_phase:
+    candidate_batch: 1
+    claim_theme_batch: 1
+    validation_gate_batch: 1
+  phase_batches:
+    candidate_batch:
+      schema_version: "1.0"
+      batch_id: maintenance-handoff-candidates
+      events:
+        - schema_version: "1.0"
+          event_type: candidate.proposed
+          external_id: cand-handoff-1
+          payload:
+            title: Async shift handoff notebook for MSP teams
+            summary: Capture unresolved ticket context before the next technician picks up the queue.
+            target_user: MSP dispatch leads
+            first_workflow: Shift change handoff for active support tickets
+            first_wedge: Structured handoff note capture with unresolved blockers and next actions
+    claim_theme_batch:
+      schema_version: "1.0"
+      batch_id: maintenance-handoff-claims
+      events:
+        - schema_version: "1.0"
+          event_type: claim.proposed
+          external_id: claim-handoff-1
+          payload:
+            statement: MSP technicians lose time during shift handoffs because ticket context is missing or scattered.
+        - schema_version: "1.0"
+          event_type: theme.proposed
+          external_id: theme-handoff-1
+          payload:
+            name: Handoff context loss
+            summary: Teams repeat diagnosis because the next shift inherits incomplete ticket context.
+        - schema_version: "1.0"
+          event_type: evidence_link.added
+          external_id: link-handoff-1
+          payload:
+            source_id: handoff_forum_thread
+            excerpt_id: handoff_forum_thread::excerpt
+            target_type: claim
+            target_id: claim-handoff-1
+            relationship: supports
+            strength: strong
+    validation_gate_batch:
+      schema_version: "1.0"
+      batch_id: maintenance-handoff-gates
+      events:
+        - schema_version: "1.0"
+          event_type: validation_gate.proposed
+          external_id: gate-handoff-1
+          payload:
+            candidate_id: cand-handoff-1
+            phase: supported_opportunity
+            name: Confirm the pattern appears in at least three MSP teams
+            description: Verify that context loss is repeated across multiple handoff workflows, not a single team complaint.
