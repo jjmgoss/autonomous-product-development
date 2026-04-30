@@ -6,10 +6,16 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parent.parent
 
 RESEARCH_SKILL_MANIFEST_PATH = "skills/research/manifest.yaml"
+RESEARCH_EVAL_CASES_DIR = "evals/research/cases"
+RESEARCH_EVAL_FIXTURES_DIR = "evals/research/fixtures/pages"
+RESEARCH_EVAL_RESULTS_DIR = "evals/research/results"
+RESEARCH_EVAL_DOC_PATH = "docs/reference/research-eval-harness.md"
 RESEARCH_SKILL_SPECS = [
     ("research_protocol", "skills/research/research_protocol.md"),
     ("question_framing", "skills/research/question_framing.md"),
@@ -77,6 +83,10 @@ REQUIRED_FILES = [
     "scripts/init_prototype_scaffold.py",
     "scripts/start_discovery_run.py",
     "scripts/clean_empty_run_dirs.py",
+    "apd/evals/__init__.py",
+    "apd/evals/research_runner.py",
+    "scripts/run_research_evals.py",
+    RESEARCH_EVAL_DOC_PATH,
     "LAUNCH_MODEL_SUMMARY.md",
 ]
 
@@ -86,6 +96,9 @@ REQUIRED_DIRS = [
     "artifacts/runs",
     "artifacts/shared",
     "artifacts/projects",
+    RESEARCH_EVAL_CASES_DIR,
+    RESEARCH_EVAL_FIXTURES_DIR,
+    RESEARCH_EVAL_RESULTS_DIR,
 ]
 
 RESEARCH_MANIFEST_FIELDS = {
@@ -225,6 +238,14 @@ REQUIRED_ACTIVE_RUN_FIELDS = [
     "- hard boundaries:",
     "- completion point:",
 ]
+
+RESEARCH_EVAL_DOC_HEADINGS = {
+    "## overview",
+    "## running evals",
+    "## case schema",
+    "## scoring",
+    "## adding cases",
+}
 
 MIN_NONEMPTY_LINES = {
     "START_HERE.md": 12,
@@ -735,6 +756,79 @@ def validate_active_run() -> list[str]:
     return errors
 
 
+def validate_research_eval_harness() -> list[str]:
+    errors = validate_markdown(RESEARCH_EVAL_DOC_PATH, RESEARCH_EVAL_DOC_HEADINGS)
+
+    case_dir = ROOT / RESEARCH_EVAL_CASES_DIR
+    case_paths = sorted(case_dir.glob("*.yaml"))
+    if len(case_paths) < 3:
+        errors.append(f"{RESEARCH_EVAL_CASES_DIR} must contain at least 3 YAML eval cases.")
+
+    for case_path in case_paths:
+        try:
+            raw_data = yaml.safe_load(case_path.read_text(encoding="utf-8"))
+        except yaml.YAMLError as exc:
+            errors.append(f"{case_path.relative_to(ROOT).as_posix()} contains invalid YAML: {exc}")
+            continue
+
+        if not isinstance(raw_data, dict):
+            errors.append(f"{case_path.relative_to(ROOT).as_posix()} must be a mapping.")
+            continue
+
+        missing = [
+            field
+            for field in ["id", "brief", "fixture_sources", "simulated_execution"]
+            if field not in raw_data
+        ]
+        if missing:
+            errors.append(
+                f"{case_path.relative_to(ROOT).as_posix()} is missing required fields: {', '.join(missing)}"
+            )
+            continue
+
+        brief = raw_data.get("brief")
+        if not isinstance(brief, dict) or not brief.get("title") or not brief.get("research_question"):
+            errors.append(
+                f"{case_path.relative_to(ROOT).as_posix()} brief must include title and research_question."
+            )
+
+        fixture_sources = raw_data.get("fixture_sources")
+        if not isinstance(fixture_sources, list) or not fixture_sources:
+            errors.append(f"{case_path.relative_to(ROOT).as_posix()} must include at least one fixture source.")
+        else:
+            for index, source in enumerate(fixture_sources, start=1):
+                if not isinstance(source, dict):
+                    errors.append(f"{case_path.relative_to(ROOT).as_posix()} fixture source #{index} must be a mapping.")
+                    continue
+                for field in ["id", "path", "url"]:
+                    if not source.get(field):
+                        errors.append(
+                            f"{case_path.relative_to(ROOT).as_posix()} fixture source #{index} is missing `{field}`."
+                        )
+                fixture_path = ROOT / RESEARCH_EVAL_FIXTURES_DIR / str(source.get("path") or "")
+                if source.get("path") and not fixture_path.is_file():
+                    errors.append(
+                        f"{case_path.relative_to(ROOT).as_posix()} references missing fixture page {source.get('path')}."
+                    )
+
+        simulated_execution = raw_data.get("simulated_execution")
+        if not isinstance(simulated_execution, dict):
+            errors.append(f"{case_path.relative_to(ROOT).as_posix()} simulated_execution must be a mapping.")
+            continue
+
+        phase_batches = simulated_execution.get("phase_batches")
+        if not isinstance(phase_batches, dict) or not phase_batches:
+            errors.append(
+                f"{case_path.relative_to(ROOT).as_posix()} simulated_execution.phase_batches must be a non-empty mapping."
+            )
+
+    fixture_files = [path for path in (ROOT / RESEARCH_EVAL_FIXTURES_DIR).glob("*") if path.is_file()]
+    if len(fixture_files) < 3:
+        errors.append(f"{RESEARCH_EVAL_FIXTURES_DIR} must contain at least 3 fixture page files.")
+
+    return errors
+
+
 def validate_research_manifest(relative_path: str) -> list[str]:
     errors: list[str] = []
     data, load_error = load_json(relative_path)
@@ -967,6 +1061,7 @@ def validate_repo() -> int:
     errors.extend(validate_markdown("ACTIVE_RUN.md", REQUIRED_ACTIVE_RUN_HEADINGS))
     errors.extend(validate_active_run())
     errors.extend(validate_research_skill_manifest(RESEARCH_SKILL_MANIFEST_PATH))
+    errors.extend(validate_research_eval_harness())
     for skill_id, skill_path in RESEARCH_SKILL_SPECS:
         errors.extend(validate_research_skill_doc(skill_path, expected_id=skill_id))
 

@@ -1,0 +1,110 @@
+id: hiring_feedback_loop
+title: Hiring feedback loop slowdown
+brief:
+  title: Hiring feedback loop slowdown
+  research_question: What repeated recruiting pain appears when interview feedback arrives too slowly?
+fixture_sources:
+  - id: recruiting_ops_thread
+    path: recruiting_ops_thread.html
+    url: https://fixtures.apd.local/recruiting/ops-thread
+    relevant: true
+  - id: candidate_followup_note
+    path: candidate_followup_note.txt
+    url: https://fixtures.apd.local/recruiting/followup-note
+    relevant: true
+  - id: hiring_market_map
+    path: hiring_market_map.txt
+    url: https://fixtures.apd.local/bait/hiring-market-map
+    relevant: false
+relevant_source_ids:
+  - recruiting_ops_thread
+  - candidate_followup_note
+irrelevant_source_ids:
+  - hiring_market_map
+expected_claim_traits:
+  - interview feedback
+  - candidates
+  - slow follow-up
+expected_theme_traits:
+  - feedback latency
+  - hiring loop
+expected_candidate_traits:
+  - debrief
+  - hiring
+  - interview
+forbidden_claim_patterns:
+  - universal recruiting operating system
+rubric_metadata:
+  track: grounded_research
+  focus: decision_latency
+simulated_execution:
+  attempts_by_phase:
+    candidate_batch: 1
+    claim_theme_batch: 1
+    validation_gate_batch: 1
+  phase_batches:
+    candidate_batch:
+      schema_version: "1.0"
+      batch_id: hiring-candidates
+      events:
+        - schema_version: "1.0"
+          event_type: candidate.proposed
+          external_id: cand-hiring-1
+          payload:
+            title: Interview debrief inbox for hiring managers
+            summary: Consolidate interview feedback and unresolved questions before candidates churn out.
+            target_user: Hiring managers
+            first_workflow: Post-interview debrief collection
+            first_wedge: Shared prompt and inbox for interviewer feedback capture
+    claim_theme_batch:
+      schema_version: "1.0"
+      batch_id: hiring-claims
+      events:
+        - schema_version: "1.0"
+          event_type: claim.proposed
+          external_id: claim-hiring-1
+          payload:
+            statement: Teams lose candidates when interview feedback and follow-up decisions move too slowly.
+        - schema_version: "1.0"
+          event_type: claim.proposed
+          external_id: claim-hiring-2
+          payload:
+            statement: The answer is a universal recruiting operating system for every hiring workflow.
+        - schema_version: "1.0"
+          event_type: theme.proposed
+          external_id: theme-hiring-1
+          payload:
+            name: Feedback latency in the hiring loop
+            summary: Interview follow-up stalls because feedback collection is delayed and fragmented.
+        - schema_version: "1.0"
+          event_type: evidence_link.added
+          external_id: link-hiring-1
+          payload:
+            source_id: recruiting_ops_thread
+            excerpt_id: recruiting_ops_thread::excerpt
+            target_type: claim
+            target_id: claim-hiring-1
+            relationship: supports
+            strength: strong
+        - schema_version: "1.0"
+          event_type: evidence_link.added
+          external_id: link-hiring-2
+          payload:
+            source_id: missing_fixture_source
+            excerpt_id: candidate_followup_note::excerpt
+            target_type: claim
+            target_id: claim-hiring-2
+            relationship: supports
+            strength: weak
+    validation_gate_batch:
+      schema_version: "1.0"
+      batch_id: hiring-gates
+      events:
+        - schema_version: "1.0"
+          event_type: validation_gate.proposed
+          external_id: gate-hiring-1
+          payload:
+            candidate_id: cand-hiring-1
+            phase: supported_opportunity
+            name: Confirm that at least one hiring manager would pay for debrief speed alone
+            description: Check whether the narrow debrief workflow solves a costly enough delay to justify adoption.

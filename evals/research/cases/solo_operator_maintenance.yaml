@@ -1,0 +1,105 @@
+id: solo_operator_maintenance
+title: Solo operator preventive maintenance toil
+brief:
+  title: Solo operator preventive maintenance toil
+  research_question: What repeated maintenance pain creates openings for a narrow preventive-maintenance product?
+fixture_sources:
+  - id: maintenance_blog_post
+    path: solo_operator_maintenance_blog.html
+    url: https://fixtures.apd.local/ops/maintenance-blog
+    relevant: true
+  - id: incident_chat_log
+    path: incident_chat_log.txt
+    url: https://fixtures.apd.local/ops/incident-chat
+    relevant: true
+  - id: trending_ai_news
+    path: trending_ai_news.txt
+    url: https://fixtures.apd.local/bait/trending-ai-news
+    relevant: false
+relevant_source_ids:
+  - maintenance_blog_post
+  - incident_chat_log
+irrelevant_source_ids:
+  - trending_ai_news
+expected_claim_traits:
+  - preventive maintenance
+  - manual checks
+  - solo operator
+expected_theme_traits:
+  - recurring toil
+  - maintenance window
+expected_candidate_traits:
+  - calendar
+  - maintenance
+  - solo operators
+forbidden_claim_patterns:
+  - fully autonomous data center
+rubric_metadata:
+  track: grounded_research
+  focus: recurring_tedium
+simulated_execution:
+  attempts_by_phase:
+    candidate_batch: 1
+    claim_theme_batch: 2
+    validation_gate_batch: 1
+  phase_batches:
+    candidate_batch:
+      schema_version: "1.0"
+      batch_id: maintenance-candidates
+      events:
+        - schema_version: "1.0"
+          event_type: candidate.proposed
+          external_id: cand-maintenance-1
+          payload:
+            title: Preventive maintenance calendar for solo operators
+            summary: Schedule recurring checks, dependencies, and proof of completion without adopting a full ITSM suite.
+            target_user: Solo infrastructure operators
+            first_workflow: Weekly and monthly maintenance windows
+            first_wedge: Calendar-backed checklists with evidence capture
+    claim_theme_batch:
+      schema_version: "1.0"
+      batch_id: maintenance-claims
+      events:
+        - schema_version: "1.0"
+          event_type: claim.proposed
+          external_id: claim-maintenance-1
+          payload:
+            statement: Solo operators still run preventive maintenance with manual checks and scattered notes, which makes maintenance windows brittle.
+        - schema_version: "1.0"
+          event_type: theme.proposed
+          external_id: theme-maintenance-1
+          payload:
+            name: Recurring toil around maintenance windows
+            summary: Preventive maintenance remains a repeated manual workflow instead of a lightweight, reviewable routine.
+        - schema_version: "1.0"
+          event_type: evidence_link.added
+          external_id: link-maintenance-1
+          payload:
+            source_id: maintenance_blog_post
+            excerpt_id: maintenance_blog_post::excerpt
+            target_type: claim
+            target_id: claim-maintenance-1
+            relationship: supports
+            strength: strong
+        - schema_version: "1.0"
+          event_type: evidence_link.added
+          external_id: link-maintenance-2
+          payload:
+            source_id: incident_chat_log
+            excerpt_id: incident_chat_log::excerpt
+            target_type: claim
+            target_id: claim-maintenance-1
+            relationship: supports
+            strength: medium
+    validation_gate_batch:
+      schema_version: "1.0"
+      batch_id: maintenance-gates
+      events:
+        - schema_version: "1.0"
+          event_type: validation_gate.proposed
+          external_id: gate-maintenance-1
+          payload:
+            candidate_id: cand-maintenance-1
+            phase: supported_opportunity
+            name: Confirm at least one buyer would replace spreadsheets rather than a full CMMS
+            description: Validate that the narrow maintenance wedge beats existing spreadsheets and reminders for solo teams.
