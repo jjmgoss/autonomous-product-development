@@ -207,6 +207,31 @@
     </div>
     {% endif %}
 
+    {% if trace_events %}
+    <details class="execution-raw-details">
+      <summary>Show trace events ({{ trace_events | length }})</summary>
+      <div class="execution-trace-events">
+        {% for event in trace_events %}
+        <div style="margin: 0 0 1rem 0; padding-bottom: 1rem; border-bottom: 1px solid rgba(148, 163, 184, 0.2);">
+          <div>
+            <strong>{{ event.created_at.strftime("%Y-%m-%d %H:%M:%S UTC") if event.created_at else "—" }}</strong>
+            <span class="muted">{{ event.event_type }}{% if event.phase %} · {{ event.phase }}{% endif %}</span>
+          </div>
+          {% if event.message %}
+          <div style="margin-top: 0.25rem;">{{ event.message }}</div>
+          {% endif %}
+          {% if event.payload_json %}
+          <details style="margin-top: 0.5rem;">
+            <summary>Payload</summary>
+            <pre class="execution-raw-json">{{ event.payload_json | tojson(indent=2) }}</pre>
+          </details>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
     <details class="execution-raw-details">
       <summary>Show raw execution details</summary>
       <pre class="execution-raw-json">{{ execution | tojson(indent=2) }}</pre>

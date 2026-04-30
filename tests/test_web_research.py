@@ -10,6 +10,7 @@ from apd.app.db import Base
 from apd.domain.models import EvidenceExcerpt, ResearchBrief, Run, RunPhase, Source
 from apd.services.model_execution_settings import save_model_execution_settings
 from apd.services.research_brief_service import create_brief
+from apd.services.research_trace import list_research_trace_events
 from apd.services import web_research
 
 
@@ -109,10 +110,12 @@ def test_run_web_research_stores_source_and_excerpt(db, monkeypatch):
         },
     )
 
-    result = web_research.run_web_research_for_brief(db, brief)
+    result = web_research.run_web_research_for_brief(db, brief, trace_correlation_id="trace-web-success")
 
     assert result["status"] == "completed"
     assert result["fetched_source_count"] == 1
+    trace_events = list_research_trace_events(db, brief_id=brief.id, correlation_id=result["trace_correlation_id"])
+    trace_event_types = [event.event_type for event in trace_events]
 
     saved_run = db.scalar(select(Run).where(Run.id == result["web_research_run_id"]))
     saved_source = db.scalar(select(Source).where(Source.run_id == saved_run.id))
@@ -126,6 +129,14 @@ def test_run_web_research_stores_source_and_excerpt(db, monkeypatch):
     assert saved_excerpt is not None
     assert "backup checks" in saved_excerpt.excerpt_text
     assert saved_brief.metadata_json["web_research_run_id"] == result["web_research_run_id"]
+    assert "phase_started" in trace_event_types
+    assert "skill_context_selected" in trace_event_types
+    assert "model_call_started" in trace_event_types
+    assert "model_call_completed" in trace_event_types
+    assert "tool_call_started" in trace_event_types
+    assert "tool_call_completed" in trace_event_types
+    assert "source_fetched" in trace_event_types
+    assert "phase_completed" in trace_event_types
 
 
 def test_get_grounding_source_packet_for_brief_includes_captured_ids_and_text(db):
@@ -252,13 +263,17 @@ def test_run_web_research_rejects_invalid_urls_without_fetching(db, monkeypatch)
 
     monkeypatch.setattr(web_research, "fetch_public_url", _should_not_fetch)
 
-    result = web_research.run_web_research_for_brief(db, brief)
+    result = web_research.run_web_research_for_brief(db, brief, trace_correlation_id="trace-web-rejected")
+    trace_events = list_research_trace_events(db, brief_id=brief.id, correlation_id=result["trace_correlation_id"])
+    rejected_payloads = [event.payload_json for event in trace_events if event.event_type == "url_rejected"]
 
     assert result["status"] == "no_valid_urls"
     assert result["fetched_source_count"] == 0
     reasons = {item["reason"] for item in result["skipped_urls"]}
     assert "unsupported_scheme" in reasons
     assert "local_host_not_allowed" in reasons
+    assert len(rejected_payloads) == 2
+    assert {payload["reason"] for payload in rejected_payloads} == {"unsupported_scheme", "local_host_not_allowed"}
 
 
 
@@ -307,7 +322,7 @@ def test_capture_only_web_discovery_route_renders_phase_status(client_and_sessio
     assert response.status_code == 303
     brief_id = int(response.headers["location"].split("/")[-1])
 
-    def _fake_run_web_research_for_brief(db, brief):
+    def _fake_run_web_research_for_brief(db, brief, trace_correlation_id=None):
         return {
             "status": "completed",
             "started_at": "2026-04-28T00:00:00+00:00",
@@ -321,6 +336,7 @@ def test_capture_only_web_discovery_route_renders_phase_status(client_and_sessio
             "queries": [{"query": "support escalation pain", "rationale": "seed"}],
             "sources": [{"url": "https://example.com/article", "title": "Example article"}],
             "skipped_urls": [],
+            "trace_correlation_id": trace_correlation_id,
         }
 
     import apd.web.routes as web_routes

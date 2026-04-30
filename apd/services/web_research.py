@@ -19,7 +19,11 @@ from apd.services.research_execution_ollama import (
     extract_json_object_from_model_output,
     get_ollama_execution_config,
 )
-from apd.services.research_skills import render_research_skill_context_for_phase
+from apd.services.research_skills import (
+    render_research_skill_context_for_phase,
+    resolve_research_skills_for_phase,
+)
+from apd.services.research_trace import append_research_trace_event, create_trace_correlation_id
 
 SCHEMA_VERSION = "1.0"
 MAX_PROPOSED_QUERIES = 5
@@ -401,9 +405,37 @@ def render_grounding_source_packet(packet: GroundingSourcePacket) -> str:
     return "\n".join(lines).strip()
 
 
-def run_web_research_for_brief(db: Session, brief: ResearchBrief) -> dict[str, object]:
+def run_web_research_for_brief(
+    db: Session,
+    brief: ResearchBrief,
+    *,
+    trace_correlation_id: str | None = None,
+) -> dict[str, object]:
     config, missing = get_ollama_execution_config(db)
     started_at = _iso_now()
+    trace_correlation_id = trace_correlation_id or create_trace_correlation_id(brief_id=brief.id)
+    trace_phase = "web_discovery"
+    trace_run_id: int | None = None
+
+    def _trace(
+        event_type: str,
+        *,
+        run_id: int | None = None,
+        phase: str | None = None,
+        message: str | None = None,
+        payload: dict[str, object] | None = None,
+    ) -> None:
+        append_research_trace_event(
+            db,
+            brief_id=brief.id,
+            run_id=run_id if run_id is not None else trace_run_id,
+            correlation_id=trace_correlation_id,
+            phase=phase or trace_phase,
+            event_type=event_type,
+            message=message,
+            payload=payload,
+        )
+
     if config is None:
         return {
             "success": False,
@@ -417,14 +449,49 @@ def run_web_research_for_brief(db: Session, brief: ResearchBrief) -> dict[str, o
             "fetched_source_count": 0,
             "skipped_urls": [],
             "sources": [],
+            "trace_correlation_id": trace_correlation_id,
         }
+
+    selected_skill_ids = resolve_research_skills_for_phase("web_discovery", max_skills=None)
+    _trace(
+        "phase_started",
+        message="Web discovery started.",
+        payload={"provider": config.provider, "model": config.model},
+    )
+    if selected_skill_ids:
+        _trace(
+            "skill_context_selected",
+            message="Selected research skills for web discovery.",
+            payload={"skill_ids": selected_skill_ids, "skill_count": len(selected_skill_ids)},
+        )
 
     prompt = build_web_research_target_prompt(brief)
     payload = _build_generate_payload(config, prompt, during_execution=True)
     try:
+        _trace(
+            "model_call_started",
+            message="Started web discovery model call.",
+            payload={"provider": config.provider, "model": config.model, "prompt_chars": len(prompt)},
+        )
         response_data, call_error = _ollama_generate(config, payload)
+        _trace(
+            "model_call_completed",
+            message="Completed web discovery model call.",
+            payload={
+                "provider": config.provider,
+                "model": config.model,
+                "success": call_error is None,
+                "error": call_error,
+                "response_chars": len(str(response_data.get("response") or "")) if response_data else 0,
+            },
+        )
         if call_error:
             finished_at = _iso_now()
+            _trace(
+                "phase_completed",
+                message="Web discovery failed.",
+                payload={"status": "provider_error", "error_count": 1},
+            )
             return {
                 "success": False,
                 "status": "provider_error",
@@ -437,11 +504,22 @@ def run_web_research_for_brief(db: Session, brief: ResearchBrief) -> dict[str, o
                 "fetched_source_count": 0,
                 "skipped_urls": [],
                 "sources": [],
+                "trace_correlation_id": trace_correlation_id,
             }
 
         raw_output = str(response_data.get("response") or "")
         if not raw_output.strip():
             finished_at = _iso_now()
+            _trace(
+                "validation_failed",
+                message="Web discovery returned an empty response.",
+                payload={"reason": "provider_error: empty_ollama_response"},
+            )
+            _trace(
+                "phase_completed",
+                message="Web discovery failed.",
+                payload={"status": "parse_failed", "error_count": 1},
+            )
             return {
                 "success": False,
                 "status": "parse_failed",
@@ -454,11 +532,22 @@ def run_web_research_for_brief(db: Session, brief: ResearchBrief) -> dict[str, o
                 "fetched_source_count": 0,
                 "skipped_urls": [],
                 "sources": [],
+                "trace_correlation_id": trace_correlation_id,
             }
 
         targets, parse_error = parse_web_research_targets(raw_output)
         if parse_error or targets is None:
             finished_at = _iso_now()
+            _trace(
+                "validation_failed",
+                message="Web discovery target output failed validation.",
+                payload={"reason": parse_error or "parse_failed: invalid_web_targets"},
+            )
+            _trace(
+                "phase_completed",
+                message="Web discovery failed.",
+                payload={"status": "parse_failed", "error_count": 1},
+            )
             return {
                 "success": False,
                 "status": "parse_failed",
@@ -471,6 +560,7 @@ def run_web_research_for_brief(db: Session, brief: ResearchBrief) -> dict[str, o
                 "fetched_source_count": 0,
                 "skipped_urls": [],
                 "sources": [],
+                "trace_correlation_id": trace_correlation_id,
             }
 
         queries = list(targets.get("queries") or [])
@@ -478,6 +568,7 @@ def run_web_research_for_brief(db: Session, brief: ResearchBrief) -> dict[str, o
         capped_queries = queries[:MAX_PROPOSED_QUERIES]
         capped_url_targets = url_targets[:MAX_FETCH_URLS]
         run = _get_or_create_web_research_run(db, brief)
+        trace_run_id = run.id
         skipped_urls: list[dict[str, str]] = []
         source_summaries: list[dict[str, object]] = []
         fetched_source_count = 0
@@ -489,9 +580,21 @@ def run_web_research_for_brief(db: Session, brief: ResearchBrief) -> dict[str, o
             normalized_url, validation_error = validate_public_url(raw_url)
             if validation_error or normalized_url is None:
                 skipped_urls.append({"url": raw_url, "reason": validation_error or "invalid_url"})
+                _trace(
+                    "url_rejected",
+                    run_id=run.id,
+                    message="Rejected proposed URL.",
+                    payload={"url": raw_url, "reason": validation_error or "invalid_url"},
+                )
                 continue
             if normalized_url in seen_urls:
                 skipped_urls.append({"url": normalized_url, "reason": "duplicate_in_request"})
+                _trace(
+                    "url_rejected",
+                    run_id=run.id,
+                    message="Rejected duplicate proposed URL.",
+                    payload={"url": normalized_url, "reason": "duplicate_in_request"},
+                )
                 continue
             seen_urls.add(normalized_url)
 
@@ -500,9 +603,33 @@ def run_web_research_for_brief(db: Session, brief: ResearchBrief) -> dict[str, o
             )
             if existing_source is not None:
                 skipped_urls.append({"url": normalized_url, "reason": "duplicate_existing_source"})
+                _trace(
+                    "url_rejected",
+                    run_id=run.id,
+                    message="Rejected already-captured URL.",
+                    payload={"url": normalized_url, "reason": "duplicate_existing_source"},
+                )
                 continue
 
+            _trace(
+                "tool_call_started",
+                run_id=run.id,
+                message="Fetching public web source.",
+                payload={"tool_name": "fetch_public_url", "url": normalized_url},
+            )
             fetch_result = fetch_public_url(normalized_url)
+            _trace(
+                "tool_call_completed",
+                run_id=run.id,
+                message="Completed public web fetch.",
+                payload={
+                    "tool_name": "fetch_public_url",
+                    "url": normalized_url,
+                    "success": bool(fetch_result.get("success")),
+                    "status_code": fetch_result.get("status_code"),
+                    "error": fetch_result.get("error"),
+                },
+            )
             if not fetch_result.get("success"):
                 skipped_urls.append({"url": normalized_url, "reason": str(fetch_result.get("error") or "fetch_failed")})
                 continue
@@ -558,6 +685,19 @@ def run_web_research_for_brief(db: Session, brief: ResearchBrief) -> dict[str, o
                     "content_type": content_type,
                 }
             )
+            _trace(
+                "source_fetched",
+                run_id=run.id,
+                message="Fetched and stored public web source.",
+                payload={
+                    "capture_run_id": run.id,
+                    "source_id": source.id,
+                    "excerpt_id": excerpt_id,
+                    "url": source.url,
+                    "content_type": content_type,
+                    "extraction_error": extraction_error,
+                },
+            )
 
         run.source_count = db.scalar(select(func.count()).select_from(Source).where(Source.run_id == run.id)) or 0
         db.add(run)
@@ -569,6 +709,19 @@ def run_web_research_for_brief(db: Session, brief: ResearchBrief) -> dict[str, o
             warnings.append(f"capped_queries_at_{MAX_PROPOSED_QUERIES}")
         if len(url_targets) > MAX_FETCH_URLS:
             warnings.append(f"capped_urls_at_{MAX_FETCH_URLS}")
+        _trace(
+            "phase_completed",
+            run_id=run.id,
+            message="Web discovery completed.",
+            payload={
+                "status": status,
+                "capture_run_id": run.id,
+                "proposed_query_count": len(capped_queries),
+                "proposed_url_count": len(capped_url_targets),
+                "fetched_source_count": fetched_source_count,
+                "skipped_url_count": len(skipped_urls),
+            },
+        )
         result = {
             "success": fetched_source_count > 0,
             "status": status,
@@ -583,6 +736,7 @@ def run_web_research_for_brief(db: Session, brief: ResearchBrief) -> dict[str, o
             "sources": source_summaries[:10],
             "queries": capped_queries,
             "web_research_run_id": run.id,
+            "trace_correlation_id": trace_correlation_id,
         }
         if fetched_source_count == 0:
             result["errors"] = ["No valid public URLs were fetched. Proposed queries were stored for future work."]

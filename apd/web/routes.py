@@ -32,6 +32,7 @@ from apd.services.research_execution_ollama import (
     get_ollama_execution_config,
 )
 from apd.services.research_execution_stub import execute_research_brief_stub
+from apd.services.research_trace import create_trace_correlation_id, list_research_trace_events
 from apd.services.web_research import get_grounding_source_packet_for_brief, run_web_research_for_brief
 from apd.web.queries import get_recent_runs, get_run_detail
 
@@ -100,12 +101,26 @@ def _component_execution_phase_data(result: dict) -> dict:
     }
 
 
+def _get_last_execution_trace_events(db: Session, brief) -> list:
+    execution = (brief.metadata_json or {}).get("last_execution") or {}
+    correlation_id = str(execution.get("trace_correlation_id") or "").strip()
+    if not correlation_id:
+        return []
+    return list_research_trace_events(
+        db,
+        brief_id=brief.id,
+        correlation_id=correlation_id,
+        limit=120,
+    )
+
+
 def _build_web_assisted_execution_result(
     *,
     model: str,
     started_at: str,
     web_discovery_result: dict,
     component_result: dict,
+    trace_correlation_id: str | None = None,
 ) -> dict:
     errors = _prefixed_messages("web_discovery", web_discovery_result.get("errors"))
     errors.extend(_prefixed_messages("component_execution", component_result.get("errors")))
@@ -113,7 +128,7 @@ def _build_web_assisted_execution_result(
     warnings = _prefixed_messages("web_discovery", web_discovery_result.get("warnings"))
     warnings.extend(_prefixed_messages("component_execution", component_result.get("warnings")))
 
-    return {
+    result = {
         "success": bool(component_result.get("success")),
         "provider": "ollama-components",
         "model": model,
@@ -133,6 +148,9 @@ def _build_web_assisted_execution_result(
             "but this does not prove grounded claims are true. Human review is still required."
         ),
     }
+    if trace_correlation_id:
+        result["trace_correlation_id"] = trace_correlation_id
+    return result
 
 
 @router.get("/", response_class=RedirectResponse, include_in_schema=False)
@@ -352,6 +370,7 @@ def brief_detail(brief_id: int, request: Request, db: Session = Depends(_get_db)
         raise HTTPException(status_code=404, detail="Research brief not found")
     ollama_config, missing_ollama_env = get_ollama_execution_config(db)
     grounding_packet = get_grounding_source_packet_for_brief(db, brief)
+    trace_events = _get_last_execution_trace_events(db, brief)
     return templates.TemplateResponse(
         request,
         "brief_detail.html",
@@ -362,6 +381,7 @@ def brief_detail(brief_id: int, request: Request, db: Session = Depends(_get_db)
             "ollama_model": ollama_config.model if ollama_config else None,
             "grounded_source_count": len(grounding_packet.sources),
             "grounded_excerpt_count": len(grounding_packet.evidence_excerpts),
+            "trace_events": trace_events,
         },
     )
 
@@ -452,7 +472,8 @@ def research_web_sources(brief_id: int, db: Session = Depends(_get_db)):
     if brief is None:
         raise HTTPException(status_code=404, detail="Research brief not found")
 
-    result = run_web_research_for_brief(db, brief)
+    trace_correlation_id = create_trace_correlation_id(brief_id=brief.id)
+    result = run_web_research_for_brief(db, brief, trace_correlation_id=trace_correlation_id)
     config, _ = get_ollama_execution_config(db)
     _save_last_execution(
         db,
@@ -468,6 +489,7 @@ def research_web_sources(brief_id: int, db: Session = Depends(_get_db)):
             "errors": _prefixed_messages("web_discovery", result.get("errors"))[:5],
             "warnings": _prefixed_messages("web_discovery", result.get("warnings"))[:5],
             "run_id": None,
+            "trace_correlation_id": result.get("trace_correlation_id") or trace_correlation_id,
             "web_discovery": _web_discovery_phase_data(result),
             "source_grounding_status": "not_started",
             "source_grounding_deferred_issue": 63,
@@ -505,6 +527,7 @@ def start_research_ollama_components_grounded(brief_id: int, db: Session = Depen
         return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
 
     started_at = _iso_now()
+    trace_correlation_id = create_trace_correlation_id(brief_id=brief.id)
     _save_last_execution(
         db,
         brief,
@@ -517,12 +540,17 @@ def start_research_ollama_components_grounded(brief_id: int, db: Session = Depen
             "warnings": [],
             "run_id": None,
             "mode": "grounded_component_execution",
+            "trace_correlation_id": trace_correlation_id,
             "component_execution": {"status": "pending"},
             "source_grounding_status": "running",
         },
     )
 
-    result = execute_research_brief_ollama_components_grounded(db, brief)
+    result = execute_research_brief_ollama_components_grounded(
+        db,
+        brief,
+        trace_correlation_id=trace_correlation_id,
+    )
     _save_last_execution(db, brief, result)
 
     if result.get("success") and result.get("run_id"):
@@ -553,6 +581,7 @@ def start_research_ollama(brief_id: int, db: Session = Depends(_get_db)):
         )
         return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
 
+    trace_correlation_id = create_trace_correlation_id(brief_id=brief.id)
     _save_last_execution(
         db,
         brief,
@@ -564,10 +593,11 @@ def start_research_ollama(brief_id: int, db: Session = Depends(_get_db)):
             "errors": [],
             "warnings": [],
             "run_id": None,
+            "trace_correlation_id": trace_correlation_id,
         },
     )
 
-    result = execute_research_brief_ollama(db, brief)
+    result = execute_research_brief_ollama(db, brief, trace_correlation_id=trace_correlation_id)
     _save_last_execution(db, brief, result)
 
     if result.get("success") and result.get("run_id"):
@@ -600,6 +630,7 @@ def start_research_ollama_components(brief_id: int, db: Session = Depends(_get_d
         return RedirectResponse(url=f"/briefs/{brief.id}", status_code=303)
 
     started_at = _iso_now()
+    trace_correlation_id = create_trace_correlation_id(brief_id=brief.id)
     _save_last_execution(
         db,
         brief,
@@ -612,19 +643,29 @@ def start_research_ollama_components(brief_id: int, db: Session = Depends(_get_d
             "warnings": [],
             "run_id": None,
             "mode": "web_assisted_component_execution",
+            "trace_correlation_id": trace_correlation_id,
             "web_discovery": {"status": "pending"},
             "component_execution": {"status": "pending"},
             "source_grounding_status": "pending",
         },
     )
 
-    web_discovery_result = run_web_research_for_brief(db, brief)
-    component_result = execute_research_brief_ollama_components_grounded(db, brief)
+    web_discovery_result = run_web_research_for_brief(
+        db,
+        brief,
+        trace_correlation_id=trace_correlation_id,
+    )
+    component_result = execute_research_brief_ollama_components_grounded(
+        db,
+        brief,
+        trace_correlation_id=trace_correlation_id,
+    )
     result = _build_web_assisted_execution_result(
         model=config.model,
         started_at=started_at,
         web_discovery_result=web_discovery_result,
         component_result=component_result,
+        trace_correlation_id=trace_correlation_id,
     )
     _save_last_execution(db, brief, result)
 

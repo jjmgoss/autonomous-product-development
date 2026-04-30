@@ -142,6 +142,10 @@ class Run(Base):
     review_notes: Mapped[list[ReviewNote]] = relationship(back_populates="run", cascade="all, delete-orphan")
     decisions: Mapped[list[Decision]] = relationship(back_populates="run", cascade="all, delete-orphan")
     artifacts: Mapped[list[Artifact]] = relationship(back_populates="run", cascade="all, delete-orphan")
+    research_trace_events: Mapped[list[ResearchTraceEvent]] = relationship(
+        back_populates="run",
+        cascade="all, delete-orphan",
+    )
 
 
 class Source(Base):
@@ -411,6 +415,28 @@ class ResearchBrief(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, onupdate=_utc_now, nullable=False)
     metadata_json: Mapped[Optional[dict]] = mapped_column(JSON)
+
+    research_trace_events: Mapped[list[ResearchTraceEvent]] = relationship(
+        back_populates="brief",
+        cascade="all, delete-orphan",
+    )
+
+
+class ResearchTraceEvent(Base):
+    __tablename__ = "research_trace_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    brief_id: Mapped[Optional[int]] = mapped_column(ForeignKey("research_briefs.id"), index=True)
+    run_id: Mapped[Optional[int]] = mapped_column(ForeignKey("runs.id"), index=True)
+    correlation_id: Mapped[Optional[str]] = mapped_column(String(255), index=True)
+    phase: Mapped[Optional[str]] = mapped_column(String(64))
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    message: Mapped[Optional[str]] = mapped_column(Text)
+    payload_json: Mapped[Optional[dict]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, nullable=False)
+
+    brief: Mapped[Optional[ResearchBrief]] = relationship(back_populates="research_trace_events")
+    run: Mapped[Optional[Run]] = relationship(back_populates="research_trace_events")
 
 
 class AppSetting(Base):
