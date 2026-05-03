@@ -52,10 +52,10 @@
 </div>
 <div class="card">
   <h2>Start research</h2>
-  {% if ollama_ready %}
+  {% if ollama_ready and search_provider_ready %}
   <p class="execution-helper-copy">Uses your configured local model to run APD's current autonomous research path.</p>
   <p class="muted" style="margin-top: -0.25rem; margin-bottom: 1rem;">
-    APD runs web discovery first, then continues into grounded component execution using captured sources when available.
+    APD generates search queries, uses your configured live search provider to discover candidates, fetches kept public sources, and then runs grounded component execution.
   </p>
   <form method="post" action="/briefs/{{ brief.id }}/start-research">
     <button type="submit" class="btn btn-primary">Start Research</button>
@@ -65,7 +65,7 @@
     Captured grounding context available: {{ grounded_source_count }} sources, {{ grounded_excerpt_count }} excerpts.
   </p>
   {% endif %}
-  {% else %}
+  {% elif not ollama_ready %}
   <div class="notice-box execution-settings-notice">
     <strong>Configure a local model to start research.</strong>
     APD uses your saved local model settings for autonomous research runs.
@@ -73,6 +73,17 @@
     {% if missing_ollama_env and missing_ollama_env|length > 0 %}
     <div class="muted" style="margin-top: 0.5rem;">
       Missing now: {{ missing_ollama_env | join(", ") }}
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="notice-box execution-settings-notice">
+    <strong>Configure a live web search provider to start research.</strong>
+    APD's normal workflow is brief → live search discovery → source triage → grounded synthesis.
+    <a href="/settings/model-execution">Open model execution settings</a>.
+    {% if search_provider_setup_message %}
+    <div class="muted" style="margin-top: 0.5rem;">
+      {{ search_provider_setup_message }}
     </div>
     {% endif %}
   </div>
@@ -110,10 +121,55 @@
         <th>Web discovery phase</th>
         <td>{{ web_status.get('status', '—') }}</td>
       </tr>
+      {% if web_status.get('search_provider') %}
+      <tr>
+        <th>Search provider</th>
+        <td>{{ web_status.get('search_provider') }}</td>
+      </tr>
+      {% endif %}
+      {% if web_status.get('search_provider_setup_required') %}
+      <tr>
+        <th>Setup required</th>
+        <td>{{ web_status.get('search_provider_setup_required') }}</td>
+      </tr>
+      {% endif %}
+      <tr>
+        <th>Discovery queries</th>
+        <td>{{ web_status.get('proposed_query_count', 0) }}</td>
+      </tr>
+      <tr>
+        <th>Candidate results</th>
+        <td>{{ web_status.get('candidate_result_count', 0) }}</td>
+      </tr>
+      {% if web_status.get('triage_counts') %}
+      {% set triage = web_status.get('triage_counts') %}
+      <tr>
+        <th>Triage</th>
+        <td>
+          keep {{ triage.get('keep', 0) }},
+          discard {{ triage.get('discard', 0) }},
+          bait {{ triage.get('bait', 0) }},
+          uncertain {{ triage.get('uncertain', 0) }}
+        </td>
+      </tr>
+      {% endif %}
       <tr>
         <th>Captured sources</th>
         <td>{{ web_status.get('fetched_source_count', 0) }}</td>
       </tr>
+      {% if web_status.get('discovery_summary') %}
+      {% set discovery = web_status.get('discovery_summary') %}
+      <tr>
+        <th>Skipped or rejected</th>
+        <td>{{ discovery.get('skipped_count', 0) }}</td>
+      </tr>
+      {% endif %}
+      {% if web_status.get('weak_discovery_warning') %}
+      <tr>
+        <th>Weak discovery warning</th>
+        <td>{{ web_status.get('weak_discovery_warning') }}</td>
+      </tr>
+      {% endif %}
       {% if web_status.get('sources') %}
       <tr>
         <th>Fetched sources</th>
@@ -128,10 +184,24 @@
       {% endif %}
       {% if web_status.get('queries') %}
       <tr>
-        <th>Model-proposed queries</th>
+        <th>Discovery queries</th>
         <td>
           {% for query in web_status.get('queries', []) %}
             <div>{{ query.get('query') }}</div>
+          {% endfor %}
+        </td>
+      </tr>
+      {% endif %}
+      {% if web_status.get('candidate_decisions') %}
+      <tr>
+        <th>Triage decisions</th>
+        <td>
+          {% for item in web_status.get('candidate_decisions', []) %}
+            <div>
+              <strong>{{ item.get('decision') }}</strong>:
+              {{ item.get('title') or item.get('url') }}
+              {% if item.get('reason') %} ({{ item.get('reason') }}){% endif %}
+            </div>
           {% endfor %}
         </td>
       </tr>

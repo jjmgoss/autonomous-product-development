@@ -25,6 +25,7 @@ from apd.services.research_brief_service import (
 from apd.services.research_brief_ideation import generate_brief_idea_with_ollama, get_brief_ideation_themes
 from apd.services.sample_research_briefs import get_sample_research_briefs
 from apd.services.model_execution_settings import get_model_execution_settings, save_model_execution_settings
+from apd.services.research_search import resolve_configured_search_provider
 from apd.services.research_execution_ollama import (
     execute_research_brief_ollama_components,
     execute_research_brief_ollama_components_grounded,
@@ -72,10 +73,18 @@ def _web_discovery_phase_data(result: dict) -> dict:
         "status": result.get("status"),
         "started_at": result.get("started_at"),
         "finished_at": result.get("finished_at"),
+        "search_provider": result.get("search_provider"),
+        "search_provider_setup_required": result.get("search_provider_setup_required"),
         "proposed_query_count": result.get("proposed_query_count", 0),
         "proposed_url_count": result.get("proposed_url_count", 0),
+        "candidate_result_count": result.get("candidate_result_count", result.get("proposed_url_count", 0)),
         "fetched_source_count": result.get("fetched_source_count", 0),
+        "triage_counts": dict(result.get("triage_counts") or {}),
+        "discovery_summary": dict(result.get("discovery_summary") or {}),
+        "weak_discovery_warning": result.get("weak_discovery_warning"),
         "queries": list(result.get("queries") or [])[:10],
+        "candidate_results": list(result.get("candidate_results") or [])[:10],
+        "candidate_decisions": list(result.get("candidate_decisions") or [])[:10],
         "sources": list(result.get("sources") or [])[:10],
         "skipped_urls": list(result.get("skipped_urls") or [])[:10],
         "errors": [str(value) for value in (result.get("errors") or [])][:5],
@@ -151,6 +160,24 @@ def _build_web_assisted_execution_result(
     if trace_correlation_id:
         result["trace_correlation_id"] = trace_correlation_id
     return result
+
+
+def _build_component_execution_skipped_result(reason: str) -> dict:
+    return {
+        "success": False,
+        "status": "skipped",
+        "started_at": _iso_now(),
+        "finished_at": _iso_now(),
+        "errors": [],
+        "warnings": [reason],
+        "run_id": None,
+        "last_phase": None,
+        "attempts_by_phase": {},
+        "grounding_status": "not_started",
+        "grounding_errors": [],
+        "grounding_source_count": 0,
+        "grounding_excerpt_count": 0,
+    }
 
 
 @router.get("/", response_class=RedirectResponse, include_in_schema=False)
@@ -369,6 +396,7 @@ def brief_detail(brief_id: int, request: Request, db: Session = Depends(_get_db)
     if brief is None:
         raise HTTPException(status_code=404, detail="Research brief not found")
     ollama_config, missing_ollama_env = get_ollama_execution_config(db)
+    search_provider_resolution = resolve_configured_search_provider(db)
     grounding_packet = get_grounding_source_packet_for_brief(db, brief)
     trace_events = _get_last_execution_trace_events(db, brief)
     return templates.TemplateResponse(
@@ -379,6 +407,9 @@ def brief_detail(brief_id: int, request: Request, db: Session = Depends(_get_db)
             "ollama_ready": ollama_config is not None,
             "missing_ollama_env": missing_ollama_env,
             "ollama_model": ollama_config.model if ollama_config else None,
+            "search_provider_ready": search_provider_resolution.is_live_provider and search_provider_resolution.is_configured,
+            "search_provider_name": search_provider_resolution.provider_name,
+            "search_provider_setup_message": search_provider_resolution.setup_required_message,
             "grounded_source_count": len(grounding_packet.sources),
             "grounded_excerpt_count": len(grounding_packet.evidence_excerpts),
             "trace_events": trace_events,
@@ -404,6 +435,8 @@ def settings_model_execution_save(
     ollama_timeout_seconds: int = Form(120),
     ollama_keep_alive: str = Form("0"),
     component_repair_attempts: int = Form(1),
+    research_search_provider: str = Form("none"),
+    brave_search_base_url: str = Form("https://api.search.brave.com/res/v1/web/search"),
     enabled: str = Form("on"),
     db: Session = Depends(_get_db),
 ):
@@ -414,6 +447,8 @@ def settings_model_execution_save(
         "ollama_timeout_seconds": ollama_timeout_seconds,
         "ollama_keep_alive": int(ollama_keep_alive) if str(ollama_keep_alive).isdigit() else ollama_keep_alive,
         "component_repair_attempts": min(max(int(component_repair_attempts), 0), 3),
+        "research_search_provider": research_search_provider,
+        "brave_search_base_url": brave_search_base_url or None,
         "enabled": bool(enabled),
     }
     save_model_execution_settings(db, data)
@@ -655,11 +690,16 @@ def start_research_ollama_components(brief_id: int, db: Session = Depends(_get_d
         brief,
         trace_correlation_id=trace_correlation_id,
     )
-    component_result = execute_research_brief_ollama_components_grounded(
-        db,
-        brief,
-        trace_correlation_id=trace_correlation_id,
-    )
+    if web_discovery_result.get("success"):
+        component_result = execute_research_brief_ollama_components_grounded(
+            db,
+            brief,
+            trace_correlation_id=trace_correlation_id,
+        )
+    else:
+        component_result = _build_component_execution_skipped_result(
+            "Skipped grounded synthesis because source discovery did not produce captured sources."
+        )
     result = _build_web_assisted_execution_result(
         model=config.model,
         started_at=started_at,
@@ -667,6 +707,10 @@ def start_research_ollama_components(brief_id: int, db: Session = Depends(_get_d
         component_result=component_result,
         trace_correlation_id=trace_correlation_id,
     )
+    if not web_discovery_result.get("success"):
+        result["status"] = web_discovery_result.get("status")
+        result["success"] = False
+        result["source_grounding_status"] = "not_started"
     _save_last_execution(db, brief, result)
 
     if result.get("success") and result.get("run_id"):

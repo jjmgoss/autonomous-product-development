@@ -46,6 +46,8 @@ def _save_ui_model_settings(client):
             "ollama_timeout_seconds": "120",
             "ollama_keep_alive": "0",
             "component_repair_attempts": "2",
+            "research_search_provider": "brave",
+            "brave_search_base_url": "https://api.search.brave.com/res/v1/web/search",
             "enabled": "on",
         },
         follow_redirects=False,
@@ -133,6 +135,7 @@ def client(tmp_path, monkeypatch):
 
     monkeypatch.setattr(app_db, "engine", test_engine)
     monkeypatch.setattr(app_db, "SessionLocal", TestSession)
+    monkeypatch.setenv("APD_BRAVE_SEARCH_API_KEY", "test-brave-key")
 
     def _override_get_db():
         db = TestSession()
@@ -191,6 +194,7 @@ def test_start_research_stub_route_creates_run(client):
 
 def test_settings_page_save_and_reload_persists_saved_values(client, monkeypatch):
     _clear_ollama_env(monkeypatch)
+    monkeypatch.setenv("APD_BRAVE_SEARCH_API_KEY", "test-brave-key")
 
     _save_ui_model_settings(client)
 
@@ -198,10 +202,12 @@ def test_settings_page_save_and_reload_persists_saved_values(client, monkeypatch
     assert response.status_code == 200
     assert 'value="http://localhost:11434"' in response.text
     assert 'value="llama3"' in response.text
+    assert 'value="https://api.search.brave.com/res/v1/web/search"' in response.text
 
 
 def test_brief_detail_shows_single_start_research_action_from_saved_db_settings(client, monkeypatch):
     _clear_ollama_env(monkeypatch)
+    monkeypatch.setenv("APD_BRAVE_SEARCH_API_KEY", "test-brave-key")
     _save_ui_model_settings(client)
     brief_id = _create_brief_via_ui(client, title="DB-backed config brief")
 
@@ -212,6 +218,34 @@ def test_brief_detail_shows_single_start_research_action_from_saved_db_settings(
     assert "Start Research with Ollama" not in response.text
     assert "Start web-assisted research (prototype)" not in response.text
     assert "Missing required env" not in response.text
+
+
+def test_brief_detail_requires_search_provider_setup_when_model_is_ready(client, monkeypatch):
+    _clear_ollama_env(monkeypatch)
+    monkeypatch.delenv("APD_BRAVE_SEARCH_API_KEY", raising=False)
+    response = client.post(
+        "/settings/model-execution",
+        data={
+            "provider": "ollama",
+            "ollama_base_url": "http://localhost:11434",
+            "ollama_model": "llama3",
+            "ollama_timeout_seconds": "120",
+            "ollama_keep_alive": "0",
+            "component_repair_attempts": "2",
+            "research_search_provider": "brave",
+            "brave_search_base_url": "https://api.search.brave.com/res/v1/web/search",
+            "enabled": "on",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    brief_id = _create_brief_via_ui(client, title="Needs search setup")
+
+    detail = client.get(f"/briefs/{brief_id}")
+
+    assert detail.status_code == 200
+    assert "Configure a live web search provider to start research." in detail.text
+    assert "APD_BRAVE_SEARCH_API_KEY is missing" in detail.text
 
 
 def test_ollama_config_detection_missing_env(monkeypatch):
@@ -376,6 +410,7 @@ def test_start_research_ollama_uses_saved_db_settings(client, monkeypatch):
 
 def test_start_research_ollama_components_uses_saved_db_settings(client, monkeypatch):
     _clear_ollama_env(monkeypatch)
+    monkeypatch.setenv("APD_BRAVE_SEARCH_API_KEY", "test-brave-key")
     _save_ui_model_settings(client)
     brief_id = _create_brief_via_ui(client, title="Saved DB config components")
 
@@ -465,6 +500,7 @@ def test_start_research_ollama_components_uses_saved_db_settings(client, monkeyp
 
 def test_brief_detail_shows_grounding_context_without_extra_action_buttons(client, monkeypatch):
     _clear_ollama_env(monkeypatch)
+    monkeypatch.setenv("APD_BRAVE_SEARCH_API_KEY", "test-brave-key")
     _save_ui_model_settings(client)
     brief_id = _create_brief_via_ui(client, title="Grounded action brief")
 
@@ -483,6 +519,7 @@ def test_brief_detail_shows_grounding_context_without_extra_action_buttons(clien
 
 def test_web_assisted_research_records_web_discovery_phase_in_last_execution(client, monkeypatch):
     _clear_ollama_env(monkeypatch)
+    monkeypatch.setenv("APD_BRAVE_SEARCH_API_KEY", "test-brave-key")
     _save_ui_model_settings(client)
     brief_id = _create_brief_via_ui(client, title="Web-assisted prototype")
 
@@ -494,13 +531,32 @@ def test_web_assisted_research_records_web_discovery_phase_in_last_execution(cli
             "started_at": "2026-04-28T00:00:00+00:00",
             "finished_at": "2026-04-28T00:00:02+00:00",
             "errors": [],
-            "warnings": [],
+            "warnings": ["Weak discovery: fetched 1 sources from 4 candidates."],
+            "search_provider": "static",
             "proposed_query_count": 1,
-            "proposed_url_count": 1,
+            "proposed_url_count": 4,
+            "candidate_result_count": 4,
             "fetched_source_count": 1,
+            "triage_counts": {"keep": 1, "discard": 2, "bait": 1, "uncertain": 0},
+            "discovery_summary": {
+                "query_count": 1,
+                "candidate_result_count": 4,
+                "kept_count": 1,
+                "discard_count": 2,
+                "bait_count": 1,
+                "uncertain_count": 0,
+                "fetched_source_count": 1,
+                "skipped_count": 3,
+                "weak_discovery_warning": "Weak discovery: fetched 1 sources from 4 candidates.",
+            },
+            "weak_discovery_warning": "Weak discovery: fetched 1 sources from 4 candidates.",
             "queries": [{"query": "solo operator maintenance pain", "rationale": "seed"}],
             "sources": [{"url": "https://example.com/source", "title": "Captured source"}],
-            "skipped_urls": [],
+            "candidate_decisions": [
+                {"title": "Captured source", "url": "https://example.com/source", "decision": "keep", "reason": "Forum pain discussion."},
+                {"title": "Vendor homepage", "url": "https://example.com", "decision": "discard", "reason": "Marketing page."},
+            ],
+            "skipped_urls": [{"url": "https://example.com", "reason": "Marketing page."}],
             "web_research_run_id": 12,
             "trace_correlation_id": trace_correlation_id,
         },
@@ -533,11 +589,47 @@ def test_web_assisted_research_records_web_discovery_phase_in_last_execution(cli
     assert "Web discovery phase" in response.text
     assert "Captured source" in response.text
     assert "solo operator maintenance pain" in response.text
+    assert "Candidate results" in response.text
+    assert "keep 1" in response.text
+    assert "discard 2" in response.text
+    assert "bait 1" in response.text
+    assert "uncertain 0" in response.text
+    assert "Weak discovery: fetched 1 sources from 4 candidates." in response.text
     assert "Web discovery succeeded; component generation failed validation." in response.text
     assert "Error summary" in response.text
     assert "Grounding status" in response.text
     assert "unknown grounded source_id" in response.text
     assert "Show raw execution details" in response.text
+
+
+def test_start_research_records_setup_required_when_search_provider_missing(client, monkeypatch):
+    _clear_ollama_env(monkeypatch)
+    monkeypatch.delenv("APD_BRAVE_SEARCH_API_KEY", raising=False)
+    response = client.post(
+        "/settings/model-execution",
+        data={
+            "provider": "ollama",
+            "ollama_base_url": "http://localhost:11434",
+            "ollama_model": "llama3",
+            "ollama_timeout_seconds": "120",
+            "ollama_keep_alive": "0",
+            "component_repair_attempts": "2",
+            "research_search_provider": "brave",
+            "brave_search_base_url": "https://api.search.brave.com/res/v1/web/search",
+            "enabled": "on",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    brief_id = _create_brief_via_ui(client, title="Missing provider key")
+
+    resp = client.post(f"/briefs/{brief_id}/start-research-ollama-components", follow_redirects=True)
+
+    assert resp.status_code == 200
+    assert "search_provider_setup_required" in resp.text
+    assert "Setup required" in resp.text
+    assert "APD_BRAVE_SEARCH_API_KEY is missing" in resp.text
+    assert "Skipped grounded synthesis because source discovery did not produce captured sources." in resp.text
 
 
 def test_execute_grounded_components_requires_captured_sources(db, monkeypatch):
@@ -1190,6 +1282,31 @@ def test_start_research_ollama_components_route_uses_mocked_service(client, monk
             type("Cfg", (), {"model": "llama3"})(),
             [],
         ),
+    )
+    monkeypatch.setattr(
+        "apd.web.routes.run_web_research_for_brief",
+        lambda db, brief, trace_correlation_id=None: {
+            "success": True,
+            "status": "completed",
+            "started_at": "2026-01-01T00:00:00+00:00",
+            "finished_at": "2026-01-01T00:00:01+00:00",
+            "errors": [],
+            "warnings": [],
+            "search_provider": "brave",
+            "proposed_query_count": 1,
+            "proposed_url_count": 1,
+            "candidate_result_count": 1,
+            "fetched_source_count": 1,
+            "triage_counts": {"keep": 1, "discard": 0, "bait": 0, "uncertain": 0},
+            "discovery_summary": {"query_count": 1, "candidate_result_count": 1, "kept_count": 1, "discard_count": 0, "bait_count": 0, "uncertain_count": 0, "fetched_source_count": 1, "skipped_count": 0, "weak_discovery_warning": None},
+            "weak_discovery_warning": None,
+            "queries": [{"query": "test query", "rationale": "seed"}],
+            "sources": [{"url": "https://example.com/source", "title": "Example source"}],
+            "candidate_decisions": [{"title": "Example source", "url": "https://example.com/source", "decision": "keep", "reason": "Relevant discussion."}],
+            "skipped_urls": [],
+            "web_research_run_id": 123,
+            "trace_correlation_id": trace_correlation_id,
+        },
     )
     monkeypatch.setattr(
         "apd.web.routes.execute_research_brief_ollama_components_grounded",

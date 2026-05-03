@@ -23,6 +23,8 @@ def test_save_and_load_model_execution_settings(tmp_path):
             "ollama_timeout_seconds": 99,
             "ollama_keep_alive": 5,
             "component_repair_attempts": 2,
+            "research_search_provider": "brave",
+            "brave_search_base_url": "https://api.search.brave.com/res/v1/web/search",
             "enabled": True,
         }
         save_model_execution_settings(s, data)
@@ -36,3 +38,5 @@ def test_save_and_load_model_execution_settings(tmp_path):
         loaded = get_model_execution_settings(s)
         assert loaded["ollama_model"] == "test-model"
         assert loaded["ollama_base_url"] == "http://localhost:11434"
+        assert loaded["research_search_provider"] == "brave"
+        assert loaded["brave_search_base_url"] == "https://api.search.brave.com/res/v1/web/search"
