@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
@@ -10,6 +8,7 @@ from apd.app.db import Base
 from apd.domain.models import EvidenceExcerpt, ResearchBrief, Run, RunPhase, Source
 from apd.services.model_execution_settings import save_model_execution_settings
 from apd.services.research_brief_service import create_brief
+from apd.services.research_search import StaticSearchProvider
 from apd.services.research_trace import list_research_trace_events
 from apd.services import web_research
 
@@ -79,25 +78,25 @@ def _save_ui_model_settings(db):
     )
 
 
+def _static_provider(fixtures_by_query):
+    return StaticSearchProvider(fixtures_by_query, provider_name="static-test")
+
+
 def test_run_web_research_stores_source_and_excerpt(db, monkeypatch):
     _save_ui_model_settings(db)
     brief = create_brief(db, title="Maintenance pain", research_question="What public evidence exists?")
+    queries = web_research.generate_search_queries_for_brief(brief)
 
-    monkeypatch.setattr(
-        web_research,
-        "_ollama_generate",
-        lambda config, payload: (
-            {
-                "response": json.dumps(
-                    {
-                        "schema_version": "1.0",
-                        "queries": [{"query": "self host maintenance pain", "rationale": "Find public complaints"}],
-                        "urls": [{"url": "https://example.com/thread", "rationale": "Relevant public thread"}],
-                    }
-                )
-            },
-            None,
-        ),
+    provider = _static_provider(
+        {
+            queries[0].query: [
+                {
+                    "title": "Public thread",
+                    "url": "https://example.com/thread",
+                    "snippet": "Solo operators keep losing a day each month to backup checks.",
+                }
+            ]
+        }
     )
     monkeypatch.setattr(
         web_research,
@@ -110,10 +109,19 @@ def test_run_web_research_stores_source_and_excerpt(db, monkeypatch):
         },
     )
 
-    result = web_research.run_web_research_for_brief(db, brief, trace_correlation_id="trace-web-success")
+    result = web_research.run_web_research_for_brief(
+        db,
+        brief,
+        trace_correlation_id="trace-web-success",
+        search_provider=provider,
+    )
 
     assert result["status"] == "completed"
     assert result["fetched_source_count"] == 1
+    assert result["triage_counts"] == {"keep": 1, "discard": 0, "bait": 0, "uncertain": 0}
+    assert result["discovery_summary"]["candidate_result_count"] == 1
+    assert result["candidate_decisions"][0]["decision"] == "keep"
+    assert result["weak_discovery_warning"] is not None
     trace_events = list_research_trace_events(db, brief_id=brief.id, correlation_id=result["trace_correlation_id"])
     trace_event_types = [event.event_type for event in trace_events]
 
@@ -124,18 +132,24 @@ def test_run_web_research_stores_source_and_excerpt(db, monkeypatch):
 
     assert saved_run is not None
     assert saved_source is not None
-    assert saved_source.source_type == "public_web"
+    assert saved_source.source_type == "forum_thread"
     assert saved_source.url == "https://example.com/thread"
     assert saved_excerpt is not None
     assert "backup checks" in saved_excerpt.excerpt_text
     assert saved_brief.metadata_json["web_research_run_id"] == result["web_research_run_id"]
     assert "phase_started" in trace_event_types
     assert "skill_context_selected" in trace_event_types
-    assert "model_call_started" in trace_event_types
-    assert "model_call_completed" in trace_event_types
+    assert "search_queries_generated" in trace_event_types
+    assert "search_provider_called" in trace_event_types
+    assert "search_result_collected" in trace_event_types
+    assert "search_result_triaged" in trace_event_types
+    assert "search_result_kept" in trace_event_types
+    assert "search_source_fetch_started" in trace_event_types
+    assert "search_source_fetch_completed" in trace_event_types
     assert "tool_call_started" in trace_event_types
     assert "tool_call_completed" in trace_event_types
     assert "source_fetched" in trace_event_types
+    assert "discovery_completed" in trace_event_types
     assert "phase_completed" in trace_event_types
 
 
@@ -208,12 +222,27 @@ def test_run_web_research_caps_url_fetches(db, monkeypatch):
     _save_ui_model_settings(db)
     brief = create_brief(db, title="Cap URLs", research_question="How many URLs are fetched?")
     fetch_calls: list[str] = []
+    queries = web_research.generate_search_queries_for_brief(brief)
 
-    urls = [{"url": f"https://example.com/{index}", "rationale": "candidate"} for index in range(7)]
-    monkeypatch.setattr(
-        web_research,
-        "_ollama_generate",
-        lambda config, payload: ({"response": json.dumps({"schema_version": "1.0", "queries": [], "urls": urls})}, None),
+    provider = _static_provider(
+        {
+            queries[0].query: [
+                {
+                    "title": f"Forum thread {index}",
+                    "url": f"https://example.com/thread-{index}",
+                    "snippet": "Operators describe recurring pain and manual work.",
+                }
+                for index in range(4)
+            ],
+            queries[1].query: [
+                {
+                    "title": f"Forum thread extra {index}",
+                    "url": f"https://example.com/thread-extra-{index}",
+                    "snippet": "Operators describe recurring pain and manual work.",
+                }
+                for index in range(3)
+            ],
+        }
     )
     monkeypatch.setattr(
         web_research,
@@ -226,7 +255,7 @@ def test_run_web_research_caps_url_fetches(db, monkeypatch):
         },
     )
 
-    result = web_research.run_web_research_for_brief(db, brief)
+    result = web_research.run_web_research_for_brief(db, brief, search_provider=provider)
 
     assert result["status"] == "completed"
     assert len(fetch_calls) == web_research.MAX_FETCH_URLS
@@ -237,25 +266,15 @@ def test_run_web_research_caps_url_fetches(db, monkeypatch):
 def test_run_web_research_rejects_invalid_urls_without_fetching(db, monkeypatch):
     _save_ui_model_settings(db)
     brief = create_brief(db, title="Reject bad URLs", research_question="Reject invalid URLs")
+    queries = web_research.generate_search_queries_for_brief(brief)
 
-    monkeypatch.setattr(
-        web_research,
-        "_ollama_generate",
-        lambda config, payload: (
-            {
-                "response": json.dumps(
-                    {
-                        "schema_version": "1.0",
-                        "queries": [{"query": "backup toil forums", "rationale": "future search"}],
-                        "urls": [
-                            {"url": "file:///tmp/private", "rationale": "bad"},
-                            {"url": "http://localhost:9999/admin", "rationale": "bad"},
-                        ],
-                    }
-                )
-            },
-            None,
-        ),
+    provider = _static_provider(
+        {
+            queries[0].query: [
+                {"title": "Forum thread", "url": "file:///tmp/thread/private", "snippet": "Invalid URL pain thread."},
+                {"title": "Forum thread", "url": "http://localhost:9999/thread/admin", "snippet": "Invalid local URL pain thread."},
+            ]
+        }
     )
 
     def _should_not_fetch(url, **kwargs):
@@ -263,12 +282,18 @@ def test_run_web_research_rejects_invalid_urls_without_fetching(db, monkeypatch)
 
     monkeypatch.setattr(web_research, "fetch_public_url", _should_not_fetch)
 
-    result = web_research.run_web_research_for_brief(db, brief, trace_correlation_id="trace-web-rejected")
+    result = web_research.run_web_research_for_brief(
+        db,
+        brief,
+        trace_correlation_id="trace-web-rejected",
+        search_provider=provider,
+    )
     trace_events = list_research_trace_events(db, brief_id=brief.id, correlation_id=result["trace_correlation_id"])
     rejected_payloads = [event.payload_json for event in trace_events if event.event_type == "url_rejected"]
 
     assert result["status"] == "no_valid_urls"
     assert result["fetched_source_count"] == 0
+    assert result["candidate_decisions"][0]["rejection_error"] == "unsupported_scheme"
     reasons = {item["reason"] for item in result["skipped_urls"]}
     assert "unsupported_scheme" in reasons
     assert "local_host_not_allowed" in reasons
@@ -280,22 +305,14 @@ def test_run_web_research_rejects_invalid_urls_without_fetching(db, monkeypatch)
 def test_run_web_research_records_fetch_failures_without_crashing(db, monkeypatch):
     _save_ui_model_settings(db)
     brief = create_brief(db, title="Fetch failures", research_question="Handle failed fetches")
+    queries = web_research.generate_search_queries_for_brief(brief)
 
-    monkeypatch.setattr(
-        web_research,
-        "_ollama_generate",
-        lambda config, payload: (
-            {
-                "response": json.dumps(
-                    {
-                        "schema_version": "1.0",
-                        "queries": [],
-                        "urls": [{"url": "https://example.com/fail", "rationale": "probe"}],
-                    }
-                )
-            },
-            None,
-        ),
+    provider = _static_provider(
+        {
+            queries[0].query: [
+                {"title": "Forum thread", "url": "https://example.com/thread/fail", "snippet": "Handle failed fetch pain thread."}
+            ]
+        }
     )
     monkeypatch.setattr(
         web_research,
@@ -303,11 +320,12 @@ def test_run_web_research_records_fetch_failures_without_crashing(db, monkeypatc
         lambda url, **kwargs: {"success": False, "error": "timeout"},
     )
 
-    result = web_research.run_web_research_for_brief(db, brief)
+    result = web_research.run_web_research_for_brief(db, brief, search_provider=provider)
 
     assert result["status"] == "no_valid_urls"
     assert result["fetched_source_count"] == 0
-    assert result["skipped_urls"] == [{"url": "https://example.com/fail", "reason": "timeout"}]
+    assert result["candidate_decisions"][0]["rejection_error"] == "timeout"
+    assert result["skipped_urls"] == [{"url": "https://example.com/thread/fail", "reason": "timeout"}]
 
 
 

@@ -55,15 +55,33 @@ If required settings are missing, the brief detail page shows a concise prompt l
 
 Today that means:
 
-1. APD sends the brief to the local model for web discovery planning.
-2. The model proposes a small JSON list of search queries and direct URLs.
-3. APD validates the proposed URLs and fetches only safe public targets.
-4. APD stores captured material as APD-owned `Source` and `EvidenceExcerpt` records.
-5. APD builds a bounded grounding packet from captured sources.
-6. APD runs grounded component execution against that packet.
-7. APD validates, repairs, and imports the result only if it passes schema, quality, and grounding checks.
+1. APD deterministically generates a bounded search-query plan from the brief.
+2. APD calls a configured search provider or deterministic static/mock adapter to collect candidate public results.
+3. APD triages candidate results into keep, discard, bait, or uncertain with explicit reasons.
+4. APD validates and fetches only kept public URLs that pass APD's existing safety rules.
+5. APD stores captured material as APD-owned `Source` and `EvidenceExcerpt` records, along with discovery metadata.
+6. APD builds a bounded grounding packet from captured sources.
+7. APD runs grounded component execution against that packet.
+8. APD validates, repairs, and imports the result only if it passes schema, quality, and grounding checks.
 
-This path is synchronous and local-first. It does not do unrestricted browsing, background jobs, or hosted provider calls.
+This path is synchronous and local-first. It does not do unrestricted browsing, background jobs, or hosted telemetry. Live search providers are optional and off by default.
+
+## Search provider modes
+
+APD's normal product story is agent-led source discovery. Users should not have to paste URLs first.
+
+For the first version of the provider layer:
+
+- APD can use a deterministic static/mock search provider for tests and local development
+- live provider integrations remain optional future work
+- the legacy direct-URL proposal path is not the main workflow
+
+The deterministic static mode is useful for tests, eval harness work, and recovery/debugging because it does not require live web, paid APIs, Ollama, or any external service.
+
+Optional environment variables for the static provider are:
+
+- `APD_RESEARCH_SEARCH_PROVIDER=static`
+- `APD_RESEARCH_STATIC_SEARCH_RESULTS_PATH=<path-to-json-fixture>`
 
 ## Research skill context
 
@@ -90,7 +108,10 @@ The page prioritizes:
 
 - overall status
 - web discovery phase status
+- query count and candidate-result count
+- keep/discard/bait/uncertain counts
 - captured source count
+- weak-discovery warnings when too few sources were kept or fetched
 - component execution phase status
 - grounding status when relevant
 - readable error summaries
@@ -151,7 +172,7 @@ The current brief-driven execution path follows these rules:
 
 - APD fetches only validated public `http` and `https` URLs
 - APD does not allow localhost, loopback, private IPs, or credentialed URLs
-- APD does not crawl beyond explicit proposed URLs
+- APD does not crawl beyond explicit kept URLs returned by the bounded discovery layer
 - APD does not bypass authentication, paywalls, or access controls
 - grounded source references are validation signals, not truth verification
 - imported research remains draft until a human reviews it
@@ -160,10 +181,10 @@ The current brief-driven execution path follows these rules:
 
 Automated tests for the brief workflow mock:
 
-- local model output
+- deterministic query planning and search-provider output
 - web-fetch behavior
 - execution success and failure paths
 
-Tests do not require live Ollama or live web access.
+Tests do not require live Ollama, live web access, paid providers, or hosted APIs.
 
 Manual verification remains useful for UI sanity checks, but raw execution details should only be needed when debugging a failure rather than understanding the normal user workflow.

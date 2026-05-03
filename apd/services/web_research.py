@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from dataclasses import dataclass
+from collections import Counter
 import html
 import ipaddress
 import json
@@ -12,22 +13,25 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from apd.domain.models import EvidenceExcerpt, ResearchBrief, Run, RunPhase, Source
-from apd.services.research_execution_ollama import (
-    _build_generate_payload,
-    _ollama_generate,
-    _unload_ollama_model,
-    extract_json_object_from_model_output,
-    get_ollama_execution_config,
+from apd.services.research_execution_ollama import extract_json_object_from_model_output
+from apd.services.research_search import (
+    DEFAULT_RESULTS_PER_QUERY,
+    SearchProvider,
+    generate_search_queries_for_brief,
+    get_configured_search_provider,
+    search_results_to_dicts,
 )
 from apd.services.research_skills import (
     render_research_skill_context_for_phase,
     resolve_research_skills_for_phase,
 )
+from apd.services.research_source_triage import triage_search_results
 from apd.services.research_trace import append_research_trace_event, create_trace_correlation_id
 
 SCHEMA_VERSION = "1.0"
 MAX_PROPOSED_QUERIES = 5
 MAX_FETCH_URLS = 5
+MAX_SEARCH_RESULTS_PER_QUERY = DEFAULT_RESULTS_PER_QUERY
 FETCH_TIMEOUT_SECONDS = 10
 MAX_RESPONSE_BYTES = 1_000_000
 MAX_EXTRACTED_TEXT_CHARS = 12_000
@@ -410,8 +414,8 @@ def run_web_research_for_brief(
     brief: ResearchBrief,
     *,
     trace_correlation_id: str | None = None,
+    search_provider: SearchProvider | None = None,
 ) -> dict[str, object]:
-    config, missing = get_ollama_execution_config(db)
     started_at = _iso_now()
     trace_correlation_id = trace_correlation_id or create_trace_correlation_id(brief_id=brief.id)
     trace_phase = "web_discovery"
@@ -436,27 +440,11 @@ def run_web_research_for_brief(
             payload=payload,
         )
 
-    if config is None:
-        return {
-            "success": False,
-            "status": "config_missing",
-            "started_at": started_at,
-            "finished_at": started_at,
-            "errors": [f"Missing required env: {value}" for value in missing],
-            "warnings": [],
-            "proposed_query_count": 0,
-            "proposed_url_count": 0,
-            "fetched_source_count": 0,
-            "skipped_urls": [],
-            "sources": [],
-            "trace_correlation_id": trace_correlation_id,
-        }
-
     selected_skill_ids = resolve_research_skills_for_phase("web_discovery", max_skills=None)
     _trace(
         "phase_started",
         message="Web discovery started.",
-        payload={"provider": config.provider, "model": config.model},
+        payload={"mode": "agent_led_source_discovery"},
     )
     if selected_skill_ids:
         _trace(
@@ -465,288 +453,330 @@ def run_web_research_for_brief(
             payload={"skill_ids": selected_skill_ids, "skill_count": len(selected_skill_ids)},
         )
 
-    prompt = build_web_research_target_prompt(brief)
-    payload = _build_generate_payload(config, prompt, during_execution=True)
-    try:
+    queries = generate_search_queries_for_brief(brief, max_queries=MAX_PROPOSED_QUERIES)
+    provider = search_provider or get_configured_search_provider()
+    run = _get_or_create_web_research_run(db, brief)
+    trace_run_id = run.id
+
+    _trace(
+        "search_queries_generated",
+        run_id=run.id,
+        message="Generated bounded discovery queries.",
+        payload={"query_count": len(queries), "queries": [query.query for query in queries]},
+    )
+    _trace(
+        "search_provider_called",
+        run_id=run.id,
+        message="Calling configured search provider.",
+        payload={
+            "provider": provider.provider_name,
+            "query_count": len(queries),
+            "max_results_per_query": MAX_SEARCH_RESULTS_PER_QUERY,
+        },
+    )
+
+    search_results = provider.search(queries, max_results_per_query=MAX_SEARCH_RESULTS_PER_QUERY)
+    for result in search_results:
         _trace(
-            "model_call_started",
-            message="Started web discovery model call.",
-            payload={"provider": config.provider, "model": config.model, "prompt_chars": len(prompt)},
+            "search_result_collected",
+            run_id=run.id,
+            message="Collected candidate search result.",
+            payload=result.as_dict(),
         )
-        response_data, call_error = _ollama_generate(config, payload)
+
+    decision_records = triage_search_results(brief, search_results)
+    triage_counts = Counter(record.decision for record in decision_records)
+    skipped_urls: list[dict[str, str]] = []
+    source_summaries: list[dict[str, object]] = []
+    fetched_source_count = 0
+    seen_urls: set[str] = set()
+    decision_records_with_fetch: list[dict[str, object]] = []
+    kept_fetch_slots_used = 0
+
+    for record in decision_records:
         _trace(
-            "model_call_completed",
-            message="Completed web discovery model call.",
+            "search_result_triaged",
+            run_id=run.id,
+            message="Triaged candidate search result.",
+            payload=record.as_dict(),
+        )
+        if record.decision == "keep":
+            _trace(
+                "search_result_kept",
+                run_id=run.id,
+                message="Keeping search result for validation and fetch.",
+                payload=record.as_dict(),
+            )
+        else:
+            skipped_urls.append({"url": record.url, "reason": record.reason})
+            _trace(
+                "search_result_rejected",
+                run_id=run.id,
+                message="Rejected search result before fetch.",
+                payload=record.as_dict(),
+            )
+            decision_records_with_fetch.append(record.as_dict())
+            continue
+
+        if kept_fetch_slots_used >= MAX_FETCH_URLS:
+            capped_reason = f"capped_urls_at_{MAX_FETCH_URLS}"
+            skipped_urls.append({"url": record.url, "reason": capped_reason})
+            decision_records_with_fetch.append({**record.as_dict(), "rejection_error": capped_reason})
+            _trace(
+                "url_rejected",
+                run_id=run.id,
+                message="Rejected kept result after reaching fetch budget.",
+                payload={"url": record.url, "reason": capped_reason},
+            )
+            continue
+        kept_fetch_slots_used += 1
+
+        normalized_url, validation_error = validate_public_url(record.url)
+        if validation_error or normalized_url is None:
+            skipped_urls.append({"url": record.url, "reason": validation_error or "invalid_url"})
+            updated = {**record.as_dict(), "rejection_error": validation_error or "invalid_url"}
+            decision_records_with_fetch.append(updated)
+            _trace(
+                "url_rejected",
+                run_id=run.id,
+                message="Rejected kept result after URL validation.",
+                payload={"url": record.url, "reason": validation_error or "invalid_url"},
+            )
+            continue
+
+        if normalized_url in seen_urls:
+            skipped_urls.append({"url": normalized_url, "reason": "duplicate_in_request"})
+            updated = {**record.as_dict(), "rejection_error": "duplicate_in_request"}
+            decision_records_with_fetch.append(updated)
+            _trace(
+                "url_rejected",
+                run_id=run.id,
+                message="Rejected duplicate kept result.",
+                payload={"url": normalized_url, "reason": "duplicate_in_request"},
+            )
+            continue
+        seen_urls.add(normalized_url)
+
+        existing_source = db.scalar(select(Source).where(Source.run_id == run.id, Source.url == normalized_url))
+        if existing_source is not None:
+            skipped_urls.append({"url": normalized_url, "reason": "duplicate_existing_source"})
+            updated = {**record.as_dict(), "rejection_error": "duplicate_existing_source"}
+            decision_records_with_fetch.append(updated)
+            _trace(
+                "url_rejected",
+                run_id=run.id,
+                message="Rejected already captured source.",
+                payload={"url": normalized_url, "reason": "duplicate_existing_source"},
+            )
+            continue
+
+        _trace(
+            "search_source_fetch_started",
+            run_id=run.id,
+            message="Fetching kept public source.",
+            payload={"url": normalized_url, "query": record.query, "provider": record.provider},
+        )
+        _trace(
+            "tool_call_started",
+            run_id=run.id,
+            message="Fetching public web source.",
+            payload={"tool_name": "fetch_public_url", "url": normalized_url},
+        )
+        fetch_result = fetch_public_url(normalized_url)
+        _trace(
+            "tool_call_completed",
+            run_id=run.id,
+            message="Completed public web fetch.",
             payload={
-                "provider": config.provider,
-                "model": config.model,
-                "success": call_error is None,
-                "error": call_error,
-                "response_chars": len(str(response_data.get("response") or "")) if response_data else 0,
+                "tool_name": "fetch_public_url",
+                "url": normalized_url,
+                "success": bool(fetch_result.get("success")),
+                "status_code": fetch_result.get("status_code"),
+                "error": fetch_result.get("error"),
             },
         )
-        if call_error:
-            finished_at = _iso_now()
-            _trace(
-                "phase_completed",
-                message="Web discovery failed.",
-                payload={"status": "provider_error", "error_count": 1},
-            )
-            return {
-                "success": False,
-                "status": "provider_error",
-                "started_at": started_at,
-                "finished_at": finished_at,
-                "errors": [call_error],
-                "warnings": [],
-                "proposed_query_count": 0,
-                "proposed_url_count": 0,
-                "fetched_source_count": 0,
-                "skipped_urls": [],
-                "sources": [],
-                "trace_correlation_id": trace_correlation_id,
-            }
+        _trace(
+            "search_source_fetch_completed",
+            run_id=run.id,
+            message="Completed kept source fetch.",
+            payload={
+                "url": normalized_url,
+                "success": bool(fetch_result.get("success")),
+                "status_code": fetch_result.get("status_code"),
+                "error": fetch_result.get("error"),
+            },
+        )
+        if not fetch_result.get("success"):
+            fetch_error = str(fetch_result.get("error") or "fetch_failed")
+            skipped_urls.append({"url": normalized_url, "reason": fetch_error})
+            decision_records_with_fetch.append({**record.as_dict(), "rejection_error": fetch_error})
+            continue
 
-        raw_output = str(response_data.get("response") or "")
-        if not raw_output.strip():
-            finished_at = _iso_now()
-            _trace(
-                "validation_failed",
-                message="Web discovery returned an empty response.",
-                payload={"reason": "provider_error: empty_ollama_response"},
-            )
-            _trace(
-                "phase_completed",
-                message="Web discovery failed.",
-                payload={"status": "parse_failed", "error_count": 1},
-            )
-            return {
-                "success": False,
-                "status": "parse_failed",
-                "started_at": started_at,
-                "finished_at": finished_at,
-                "errors": ["provider_error: empty_ollama_response"],
-                "warnings": [],
-                "proposed_query_count": 0,
-                "proposed_url_count": 0,
-                "fetched_source_count": 0,
-                "skipped_urls": [],
-                "sources": [],
-                "trace_correlation_id": trace_correlation_id,
-            }
+        content_type = str(fetch_result.get("content_type") or "")
+        title, extracted_text, extraction_error = extract_title_and_text(
+            fetch_result.get("body") or b"",
+            content_type,
+        )
 
-        targets, parse_error = parse_web_research_targets(raw_output)
-        if parse_error or targets is None:
-            finished_at = _iso_now()
-            _trace(
-                "validation_failed",
-                message="Web discovery target output failed validation.",
-                payload={"reason": parse_error or "parse_failed: invalid_web_targets"},
-            )
-            _trace(
-                "phase_completed",
-                message="Web discovery failed.",
-                payload={"status": "parse_failed", "error_count": 1},
-            )
-            return {
-                "success": False,
-                "status": "parse_failed",
-                "started_at": started_at,
-                "finished_at": finished_at,
-                "errors": [parse_error or "parse_failed: invalid_web_targets"],
-                "warnings": [],
-                "proposed_query_count": 0,
-                "proposed_url_count": 0,
-                "fetched_source_count": 0,
-                "skipped_urls": [],
-                "sources": [],
-                "trace_correlation_id": trace_correlation_id,
-            }
+        source = Source(
+            run_id=run.id,
+            title=title or record.title,
+            source_type=record.source_type,
+            url=normalized_url,
+            origin=parse.urlparse(normalized_url).hostname,
+            captured_at=datetime.now(timezone.utc),
+            summary=(extracted_text[:400] if extracted_text else (record.snippet or None)),
+            metadata_json={
+                "brief_id": brief.id,
+                "fetched_by": "apd_web_research",
+                "fetched_at": _iso_now(),
+                "query": record.query,
+                "provider": record.provider,
+                "rank": record.rank,
+                "triage_decision": record.decision,
+                "triage_reason": record.reason,
+                "source_type_guess": record.source_type,
+                "status": "fetched",
+                "content_type": content_type,
+                "extraction_error": extraction_error,
+            },
+        )
+        db.add(source)
+        db.flush()
 
-        queries = list(targets.get("queries") or [])
-        url_targets = list(targets.get("urls") or [])
-        capped_queries = queries[:MAX_PROPOSED_QUERIES]
-        capped_url_targets = url_targets[:MAX_FETCH_URLS]
-        run = _get_or_create_web_research_run(db, brief)
-        trace_run_id = run.id
-        skipped_urls: list[dict[str, str]] = []
-        source_summaries: list[dict[str, object]] = []
-        fetched_source_count = 0
-        seen_urls: set[str] = set()
-
-        for url_target in capped_url_targets:
-            raw_url = str(url_target.get("url") or "").strip()
-            rationale = str(url_target.get("rationale") or "").strip()
-            normalized_url, validation_error = validate_public_url(raw_url)
-            if validation_error or normalized_url is None:
-                skipped_urls.append({"url": raw_url, "reason": validation_error or "invalid_url"})
-                _trace(
-                    "url_rejected",
-                    run_id=run.id,
-                    message="Rejected proposed URL.",
-                    payload={"url": raw_url, "reason": validation_error or "invalid_url"},
-                )
-                continue
-            if normalized_url in seen_urls:
-                skipped_urls.append({"url": normalized_url, "reason": "duplicate_in_request"})
-                _trace(
-                    "url_rejected",
-                    run_id=run.id,
-                    message="Rejected duplicate proposed URL.",
-                    payload={"url": normalized_url, "reason": "duplicate_in_request"},
-                )
-                continue
-            seen_urls.add(normalized_url)
-
-            existing_source = db.scalar(
-                select(Source).where(Source.run_id == run.id, Source.url == normalized_url)
-            )
-            if existing_source is not None:
-                skipped_urls.append({"url": normalized_url, "reason": "duplicate_existing_source"})
-                _trace(
-                    "url_rejected",
-                    run_id=run.id,
-                    message="Rejected already-captured URL.",
-                    payload={"url": normalized_url, "reason": "duplicate_existing_source"},
-                )
-                continue
-
-            _trace(
-                "tool_call_started",
+        excerpt_id = None
+        if extracted_text:
+            excerpt = EvidenceExcerpt(
                 run_id=run.id,
-                message="Fetching public web source.",
-                payload={"tool_name": "fetch_public_url", "url": normalized_url},
-            )
-            fetch_result = fetch_public_url(normalized_url)
-            _trace(
-                "tool_call_completed",
-                run_id=run.id,
-                message="Completed public web fetch.",
-                payload={
-                    "tool_name": "fetch_public_url",
-                    "url": normalized_url,
-                    "success": bool(fetch_result.get("success")),
-                    "status_code": fetch_result.get("status_code"),
-                    "error": fetch_result.get("error"),
-                },
-            )
-            if not fetch_result.get("success"):
-                skipped_urls.append({"url": normalized_url, "reason": str(fetch_result.get("error") or "fetch_failed")})
-                continue
-
-            content_type = str(fetch_result.get("content_type") or "")
-            title, extracted_text, extraction_error = extract_title_and_text(
-                fetch_result.get("body") or b"",
-                content_type,
-            )
-
-            source = Source(
-                run_id=run.id,
-                title=title,
-                source_type="public_web",
-                url=normalized_url,
-                origin=parse.urlparse(normalized_url).hostname,
-                captured_at=datetime.now(timezone.utc),
-                summary=(extracted_text[:400] if extracted_text else None),
+                source_id=source.id,
+                excerpt_text=extracted_text[:MAX_EXCERPT_TEXT_CHARS],
+                location_reference="fetched_page_text",
+                excerpt_type="web_capture",
                 metadata_json={
                     "brief_id": brief.id,
                     "fetched_by": "apd_web_research",
-                    "fetched_at": _iso_now(),
-                    "rationale": rationale,
-                    "status": "fetched",
-                    "content_type": content_type,
-                    "extraction_error": extraction_error,
+                    "query": record.query,
+                    "provider": record.provider,
                 },
             )
-            db.add(source)
+            db.add(excerpt)
             db.flush()
+            excerpt_id = excerpt.id
 
-            excerpt_id = None
-            if extracted_text:
-                excerpt = EvidenceExcerpt(
-                    run_id=run.id,
-                    source_id=source.id,
-                    excerpt_text=extracted_text[:MAX_EXCERPT_TEXT_CHARS],
-                    location_reference="fetched_page_text",
-                    excerpt_type="web_capture",
-                    metadata_json={"brief_id": brief.id, "fetched_by": "apd_web_research"},
-                )
-                db.add(excerpt)
-                db.flush()
-                excerpt_id = excerpt.id
-
-            fetched_source_count += 1
-            source_summaries.append(
-                {
-                    "source_id": source.id,
-                    "excerpt_id": excerpt_id,
-                    "url": source.url,
-                    "title": source.title,
-                    "content_type": content_type,
-                }
-            )
-            _trace(
-                "source_fetched",
-                run_id=run.id,
-                message="Fetched and stored public web source.",
-                payload={
-                    "capture_run_id": run.id,
-                    "source_id": source.id,
-                    "excerpt_id": excerpt_id,
-                    "url": source.url,
-                    "content_type": content_type,
-                    "extraction_error": extraction_error,
-                },
-            )
-
-        run.source_count = db.scalar(select(func.count()).select_from(Source).where(Source.run_id == run.id)) or 0
-        db.add(run)
-        finished_at = _iso_now()
-
-        status = "completed" if fetched_source_count > 0 else "no_valid_urls"
-        warnings: list[str] = []
-        if len(queries) > MAX_PROPOSED_QUERIES:
-            warnings.append(f"capped_queries_at_{MAX_PROPOSED_QUERIES}")
-        if len(url_targets) > MAX_FETCH_URLS:
-            warnings.append(f"capped_urls_at_{MAX_FETCH_URLS}")
+        fetched_source_count += 1
+        source_summaries.append(
+            {
+                "source_id": source.id,
+                "excerpt_id": excerpt_id,
+                "url": source.url,
+                "title": source.title,
+                "content_type": content_type,
+                "query": record.query,
+                "provider": record.provider,
+                "decision_reason": record.reason,
+            }
+        )
+        decision_records_with_fetch.append({**record.as_dict(), "fetched": True})
         _trace(
-            "phase_completed",
+            "source_fetched",
             run_id=run.id,
-            message="Web discovery completed.",
+            message="Fetched and stored public web source.",
             payload={
-                "status": status,
                 "capture_run_id": run.id,
-                "proposed_query_count": len(capped_queries),
-                "proposed_url_count": len(capped_url_targets),
-                "fetched_source_count": fetched_source_count,
-                "skipped_url_count": len(skipped_urls),
+                "source_id": source.id,
+                "excerpt_id": excerpt_id,
+                "url": source.url,
+                "content_type": content_type,
+                "extraction_error": extraction_error,
             },
         )
-        result = {
-            "success": fetched_source_count > 0,
-            "status": status,
-            "started_at": started_at,
-            "finished_at": finished_at,
-            "errors": [],
-            "warnings": warnings,
-            "proposed_query_count": len(capped_queries),
-            "proposed_url_count": len(capped_url_targets),
-            "fetched_source_count": fetched_source_count,
-            "skipped_urls": skipped_urls[:10],
-            "sources": source_summaries[:10],
-            "queries": capped_queries,
-            "web_research_run_id": run.id,
-            "trace_correlation_id": trace_correlation_id,
-        }
-        if fetched_source_count == 0:
-            result["errors"] = ["No valid public URLs were fetched. Proposed queries were stored for future work."]
 
-        meta = dict(brief.metadata_json or {})
-        meta["web_research_run_id"] = run.id
-        brief.metadata_json = meta
-        db.add(brief)
-        db.commit()
-        db.refresh(brief)
-        return result
-    finally:
-        _unload_ollama_model(config)
+    run.source_count = db.scalar(select(func.count()).select_from(Source).where(Source.run_id == run.id)) or 0
+    db.add(run)
+    finished_at = _iso_now()
+
+    warnings: list[str] = []
+    weak_discovery_warning: str | None = None
+    if triage_counts.get("keep", 0) > MAX_FETCH_URLS:
+        warnings.append(f"capped_urls_at_{MAX_FETCH_URLS}")
+    if fetched_source_count < 2:
+        weak_discovery_warning = (
+            f"Weak discovery: fetched {fetched_source_count} sources from {len(search_results)} candidates."
+        )
+        warnings.append(weak_discovery_warning)
+        _trace(
+            "discovery_weak_warning",
+            run_id=run.id,
+            message="Discovery completed with weak source coverage.",
+            payload={
+                "candidate_result_count": len(search_results),
+                "kept_count": triage_counts.get("keep", 0),
+                "fetched_source_count": fetched_source_count,
+            },
+        )
+
+    status = "completed" if fetched_source_count > 0 else ("no_search_results" if not search_results else "no_valid_urls")
+    summary = {
+        "query_count": len(queries),
+        "candidate_result_count": len(search_results),
+        "kept_count": triage_counts.get("keep", 0),
+        "discard_count": triage_counts.get("discard", 0),
+        "bait_count": triage_counts.get("bait", 0),
+        "uncertain_count": triage_counts.get("uncertain", 0),
+        "fetched_source_count": fetched_source_count,
+        "skipped_count": len(skipped_urls),
+        "weak_discovery_warning": weak_discovery_warning,
+    }
+    _trace(
+        "discovery_completed",
+        run_id=run.id,
+        message="Structured source discovery completed.",
+        payload={"status": status, **summary},
+    )
+    _trace(
+        "phase_completed",
+        run_id=run.id,
+        message="Web discovery completed.",
+        payload={"status": status, "capture_run_id": run.id, **summary},
+    )
+
+    result = {
+        "success": fetched_source_count > 0,
+        "status": status,
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "errors": [],
+        "warnings": warnings,
+        "search_provider": provider.provider_name,
+        "proposed_query_count": len(queries),
+        "proposed_url_count": len(search_results),
+        "candidate_result_count": len(search_results),
+        "fetched_source_count": fetched_source_count,
+        "triage_counts": {
+            "keep": triage_counts.get("keep", 0),
+            "discard": triage_counts.get("discard", 0),
+            "bait": triage_counts.get("bait", 0),
+            "uncertain": triage_counts.get("uncertain", 0),
+        },
+        "discovery_summary": summary,
+        "weak_discovery_warning": weak_discovery_warning,
+        "skipped_urls": skipped_urls[:10],
+        "sources": source_summaries[:10],
+        "queries": [{"query": query.query, "rationale": query.rationale} for query in queries],
+        "candidate_results": search_results_to_dicts(search_results)[:10],
+        "candidate_decisions": decision_records_with_fetch[:10],
+        "web_research_run_id": run.id,
+        "trace_correlation_id": trace_correlation_id,
+    }
+    if fetched_source_count == 0:
+        result["errors"] = [
+            "No kept public URLs were fetched. Discovery results and rejection reasons were stored for review."
+        ]
+
+    meta = dict(brief.metadata_json or {})
+    meta["web_research_run_id"] = run.id
+    brief.metadata_json = meta
+    db.add(brief)
+    db.commit()
+    db.refresh(brief)
+    return result

@@ -8,6 +8,7 @@ The first version uses:
 
 - YAML case files under `evals/research/cases/`
 - fixture HTML or text pages under `evals/research/fixtures/pages/`
+- deterministic/static search discovery inputs when a case needs pre-synthesis retrieval behavior
 - a simulated APD component-execution path in `apd/evals/research_runner.py`
 - JSON results written to `evals/research/results/`
 
@@ -101,3 +102,5 @@ To add a new eval case:
 7. Run `uv run python scripts/run_research_evals.py --fixture-only` and confirm the new case appears in the summary and output JSON.
 
 Keep cases narrow. The goal is not to model the whole internet. The goal is to exercise one repeatable research situation with explicit evidence, bait sources, and expected output traits.
+
+The eval harness should remain runnable without live web, live model calls, paid search providers, or hosted APIs. Static search fixtures are the intended way to test the discovery layer in CI.

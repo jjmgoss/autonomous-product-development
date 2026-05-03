@@ -494,13 +494,32 @@ def test_web_assisted_research_records_web_discovery_phase_in_last_execution(cli
             "started_at": "2026-04-28T00:00:00+00:00",
             "finished_at": "2026-04-28T00:00:02+00:00",
             "errors": [],
-            "warnings": [],
+            "warnings": ["Weak discovery: fetched 1 sources from 4 candidates."],
+            "search_provider": "static",
             "proposed_query_count": 1,
-            "proposed_url_count": 1,
+            "proposed_url_count": 4,
+            "candidate_result_count": 4,
             "fetched_source_count": 1,
+            "triage_counts": {"keep": 1, "discard": 2, "bait": 1, "uncertain": 0},
+            "discovery_summary": {
+                "query_count": 1,
+                "candidate_result_count": 4,
+                "kept_count": 1,
+                "discard_count": 2,
+                "bait_count": 1,
+                "uncertain_count": 0,
+                "fetched_source_count": 1,
+                "skipped_count": 3,
+                "weak_discovery_warning": "Weak discovery: fetched 1 sources from 4 candidates.",
+            },
+            "weak_discovery_warning": "Weak discovery: fetched 1 sources from 4 candidates.",
             "queries": [{"query": "solo operator maintenance pain", "rationale": "seed"}],
             "sources": [{"url": "https://example.com/source", "title": "Captured source"}],
-            "skipped_urls": [],
+            "candidate_decisions": [
+                {"title": "Captured source", "url": "https://example.com/source", "decision": "keep", "reason": "Forum pain discussion."},
+                {"title": "Vendor homepage", "url": "https://example.com", "decision": "discard", "reason": "Marketing page."},
+            ],
+            "skipped_urls": [{"url": "https://example.com", "reason": "Marketing page."}],
             "web_research_run_id": 12,
             "trace_correlation_id": trace_correlation_id,
         },
@@ -533,6 +552,12 @@ def test_web_assisted_research_records_web_discovery_phase_in_last_execution(cli
     assert "Web discovery phase" in response.text
     assert "Captured source" in response.text
     assert "solo operator maintenance pain" in response.text
+    assert "Candidate results" in response.text
+    assert "keep 1" in response.text
+    assert "discard 2" in response.text
+    assert "bait 1" in response.text
+    assert "uncertain 0" in response.text
+    assert "Weak discovery: fetched 1 sources from 4 candidates." in response.text
     assert "Web discovery succeeded; component generation failed validation." in response.text
     assert "Error summary" in response.text
     assert "Grounding status" in response.text

@@ -110,10 +110,49 @@
         <th>Web discovery phase</th>
         <td>{{ web_status.get('status', '—') }}</td>
       </tr>
+      {% if web_status.get('search_provider') %}
+      <tr>
+        <th>Search provider</th>
+        <td>{{ web_status.get('search_provider') }}</td>
+      </tr>
+      {% endif %}
+      <tr>
+        <th>Discovery queries</th>
+        <td>{{ web_status.get('proposed_query_count', 0) }}</td>
+      </tr>
+      <tr>
+        <th>Candidate results</th>
+        <td>{{ web_status.get('candidate_result_count', 0) }}</td>
+      </tr>
+      {% if web_status.get('triage_counts') %}
+      {% set triage = web_status.get('triage_counts') %}
+      <tr>
+        <th>Triage</th>
+        <td>
+          keep {{ triage.get('keep', 0) }},
+          discard {{ triage.get('discard', 0) }},
+          bait {{ triage.get('bait', 0) }},
+          uncertain {{ triage.get('uncertain', 0) }}
+        </td>
+      </tr>
+      {% endif %}
       <tr>
         <th>Captured sources</th>
         <td>{{ web_status.get('fetched_source_count', 0) }}</td>
       </tr>
+      {% if web_status.get('discovery_summary') %}
+      {% set discovery = web_status.get('discovery_summary') %}
+      <tr>
+        <th>Skipped or rejected</th>
+        <td>{{ discovery.get('skipped_count', 0) }}</td>
+      </tr>
+      {% endif %}
+      {% if web_status.get('weak_discovery_warning') %}
+      <tr>
+        <th>Weak discovery warning</th>
+        <td>{{ web_status.get('weak_discovery_warning') }}</td>
+      </tr>
+      {% endif %}
       {% if web_status.get('sources') %}
       <tr>
         <th>Fetched sources</th>
@@ -128,10 +167,24 @@
       {% endif %}
       {% if web_status.get('queries') %}
       <tr>
-        <th>Model-proposed queries</th>
+        <th>Discovery queries</th>
         <td>
           {% for query in web_status.get('queries', []) %}
             <div>{{ query.get('query') }}</div>
+          {% endfor %}
+        </td>
+      </tr>
+      {% endif %}
+      {% if web_status.get('candidate_decisions') %}
+      <tr>
+        <th>Triage decisions</th>
+        <td>
+          {% for item in web_status.get('candidate_decisions', []) %}
+            <div>
+              <strong>{{ item.get('decision') }}</strong>:
+              {{ item.get('title') or item.get('url') }}
+              {% if item.get('reason') %} ({{ item.get('reason') }}){% endif %}
+            </div>
           {% endfor %}
         </td>
       </tr>

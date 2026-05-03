@@ -14,7 +14,7 @@ In practical repo terms, the intended loop is:
 
 1. A user creates a research brief.
 2. APD starts a bounded research execution from that brief.
-3. APD runs controlled web discovery and source capture.
+3. APD runs controlled search discovery, source triage, and source capture.
 4. APD uses captured sources to drive grounded component generation.
 5. APD validates, repairs, and imports structured research objects.
 6. The user reviews candidates, claims, themes, gates, and evidence links.
@@ -73,12 +73,14 @@ Today, the concrete product loop in the repo is:
 
 1. Create a research brief.
 2. Click `Start Research`.
-3. APD runs web discovery.
-4. APD validates and fetches safe public URLs.
-5. APD stores `Source` and `EvidenceExcerpt` records.
-6. APD runs grounded component execution against a bounded source packet.
-7. APD validates, repairs, and imports draft research objects.
-8. The user reviews the imported run through the candidate-first run detail UI.
+3. APD generates a bounded query plan.
+4. APD calls a configured search provider or deterministic static/mock adapter.
+5. APD triages candidate results into keep, discard, bait, or uncertain.
+6. APD validates and fetches only kept safe public URLs.
+7. APD stores `Source` and `EvidenceExcerpt` records plus discovery metadata.
+8. APD runs grounded component execution against a bounded source packet.
+9. APD validates, repairs, and imports draft research objects.
+10. The user reviews the imported run through the candidate-first run detail UI.
 
 That loop is still early, but it is already harness behavior. The runtime is no longer just "copy a prompt into another tool and import a JSON file later."
 
@@ -135,21 +137,24 @@ Purpose:
 - identify explicit public web targets relevant to the brief
 
 Model role:
-- propose search queries and direct URLs
+- later: help refine search planning when APD adds model-assisted query planning again
 
 APD harness role:
-- request JSON only, validate structure, reject unsafe URLs, enforce caps, and decide what actually gets fetched
+- generate bounded search queries, call the selected search adapter, collect candidate metadata, triage results, reject unsafe URLs, enforce caps, and decide what actually gets fetched
 
 Expected output objects:
-- proposed query list
-- proposed URL list
+- query list
+- candidate search result list
+- triage decisions with keep/discard reasons
 - web discovery execution metadata
 
 Validation and safety checks:
 - public `http` or `https` only
 - no localhost, loopback, private IPs, credentials, or authenticated sources
 - no uncontrolled crawling
-- small fixed budgets for query count, URL count, timeouts, and response size
+- small fixed budgets for query count, candidate-result count, kept fetch count, timeouts, and response size
+
+The first provider integration should stay simple. A deterministic static/mock provider is enough for tests, evals, and local development. Live provider integrations can come later and should remain optional.
 
 ### `source_triage`
 
@@ -160,7 +165,7 @@ Model role:
 - later: help identify high-value or low-value sources
 
 APD harness role:
-- persist all captured material that passed safety checks, track fetch failures and rejected targets, and later choose which sources enter the active source packet
+- persist discovery decisions and all captured material that passed safety checks, track fetch failures and rejected targets, and later choose which sources enter the active source packet
 
 Expected output objects:
 - `Source`
@@ -170,6 +175,8 @@ Validation and safety checks:
 - source metadata remains APD-owned
 - rejected or failed fetches remain observable
 - triage does not silently discard safety-relevant history
+
+Rejected candidates should stay traceable with a reason such as discard, bait, uncertain, invalid URL, duplicate, or fetch failure.
 
 ### `evidence_extraction`
 
