@@ -18,7 +18,7 @@ from apd.services.research_search import (
     DEFAULT_RESULTS_PER_QUERY,
     SearchProvider,
     generate_search_queries_for_brief,
-    get_configured_search_provider,
+    resolve_configured_search_provider,
     search_results_to_dicts,
 )
 from apd.services.research_skills import (
@@ -454,7 +454,8 @@ def run_web_research_for_brief(
         )
 
     queries = generate_search_queries_for_brief(brief, max_queries=MAX_PROPOSED_QUERIES)
-    provider = search_provider or get_configured_search_provider()
+    provider_resolution = None if search_provider is not None else resolve_configured_search_provider(db)
+    provider = search_provider or provider_resolution.provider
     run = _get_or_create_web_research_run(db, brief)
     trace_run_id = run.id
 
@@ -475,7 +476,107 @@ def run_web_research_for_brief(
         },
     )
 
-    search_results = provider.search(queries, max_results_per_query=MAX_SEARCH_RESULTS_PER_QUERY)
+    if provider_resolution is not None and not provider_resolution.is_configured:
+        finished_at = _iso_now()
+        setup_message = provider_resolution.setup_required_message or "Search provider setup required."
+        _trace(
+            "discovery_weak_warning",
+            run_id=run.id,
+            message="Search provider setup is required before discovery can run.",
+            payload={"provider": provider_resolution.provider_name, "reason": setup_message},
+        )
+        _trace(
+            "phase_completed",
+            run_id=run.id,
+            message="Web discovery could not start because the search provider is not configured.",
+            payload={"status": "search_provider_setup_required", "provider": provider_resolution.provider_name},
+        )
+        result = {
+            "success": False,
+            "status": "search_provider_setup_required",
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "errors": [setup_message],
+            "warnings": [],
+            "search_provider": provider_resolution.provider_name,
+            "search_provider_setup_required": setup_message,
+            "proposed_query_count": len(queries),
+            "proposed_url_count": 0,
+            "candidate_result_count": 0,
+            "fetched_source_count": 0,
+            "triage_counts": {"keep": 0, "discard": 0, "bait": 0, "uncertain": 0},
+            "discovery_summary": {
+                "query_count": len(queries),
+                "candidate_result_count": 0,
+                "kept_count": 0,
+                "discard_count": 0,
+                "bait_count": 0,
+                "uncertain_count": 0,
+                "fetched_source_count": 0,
+                "skipped_count": 0,
+                "weak_discovery_warning": setup_message,
+            },
+            "weak_discovery_warning": setup_message,
+            "skipped_urls": [],
+            "sources": [],
+            "queries": [{"query": query.query, "rationale": query.rationale} for query in queries],
+            "candidate_results": [],
+            "candidate_decisions": [],
+            "web_research_run_id": run.id,
+            "trace_correlation_id": trace_correlation_id,
+        }
+        meta = dict(brief.metadata_json or {})
+        meta["web_research_run_id"] = run.id
+        brief.metadata_json = meta
+        db.add(brief)
+        db.commit()
+        db.refresh(brief)
+        return result
+
+    try:
+        search_results = provider.search(queries, max_results_per_query=MAX_SEARCH_RESULTS_PER_QUERY)
+    except Exception as exc:
+        finished_at = _iso_now()
+        provider_error = f"search_provider_error: {exc}"
+        _trace(
+            "phase_completed",
+            run_id=run.id,
+            message="Web discovery failed during provider search.",
+            payload={"status": "provider_error", "provider": provider.provider_name, "error": provider_error},
+        )
+        return {
+            "success": False,
+            "status": "provider_error",
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "errors": [provider_error],
+            "warnings": [],
+            "search_provider": provider.provider_name,
+            "proposed_query_count": len(queries),
+            "proposed_url_count": 0,
+            "candidate_result_count": 0,
+            "fetched_source_count": 0,
+            "triage_counts": {"keep": 0, "discard": 0, "bait": 0, "uncertain": 0},
+            "discovery_summary": {
+                "query_count": len(queries),
+                "candidate_result_count": 0,
+                "kept_count": 0,
+                "discard_count": 0,
+                "bait_count": 0,
+                "uncertain_count": 0,
+                "fetched_source_count": 0,
+                "skipped_count": 0,
+                "weak_discovery_warning": None,
+            },
+            "weak_discovery_warning": None,
+            "skipped_urls": [],
+            "sources": [],
+            "queries": [{"query": query.query, "rationale": query.rationale} for query in queries],
+            "candidate_results": [],
+            "candidate_decisions": [],
+            "web_research_run_id": run.id,
+            "trace_correlation_id": trace_correlation_id,
+        }
     for result in search_results:
         _trace(
             "search_result_collected",
@@ -748,6 +849,7 @@ def run_web_research_for_brief(
         "errors": [],
         "warnings": warnings,
         "search_provider": provider.provider_name,
+        "search_provider_setup_required": None,
         "proposed_query_count": len(queries),
         "proposed_url_count": len(search_results),
         "candidate_result_count": len(search_results),

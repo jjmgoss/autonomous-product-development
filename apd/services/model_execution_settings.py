@@ -15,6 +15,8 @@ DEFAULTS = {
     "ollama_keep_alive": 0,
     "ollama_timeout_seconds": 120,
     "component_repair_attempts": 2,
+    "research_search_provider": "none",
+    "brave_search_base_url": "https://api.search.brave.com/res/v1/web/search",
     "enabled": True,
 }
 
@@ -77,6 +79,12 @@ def get_model_execution_settings(db: Session | None) -> dict[str, Any]:
             result["component_repair_attempts"] = min(int(env_rep), 3)
         except Exception:
             pass
+    env_search_provider = (os.getenv("APD_RESEARCH_SEARCH_PROVIDER") or "").strip().lower()
+    if env_search_provider:
+        result["research_search_provider"] = env_search_provider
+    env_brave_base = (os.getenv("APD_BRAVE_SEARCH_BASE_URL") or "").strip()
+    if env_brave_base:
+        result["brave_search_base_url"] = env_brave_base
 
     if db is None:
         return result
@@ -94,6 +102,8 @@ def save_model_execution_settings(db: Session, data: dict[str, Any]) -> AppSetti
     normalized["provider"] = str(normalized.get("provider") or "").strip().lower() or "ollama"
     normalized["ollama_base_url"] = str(normalized.get("ollama_base_url") or "").strip() or None
     normalized["ollama_model"] = str(normalized.get("ollama_model") or "").strip() or None
+    normalized["research_search_provider"] = str(normalized.get("research_search_provider") or "").strip().lower() or "none"
+    normalized["brave_search_base_url"] = str(normalized.get("brave_search_base_url") or "").strip() or DEFAULTS["brave_search_base_url"]
     normalized["ollama_timeout_seconds"] = _parse_positive_int(normalized.get("ollama_timeout_seconds"), default=120)
     normalized["component_repair_attempts"] = min(
         _parse_nonnegative_int(normalized.get("component_repair_attempts"), default=1),

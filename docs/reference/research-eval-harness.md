@@ -103,4 +103,4 @@ To add a new eval case:
 
 Keep cases narrow. The goal is not to model the whole internet. The goal is to exercise one repeatable research situation with explicit evidence, bait sources, and expected output traits.
 
-The eval harness should remain runnable without live web, live model calls, paid search providers, or hosted APIs. Static search fixtures are the intended way to test the discovery layer in CI.
+The eval harness should remain runnable without live web, live model calls, paid search providers, or hosted APIs. Static search fixtures are the intended way to test the discovery layer in CI, while live search providers remain part of the normal product runtime outside CI.

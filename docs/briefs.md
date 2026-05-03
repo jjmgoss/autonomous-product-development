@@ -56,7 +56,7 @@ If required settings are missing, the brief detail page shows a concise prompt l
 Today that means:
 
 1. APD deterministically generates a bounded search-query plan from the brief.
-2. APD calls a configured search provider or deterministic static/mock adapter to collect candidate public results.
+2. APD calls a configured live search provider to collect candidate public results.
 3. APD triages candidate results into keep, discard, bait, or uncertain with explicit reasons.
 4. APD validates and fetches only kept public URLs that pass APD's existing safety rules.
 5. APD stores captured material as APD-owned `Source` and `EvidenceExcerpt` records, along with discovery metadata.
@@ -64,24 +64,32 @@ Today that means:
 7. APD runs grounded component execution against that packet.
 8. APD validates, repairs, and imports the result only if it passes schema, quality, and grounding checks.
 
-This path is synchronous and local-first. It does not do unrestricted browsing, background jobs, or hosted telemetry. Live search providers are optional and off by default.
+This path is synchronous and local-first. It does not do unrestricted browsing, background jobs, or hosted telemetry. A live search provider must be configured before `Start Research` can discover sources.
 
 ## Search provider modes
 
-APD's normal product story is agent-led source discovery. Users should not have to paste URLs first.
+APD's normal product story is agent-led source discovery backed by a real search provider. Users should not have to paste URLs first.
 
 For the first version of the provider layer:
 
-- APD can use a deterministic static/mock search provider for tests and local development
-- live provider integrations remain optional future work
+- Brave Search is the first supported live provider path
+- APD can still use a deterministic static/mock search provider for tests and local development
 - the legacy direct-URL proposal path is not the main workflow
 
-The deterministic static mode is useful for tests, eval harness work, and recovery/debugging because it does not require live web, paid APIs, Ollama, or any external service.
+The deterministic static mode is useful for tests, eval harness work, and recovery/debugging because it does not require live web, paid APIs, Ollama, or any external service. It is not the normal product workflow.
 
-Optional environment variables for the static provider are:
+Configure a live provider through APD's settings page plus environment variables for secrets:
+
+- in `/settings/model-execution`, set `Research search provider` to `Brave Search`
+- optionally adjust the Brave API base URL
+- set `APD_BRAVE_SEARCH_API_KEY=<your-api-key>` in the environment where APD runs
+
+Static provider environment variables remain available for deterministic test/dev mode only:
 
 - `APD_RESEARCH_SEARCH_PROVIDER=static`
 - `APD_RESEARCH_STATIC_SEARCH_RESULTS_PATH=<path-to-json-fixture>`
+
+If no live provider is configured, the brief detail page and execution summary should show a setup-required message rather than pretending discovery succeeded.
 
 ## Research skill context
 
@@ -112,6 +120,7 @@ The page prioritizes:
 - keep/discard/bait/uncertain counts
 - captured source count
 - weak-discovery warnings when too few sources were kept or fetched
+- setup-required messages when live search provider configuration is missing
 - component execution phase status
 - grounding status when relevant
 - readable error summaries
@@ -185,6 +194,6 @@ Automated tests for the brief workflow mock:
 - web-fetch behavior
 - execution success and failure paths
 
-Tests do not require live Ollama, live web access, paid providers, or hosted APIs.
+Tests do not require live Ollama, live web access, paid providers, or hosted APIs. Static/mock provider mode remains the intended path for CI.
 
 Manual verification remains useful for UI sanity checks, but raw execution details should only be needed when debugging a failure rather than understanding the normal user workflow.

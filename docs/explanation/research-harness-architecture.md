@@ -74,7 +74,7 @@ Today, the concrete product loop in the repo is:
 1. Create a research brief.
 2. Click `Start Research`.
 3. APD generates a bounded query plan.
-4. APD calls a configured search provider or deterministic static/mock adapter.
+4. APD calls a configured live search provider.
 5. APD triages candidate results into keep, discard, bait, or uncertain.
 6. APD validates and fetches only kept safe public URLs.
 7. APD stores `Source` and `EvidenceExcerpt` records plus discovery metadata.
@@ -154,7 +154,9 @@ Validation and safety checks:
 - no uncontrolled crawling
 - small fixed budgets for query count, candidate-result count, kept fetch count, timeouts, and response size
 
-The first provider integration should stay simple. A deterministic static/mock provider is enough for tests, evals, and local development. Live provider integrations can come later and should remain optional.
+The first provider integration should stay simple, but the normal product workflow should still use a real search backend. APD now exposes a clean provider interface so Brave Search can serve as the initial live path, while deterministic static/mock providers remain available for tests, evals, and local development.
+
+If no live provider is configured, APD should stop at setup-required discovery status rather than continuing into synthesis with empty results.
 
 ### `source_triage`
 

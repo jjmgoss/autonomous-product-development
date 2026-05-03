@@ -8,7 +8,7 @@
 <div class="card">
   <h2>Model Execution Settings</h2>
   <p class="muted" style="margin-top: -0.4rem;">
-    Stores non-secret local model settings in the APD database. Hosted provider API keys are not supported on this page.
+    Stores non-secret local model and search-provider settings in the APD database. Hosted provider API keys stay in environment variables.
   </p>
   <form method="post" action="/settings/model-execution">
     <table class="detail-table">
@@ -40,6 +40,27 @@
       <tr>
         <th>Component repair attempts</th>
         <td><input type="number" name="component_repair_attempts" min="0" max="3" value="{{ settings.component_repair_attempts or 1 }}"></td>
+      </tr>
+      <tr>
+        <th>Research search provider</th>
+        <td>
+          <select name="research_search_provider">
+            <option value="none" {% if settings.research_search_provider == 'none' %}selected{% endif %}>None</option>
+            <option value="brave" {% if settings.research_search_provider == 'brave' %}selected{% endif %}>Brave Search</option>
+          </select>
+          <div class="muted" style="margin-top: 0.35rem;">
+            Normal product workflow uses a live search provider. Static/mock search remains test/dev-only and is configured through environment variables, not this form.
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <th>Brave Search base URL</th>
+        <td>
+          <input type="text" name="brave_search_base_url" value="{{ settings.brave_search_base_url or 'https://api.search.brave.com/res/v1/web/search' }}" style="width:400px;">
+          <div class="muted" style="margin-top: 0.35rem;">
+            Set <code>APD_BRAVE_SEARCH_API_KEY</code> in your environment to enable Brave Search requests.
+          </div>
+        </td>
       </tr>
     </table>
 

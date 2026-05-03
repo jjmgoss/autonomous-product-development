@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from io import BytesIO
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -8,14 +9,17 @@ from sqlalchemy.orm import sessionmaker
 import pytest
 
 from apd.app.db import Base
+from apd.services.model_execution_settings import save_model_execution_settings
 from apd.services.research_brief_service import create_brief
 from apd.services.research_search import (
+    BraveSearchProvider,
     EmptySearchProvider,
     SearchResult,
     SearchQuery,
     StaticSearchProvider,
     generate_search_queries_for_brief,
     load_static_search_provider,
+    resolve_configured_search_provider,
 )
 from apd.services.research_source_triage import guess_source_type, triage_search_result
 
@@ -150,3 +154,76 @@ def test_triage_search_result_discards_vendor_marketing_for_pain_briefs(db_sessi
     assert decision.source_type == "vendor_marketing"
     assert decision.decision == "discard"
     assert "weak evidence" in decision.reason.lower()
+
+
+def test_resolve_configured_search_provider_uses_saved_brave_settings(db_session, monkeypatch):
+    save_model_execution_settings(
+        db_session,
+        {
+            "provider": "ollama",
+            "ollama_base_url": "http://localhost:11434",
+            "ollama_model": "llama3",
+            "research_search_provider": "brave",
+            "brave_search_base_url": "https://api.search.brave.com/res/v1/web/search",
+        },
+    )
+    monkeypatch.setenv("APD_BRAVE_SEARCH_API_KEY", "brave-test-key")
+
+    resolution = resolve_configured_search_provider(db_session)
+
+    assert resolution.provider_name == "brave"
+    assert resolution.is_live_provider is True
+    assert resolution.is_configured is True
+    assert isinstance(resolution.provider, BraveSearchProvider)
+
+
+def test_resolve_configured_search_provider_reports_missing_brave_key(db_session, monkeypatch):
+    save_model_execution_settings(
+        db_session,
+        {
+            "research_search_provider": "brave",
+            "brave_search_base_url": "https://api.search.brave.com/res/v1/web/search",
+        },
+    )
+    monkeypatch.delenv("APD_BRAVE_SEARCH_API_KEY", raising=False)
+
+    resolution = resolve_configured_search_provider(db_session)
+
+    assert resolution.provider_name == "brave"
+    assert resolution.is_configured is False
+    assert "APD_BRAVE_SEARCH_API_KEY" in str(resolution.setup_required_message)
+
+
+def test_brave_search_provider_parses_response(monkeypatch):
+    class _FakeResponse(BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    payload = {
+        "web": {
+            "results": [
+                {
+                    "title": "Forum thread",
+                    "url": "https://example.com/thread",
+                    "description": "Users describe painful manual work.",
+                    "family_friendly": True,
+                    "language": "en",
+                }
+            ]
+        }
+    }
+
+    monkeypatch.setattr(
+        "apd.services.research_search.request.urlopen",
+        lambda req, timeout=0: _FakeResponse(json.dumps(payload).encode("utf-8")),
+    )
+
+    provider = BraveSearchProvider(api_key="test-key")
+    results = provider.search([SearchQuery(query="manual work pain forum complaints", rationale="pain")])
+
+    assert len(results) == 1
+    assert results[0].provider == "brave"
+    assert results[0].title == "Forum thread"

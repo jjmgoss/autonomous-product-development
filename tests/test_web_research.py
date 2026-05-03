@@ -328,6 +328,19 @@ def test_run_web_research_records_fetch_failures_without_crashing(db, monkeypatc
     assert result["skipped_urls"] == [{"url": "https://example.com/thread/fail", "reason": "timeout"}]
 
 
+def test_run_web_research_requires_live_search_provider_setup(db, monkeypatch):
+    brief = create_brief(db, title="Provider setup", research_question="What signal exists?")
+    monkeypatch.delenv("APD_RESEARCH_SEARCH_PROVIDER", raising=False)
+    monkeypatch.delenv("APD_BRAVE_SEARCH_API_KEY", raising=False)
+
+    result = web_research.run_web_research_for_brief(db, brief)
+
+    assert result["success"] is False
+    assert result["status"] == "search_provider_setup_required"
+    assert "Search provider setup required" in result["errors"][0]
+    assert "Search provider setup required" in result["search_provider_setup_required"]
+
+
 
 def test_capture_only_web_discovery_route_renders_phase_status(client_and_session, monkeypatch):
     client, TestSession = client_and_session
